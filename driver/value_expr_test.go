@@ -1,0 +1,40 @@
+package driver
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/mia0x75/pgparser/format"
+	"github.com/mia0x75/pgparser/types"
+)
+
+func TestValueExprRestore(t *testing.T) {
+	testCases := []struct {
+		datum  types.Datum
+		expect string
+	}{
+		{types.NewDatum(nil), "NULL"},
+		{types.NewIntDatum(1), "1"},
+		{types.NewIntDatum(-1), "-1"},
+		{types.NewUintDatum(1), "1"},
+		{types.NewFloat32Datum(1.1), "1.1e+00"},
+		{types.NewFloat64Datum(1.1), "1.1e+00"},
+		{types.NewStringDatum("test `s't\"r."), "'test `s''t\"r.'"},
+		{types.NewBytesDatum([]byte("test `s't\"r.")), "'test `s''t\"r.'"},
+		{types.NewBinaryLiteralDatum([]byte("test `s't\"r.")), "b'11101000110010101110011011101000010000001100000011100110010011101110100001000100111001000101110'"},
+		{types.NewDecimalDatum(types.NewDecFromInt(321)), "321"},
+	}
+	// Run Test
+	var sb strings.Builder
+	for _, testCase := range testCases {
+		sb.Reset()
+		expr := &ValueExpr{Datum: testCase.datum}
+		err := expr.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sb.String() != testCase.expect {
+			t.Fatalf("got %#v, want %#v (Datum: %#v)", sb.String(), testCase.expect, testCase.datum)
+		}
+	}
+}

@@ -1,0 +1,55 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - gocritic
+  exclusions:
+    generated: strict
+    paths:
+      # The following packages are vendored/ported from upstream projects and
+      # have not been adapted to this repository's lint configuration.
+      - ast/
+      - auth/
+      - charset/
+      - driver/
+      - errors/
+      - format/
+      - goyacc/
+      - hack/
+      - model/
+      - opcode/
+      - postgres/
+      - sqlerr/
+      - types/
+      # goyacc generated parser.
+      - parser\.go
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: strict
+    paths:
+      - ast/
+      - auth/
+      - charset/
+      - driver/
+      - errors/
+      - format/
+      - goyacc/
+      - hack/
+      - model/
+      - opcode/
+      - postgres/
+      - sqlerr/
+      - types/
+      - parser\.go

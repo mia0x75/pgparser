@@ -1,0 +1,366 @@
+package types
+
+import (
+	"math"
+	"testing"
+)
+
+func TestOverflow_Add(t *testing.T) {
+	tblUint64 := []struct {
+		lsh      uint64
+		rsh      uint64
+		ret      uint64
+		overflow bool
+	}{
+		{math.MaxUint64, 1, 0, true},
+		{math.MaxUint64, 0, math.MaxUint64, false},
+		{1, 1, 2, false},
+	}
+
+	for _, tt := range tblUint64 {
+		ret, err := AddUint64(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt64 := []struct {
+		lsh      int64
+		rsh      int64
+		ret      int64
+		overflow bool
+	}{
+		{math.MaxInt64, 1, 0, true},
+		{math.MaxInt64, 0, math.MaxInt64, false},
+		{0, math.MinInt64, math.MinInt64, false},
+		{-1, math.MinInt64, 0, true},
+		{math.MaxInt64, math.MinInt64, -1, false},
+		{1, 1, 2, false},
+		{1, -1, 0, false},
+	}
+
+	for _, tt := range tblInt64 {
+		ret, err := AddInt64(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt := []struct {
+		lsh      uint64
+		rsh      int64
+		ret      uint64
+		overflow bool
+	}{
+		{math.MaxUint64, math.MinInt64, math.MaxUint64 + math.MinInt64, false},
+		{math.MaxInt64, math.MinInt64, 0, true},
+		{0, -1, 0, true},
+		{1, -1, 0, false},
+		{0, 1, 1, false},
+		{1, 1, 2, false},
+	}
+
+	for _, tt := range tblInt {
+		ret, err := AddInteger(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+}
+
+func TestOverflow_Sub(t *testing.T) {
+	tblUint64 := []struct {
+		lsh      uint64
+		rsh      uint64
+		ret      uint64
+		overflow bool
+	}{
+		{math.MaxUint64, 1, math.MaxUint64 - 1, false},
+		{math.MaxUint64, 0, math.MaxUint64, false},
+		{0, math.MaxUint64, 0, true},
+		{0, 1, 0, true},
+		{1, math.MaxUint64, 0, true},
+		{1, 1, 0, false},
+	}
+
+	for _, tt := range tblUint64 {
+		ret, err := SubUint64(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt64 := []struct {
+		lsh      int64
+		rsh      int64
+		ret      int64
+		overflow bool
+	}{
+		{math.MinInt64, 0, math.MinInt64, false},
+		{math.MinInt64, 1, 0, true},
+		{math.MaxInt64, -1, 0, true},
+		{0, math.MinInt64, 0, true},
+		{-1, math.MinInt64, math.MaxInt64, false},
+		{math.MinInt64, math.MaxInt64, 0, true},
+		{math.MinInt64, math.MinInt64, 0, false},
+		{math.MinInt64, -math.MaxInt64, -1, false},
+		{1, 1, 0, false},
+	}
+
+	for _, tt := range tblInt64 {
+		ret, err := SubInt64(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt := []struct {
+		lsh      uint64
+		rsh      int64
+		ret      uint64
+		overflow bool
+	}{
+		{0, math.MinInt64, -math.MinInt64, false},
+		{0, 1, 0, true},
+		{math.MaxUint64, math.MinInt64, 0, true},
+		{math.MaxInt64, math.MinInt64, 2*math.MaxInt64 + 1, false},
+		{math.MaxUint64, -1, 0, true},
+		{0, -1, 1, false},
+		{1, 1, 0, false},
+	}
+
+	for _, tt := range tblInt {
+		ret, err := SubUintWithInt(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt2 := []struct {
+		lsh      int64
+		rsh      uint64
+		ret      uint64
+		overflow bool
+	}{
+		{math.MinInt64, 0, 0, true},
+		{math.MaxInt64, 0, math.MaxInt64, false},
+		{math.MaxInt64, math.MaxUint64, 0, true},
+		{math.MaxInt64, -math.MinInt64, 0, true},
+		{-1, 0, 0, true},
+		{1, 1, 0, false},
+	}
+
+	for _, tt := range tblInt2 {
+		ret, err := SubIntWithUint(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+}
+
+func TestOverflow_Mul(t *testing.T) {
+	tblUint64 := []struct {
+		lsh      uint64
+		rsh      uint64
+		ret      uint64
+		overflow bool
+	}{
+		{math.MaxUint64, 1, math.MaxUint64, false},
+		{math.MaxUint64, 0, 0, false},
+		{math.MaxUint64, 2, 0, true},
+		{1, 1, 1, false},
+	}
+
+	for _, tt := range tblUint64 {
+		ret, err := MulUint64(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt64 := []struct {
+		lsh      int64
+		rsh      int64
+		ret      int64
+		overflow bool
+	}{
+		{math.MaxInt64, 1, math.MaxInt64, false},
+		{math.MinInt64, 1, math.MinInt64, false},
+		{math.MaxInt64, -1, -math.MaxInt64, false},
+		{math.MinInt64, -1, 0, true},
+		{math.MinInt64, 0, 0, false},
+		{math.MaxInt64, 0, 0, false},
+		{math.MaxInt64, math.MaxInt64, 0, true},
+		{math.MaxInt64, math.MinInt64, 0, true},
+		{math.MinInt64 / 10, 11, 0, true},
+		{1, 1, 1, false},
+	}
+
+	for _, tt := range tblInt64 {
+		ret, err := MulInt64(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt := []struct {
+		lsh      uint64
+		rsh      int64
+		ret      uint64
+		overflow bool
+	}{
+		{math.MaxUint64, 0, 0, false},
+		{0, -1, 0, false},
+		{1, -1, 0, true},
+		{math.MaxUint64, -1, 0, true},
+		{math.MaxUint64, 10, 0, true},
+		{1, 1, 1, false},
+	}
+
+	for _, tt := range tblInt {
+		ret, err := MulInteger(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+}
+
+func TestOverflow_Div(t *testing.T) {
+	tblInt64 := []struct {
+		lsh      int64
+		rsh      int64
+		ret      int64
+		overflow bool
+	}{
+		{math.MaxInt64, 1, math.MaxInt64, false},
+		{math.MinInt64, 1, math.MinInt64, false},
+		{math.MinInt64, -1, 0, true},
+		{math.MaxInt64, -1, -math.MaxInt64, false},
+		{1, -1, -1, false},
+		{-1, 1, -1, false},
+		{-1, 2, 0, false},
+		{math.MinInt64, 2, math.MinInt64 / 2, false},
+	}
+
+	for _, tt := range tblInt64 {
+		ret, err := DivInt64(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt := []struct {
+		lsh      uint64
+		rsh      int64
+		ret      uint64
+		overflow bool
+	}{
+		{0, -1, 0, false},
+		{1, -1, 0, true},
+		{math.MaxInt64, math.MinInt64, 0, false},
+		{math.MaxInt64, -1, 0, true},
+	}
+
+	for _, tt := range tblInt {
+		ret, err := DivUintWithInt(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+
+	tblInt2 := []struct {
+		lsh      int64
+		rsh      uint64
+		ret      uint64
+		overflow bool
+	}{
+		{math.MinInt64, math.MaxInt64, 0, true},
+		{0, 1, 0, false},
+		{-1, math.MaxInt64, 0, false},
+	}
+
+	for _, tt := range tblInt2 {
+		ret, err := DivIntWithUint(tt.lsh, tt.rsh)
+		if tt.overflow {
+			if err == nil {
+				t.Fatalf("expected error: %#v", tt)
+			}
+		} else {
+			if ret != tt.ret {
+				t.Fatalf("got %#v, want %#v", ret, tt.ret)
+			}
+		}
+	}
+}
