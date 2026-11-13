@@ -136,7 +136,7 @@ func TestParseSQLCreateSchemaAST(t *testing.T) {
 	if !schema.IfNotExists || schema.Name != "app" || schema.Authorization != "alice" {
 		t.Fatalf("CreateSchemaStmt = %#v", schema)
 	}
-	if got := compactSQL(restoreNode(t, schema)); got != "CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION alice" {
+	if got := compactSQL(restoreNode(t, schema)); got != `CREATE SCHEMA IF NOT EXISTS "app" AUTHORIZATION "alice"` {
 		t.Fatalf("CreateSchemaStmt restore = %q", got)
 	}
 	authOnly := mustParseOne(t, `CREATE SCHEMA AUTHORIZATION alice;`).(*ast.CreateSchemaStmt)
@@ -253,7 +253,7 @@ func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	if !idx.Concurrently || !idx.IfNotExists || idx.Using != "btree" || idx.WithOptions != "fillfactor = ?" || idx.Tablespace != "ts" || !col.Desc || col.NullsOrder != 2 || col.Opclass != "text_pattern_ops" {
 		t.Fatalf("CreateIndexStmt = %#v col=%#v", idx, col)
 	}
-	if got := compactSQL(restoreNode(t, idx)); got != "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix ON t USING BTREE (a DESC NULLS LAST text_pattern_ops) WITH (fillfactor = ?) TABLESPACE ts" {
+	if got := compactSQL(restoreNode(t, idx)); got != `CREATE INDEX CONCURRENTLY IF NOT EXISTS "ix" ON "t" USING BTREE ("a" DESC NULLS LAST "text_pattern_ops") WITH (fillfactor = ?) TABLESPACE "ts"` {
 		t.Fatalf("CreateIndexStmt restore = %q", got)
 	}
 
@@ -261,7 +261,7 @@ func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	if !view.Temporary || !view.HasCheckOption || view.CheckOption != 0 || view.WithOptions != "security_barrier" {
 		t.Fatalf("CreateViewStmt = %#v", view)
 	}
-	if got := compactSQL(restoreNode(t, view)); !strings.Contains(got, "CREATE TEMPORARY VIEW v WITH (security_barrier) AS ") || !strings.HasSuffix(got, "WITH LOCAL CHECK OPTION") {
+	if got := compactSQL(restoreNode(t, view)); !strings.Contains(got, `CREATE TEMPORARY VIEW "v" WITH (security_barrier) AS `) || !strings.HasSuffix(got, "WITH LOCAL CHECK OPTION") {
 		t.Fatalf("CreateViewStmt restore = %q", got)
 	}
 
@@ -269,7 +269,7 @@ func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	if !drop.Concurrently || !drop.IfExists {
 		t.Fatalf("DropIndexStmt = %#v", drop)
 	}
-	if got := compactSQL(restoreNode(t, drop)); got != "DROP INDEX CONCURRENTLY IF EXISTS ix" {
+	if got := compactSQL(restoreNode(t, drop)); got != `DROP INDEX CONCURRENTLY IF EXISTS "ix"` {
 		t.Fatalf("DropIndexStmt restore = %q", got)
 	}
 

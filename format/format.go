@@ -214,7 +214,7 @@ const (
 )
 
 const (
-	DefaultRestoreFlags = RestoreStringSingleQuotes | RestoreKeyWordUppercase | RestoreNameBackQuotes
+	DefaultRestoreFlags = RestoreStringSingleQuotes | RestoreKeyWordUppercase | RestoreNameDoubleQuotes
 )
 
 func (rf RestoreFlags) has(flag RestoreFlags) bool {

@@ -319,13 +319,18 @@ type FuncCallExpr struct {
 	// WithinGroup is the optional WITHIN GROUP (ORDER BY ...) clause.
 	WithinGroup *OrderByClause
 	// Star is true when the call is written as `count(*)`.
-	Star bool
+	Star     bool
+	Distinct bool
+	OrderBy  *OrderByClause
 }
 
 // Restore implements Node interface.
 func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord(n.FnName.O)
 	ctx.WritePlain("(")
+	if n.Distinct {
+		ctx.WriteKeyWord("DISTINCT ")
+	}
 	switch n.FnName.L {
 	case "convert":
 		if err := n.Args[0].Restore(ctx); err != nil {
@@ -407,7 +412,7 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 			}
 			i++
 		}
-	case "count":
+	default:
 		if n.Star {
 			ctx.WritePlain("*")
 		} else {
@@ -420,14 +425,11 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 				}
 			}
 		}
-	default:
-		for i, argv := range n.Args {
-			if i != 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := argv.Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr.Args %d", i)
-			}
+	}
+	if n.OrderBy != nil {
+		ctx.WritePlain(" ")
+		if err := n.OrderBy.Restore(ctx); err != nil {
+			return err
 		}
 	}
 	ctx.WritePlain(")")
@@ -490,6 +492,13 @@ func (n *FuncCallExpr) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*FuncCallExpr)
+	if n.OrderBy != nil {
+		node, ok := n.OrderBy.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OrderBy = node.(*OrderByClause)
+	}
 	for i, val := range n.Args {
 		node, ok := val.Accept(v)
 		if !ok {
@@ -678,6 +687,8 @@ type AggregateFuncExpr struct {
 	Filter ExprNode
 	// WithinGroup is the optional WITHIN GROUP (ORDER BY ...) clause.
 	WithinGroup *OrderByClause
+	OrderBy     *OrderByClause
+	Star        bool
 }
 
 // Restore implements Node interface.
@@ -686,6 +697,9 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 	ctx.WritePlain("(")
 	if n.Distinct {
 		ctx.WriteKeyWord("DISTINCT ")
+	}
+	if n.Star {
+		ctx.WritePlain("*")
 	}
 	switch strings.ToLower(n.F) {
 	case "group_concat":
@@ -709,6 +723,12 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 			if err := argv.Restore(ctx); err != nil {
 				return errors.Annotatef(err, "An error occurred while restore AggregateFuncExpr.Args[%d]", i)
 			}
+		}
+	}
+	if n.OrderBy != nil {
+		ctx.WritePlain(" ")
+		if err := n.OrderBy.Restore(ctx); err != nil {
+			return err
 		}
 	}
 	ctx.WritePlain(")")
@@ -741,6 +761,13 @@ func (n *AggregateFuncExpr) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*AggregateFuncExpr)
+	if n.OrderBy != nil {
+		node, ok := n.OrderBy.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OrderBy = node.(*OrderByClause)
+	}
 	for i, val := range n.Args {
 		node, ok := val.Accept(v)
 		if !ok {
@@ -810,7 +837,10 @@ type WindowFuncExpr struct {
 	// Spec is the specification of this window.
 	Spec WindowSpec
 	// Star is true when the call is written as `count(*)`.
-	Star bool
+	Star        bool
+	Filter      ExprNode
+	OrderBy     *OrderByClause
+	WithinGroup *OrderByClause
 }
 
 // Restore implements Node interface.
@@ -830,7 +860,27 @@ func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore WindowFuncExpr.Args[%d]", i)
 		}
 	}
+	if n.OrderBy != nil {
+		ctx.WritePlain(" ")
+		if err := n.OrderBy.Restore(ctx); err != nil {
+			return err
+		}
+	}
 	ctx.WritePlain(")")
+	if n.WithinGroup != nil {
+		ctx.WriteKeyWord(" WITHIN GROUP (")
+		if err := n.WithinGroup.Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WritePlain(")")
+	}
+	if n.Filter != nil {
+		ctx.WriteKeyWord(" FILTER (WHERE ")
+		if err := n.Filter.Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WritePlain(")")
+	}
 	if n.FromLast {
 		ctx.WriteKeyWord(" FROM LAST")
 	}
@@ -857,6 +907,27 @@ func (n *WindowFuncExpr) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*WindowFuncExpr)
+	if n.Filter != nil {
+		node, ok := n.Filter.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Filter = node.(ExprNode)
+	}
+	if n.OrderBy != nil {
+		node, ok := n.OrderBy.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OrderBy = node.(*OrderByClause)
+	}
+	if n.WithinGroup != nil {
+		node, ok := n.WithinGroup.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WithinGroup = node.(*OrderByClause)
+	}
 	for i, val := range n.Args {
 		node, ok := val.Accept(v)
 		if !ok {

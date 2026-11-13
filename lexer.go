@@ -132,6 +132,10 @@ func (l *Lexer) NextToken() Token {
 			if l.state == stateXQS {
 				return l.lexQuoteContinue()
 			}
+			if l.state != stateInitial {
+				l.Err = fmt.Errorf("unterminated SQL token")
+				l.state = stateInitial
+			}
 			return Token{Type: lex_EOF, Loc: l.pos}
 		}
 
@@ -181,7 +185,7 @@ func (l *Lexer) lexInitial() Token {
 	}
 
 	// Check for SQL comment
-	if ch == '-' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '-' {
+	if (ch == '-' || ch == '/') && l.pos+1 < len(l.input) && l.input[l.pos+1] == ch {
 		l.skipLineComment()
 		return l.NextToken()
 	}
@@ -791,7 +795,11 @@ func (l *Lexer) lexParam() Token {
 		return Token{Type: lex_EOF, Loc: l.start}
 	}
 
-	val, _ := strconv.ParseInt(l.input[start:l.pos], 10, 64)
+	val, err := strconv.ParseInt(l.input[start:l.pos], 10, 32)
+	if err != nil || val == 0 {
+		l.Err = fmt.Errorf("parameter number must be between 1 and 2147483647")
+		return Token{Type: lex_EOF, Loc: l.start}
+	}
 	return Token{Type: lex_PARAM, Ival: val, Loc: l.start}
 }
 
@@ -804,6 +812,10 @@ func (l *Lexer) lexOperator() Token {
 	}
 
 	op := l.input[start:l.pos]
+	if idx := strings.Index(op, "//"); idx > 0 {
+		l.pos = start + idx
+		op = op[:idx]
+	}
 
 	// Check for embedded comment start
 	if idx := strings.Index(op, "/*"); idx > 0 {
@@ -818,21 +830,11 @@ func (l *Lexer) lexOperator() Token {
 	}
 
 	// For SQL compatibility, strip trailing + or - unless preceded by special chars
-	for len(op) > 1 && (op[len(op)-1] == '+' || op[len(op)-1] == '-') {
-		hasSpecial := false
-		for i := len(op) - 2; i >= 0; i-- {
-			c := op[i]
-			if c == '~' || c == '!' || c == '@' || c == '#' || c == '^' ||
-				c == '&' || c == '|' || c == '`' || c == '?' || c == '%' {
-				hasSpecial = true
-				break
-			}
+	if !strings.ContainsAny(op, "~!@#^&|`?%") {
+		for len(op) > 1 && (op[len(op)-1] == '+' || op[len(op)-1] == '-') {
+			op = op[:len(op)-1]
+			l.pos--
 		}
-		if hasSpecial {
-			break
-		}
-		op = op[:len(op)-1]
-		l.pos--
 	}
 
 	// Single-char ops that should be returned as their char value

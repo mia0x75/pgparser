@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"sort"
@@ -393,6 +394,10 @@ func (bj *BinaryJSON) UnmarshalJSON(data []byte) error {
 	err := decoder.Decode(&in)
 	if err != nil {
 		return errors.Trace(err)
+	}
+	var trailing interface{}
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return errors.New("invalid trailing JSON input")
 	}
 	buf := make([]byte, 0, len(data))
 	var typeCode TypeCode

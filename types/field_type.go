@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -26,7 +27,12 @@ type FieldType struct {
 	Charset string
 	Collate string
 	// Elems is the element list for enum and set type.
-	Elems []string
+	Elems         []string
+	PGName        []string
+	PGModifiers   []string
+	PGArrayBounds []int64
+	PGSetOf       bool
+	PGInterval    string
 }
 
 // NewFieldType returns a FieldType,
@@ -42,11 +48,20 @@ func NewFieldType(tp byte) *FieldType {
 // Clone returns a copy of itself.
 func (ft *FieldType) Clone() *FieldType {
 	ret := *ft
+	ret.Elems = append([]string(nil), ft.Elems...)
+	ret.PGName = append([]string(nil), ft.PGName...)
+	ret.PGModifiers = append([]string(nil), ft.PGModifiers...)
+	ret.PGArrayBounds = append([]int64(nil), ft.PGArrayBounds...)
 	return &ret
 }
 
 // Equal checks whether two FieldType objects are equal.
 func (ft *FieldType) Equal(other *FieldType) bool {
+	if ft.PGSetOf != other.PGSetOf || ft.PGInterval != other.PGInterval ||
+		!slices.Equal(ft.PGName, other.PGName) || !slices.Equal(ft.PGModifiers, other.PGModifiers) ||
+		!slices.Equal(ft.PGArrayBounds, other.PGArrayBounds) {
+		return false
+	}
 	// We do not need to compare whole `ft.Flag == other.Flag` when wrapping cast upon an Expression.
 	// but need compare unsigned_flag of ft.Flag.
 	partialEqual := ft.Tp == other.Tp &&
@@ -103,6 +118,11 @@ func (ft *FieldType) Init(tp byte) {
 // CompactStr only considers Tp/CharsetBin/Flen/Deimal.
 // This is used for showing column type in infoschema.
 func (ft *FieldType) CompactStr() string {
+	if len(ft.PGName) > 0 {
+		var out strings.Builder
+		_ = ft.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &out))
+		return out.String()
+	}
 	ts := TypeToStr(ft.Tp, ft.Charset)
 	suffix := ""
 
@@ -188,6 +208,35 @@ func (ft *FieldType) String() string {
 
 // Restore implements Node interface.
 func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
+	if len(ft.PGName) > 0 {
+		if ft.PGSetOf {
+			ctx.WriteKeyWord("SETOF ")
+		}
+		for i, name := range ft.PGName {
+			if i > 0 {
+				ctx.WritePlain(".")
+			}
+			if len(ft.PGName) == 1 && name == "interval" {
+				ctx.WriteKeyWord(name)
+			} else {
+				ctx.WriteName(name)
+			}
+		}
+		if len(ft.PGModifiers) > 0 {
+			ctx.WritePlain("(" + strings.Join(ft.PGModifiers, ", ") + ")")
+		}
+		if ft.PGInterval != "" {
+			ctx.WriteKeyWord(" " + ft.PGInterval)
+		}
+		for _, bound := range ft.PGArrayBounds {
+			if bound < 0 {
+				ctx.WritePlain("[]")
+			} else {
+				ctx.WritePlainf("[%d]", bound)
+			}
+		}
+		return nil
+	}
 	ctx.WriteKeyWord(TypeToStr(ft.Tp, ft.Charset))
 
 	switch ft.Tp {
@@ -244,6 +293,10 @@ func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
 
 // RestoreAsCastType is used for write AST back to string.
 func (ft *FieldType) RestoreAsCastType(ctx *format.RestoreCtx) {
+	if len(ft.PGName) > 0 {
+		_ = ft.Restore(ctx)
+		return
+	}
 	switch ft.Tp {
 	case postgres.TypeVarString:
 		if ft.Charset == charset.CharsetBin && ft.Collate == charset.CollationBin {

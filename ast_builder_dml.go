@@ -8,7 +8,7 @@ import (
 // makeSetOp returns the set operation statement of two select statements.
 func makeSetOp(op ast.SetOprType, all bool, larg, rarg ast.Node) ast.Node {
 	selects := make([]ast.Node, 0, 2)
-	if set, ok := larg.(*ast.SetOprStmt); ok && set.SelectList != nil && !set.IsInBraces {
+	if set, ok := larg.(*ast.SetOprStmt); ok && set.SelectList != nil && !set.IsInBraces && set.With == nil && set.OrderBy == nil && set.Limit == nil {
 		// A chain of set operations is a flat list of selects.
 		selects = append(selects, set.SelectList.Selects...)
 	} else if larg != nil {
@@ -16,11 +16,18 @@ func makeSetOp(op ast.SetOprType, all bool, larg, rarg ast.Node) ast.Node {
 	}
 	if rarg != nil {
 		selects = append(selects, rarg)
-		if sel, ok := rarg.(*ast.SelectStmt); ok {
-			t := op
-			if all {
-				t = allSetOprType(op)
-			}
+		t := op
+		if all {
+			t = allSetOprType(op)
+		}
+		switch sel := rarg.(type) {
+		case *ast.SelectStmt:
+			sel.AfterSetOperator = &t
+		case *ast.SetOprStmt:
+			sel.AfterSetOperator = &t
+		case *ast.ValuesStmt:
+			sel.AfterSetOperator = &t
+		case *ast.TableStmt:
 			sel.AfterSetOperator = &t
 		}
 	}
@@ -45,6 +52,7 @@ func allSetOprType(op ast.SetOprType) ast.SetOprType {
 // setWithClause sets the with clause of a select statement.
 func setWithClause(n ast.Node, with ast.Node) ast.Node {
 	if w, ok := with.(*ast.WithClause); ok {
+		n = selectClauseNode(n)
 		switch v := n.(type) {
 		case *ast.SelectStmt:
 			v.With = w
@@ -57,13 +65,14 @@ func setWithClause(n ast.Node, with ast.Node) ast.Node {
 
 // setSelectOptions sets the order by, locking and limit clauses of a select statement.
 func setSelectOptions(n ast.Node, orderBy ast.Node, locking ast.Node, limit *SelectLimit) ast.Node {
+	n = selectClauseNode(n)
 	switch v := n.(type) {
 	case *ast.SelectStmt:
 		if orderBy != nil {
 			v.OrderBy = orderBy.(*ast.OrderByClause)
 		}
 		if limit != nil {
-			v.Limit = limitClause(limit)
+			v.Limit = limitClause(limit, v.Limit)
 		}
 		applyLocking(v, locking)
 	case *ast.SetOprStmt:
@@ -71,10 +80,21 @@ func setSelectOptions(n ast.Node, orderBy ast.Node, locking ast.Node, limit *Sel
 			v.OrderBy = orderBy.(*ast.OrderByClause)
 		}
 		if limit != nil {
-			v.Limit = limitClause(limit)
+			v.Limit = limitClause(limit, v.Limit)
 		}
 	}
 	return n
+}
+
+// selectClauseNode gives VALUES and TABLE operands a SetOprStmt container
+// because ORDER, LIMIT and WITH are not fields of those statement nodes.
+func selectClauseNode(n ast.Node) ast.Node {
+	switch n.(type) {
+	case *ast.ValuesStmt, *ast.TableStmt:
+		return &ast.SetOprStmt{SelectList: &ast.SetOprSelectList{Selects: []ast.Node{n}}}
+	default:
+		return n
+	}
 }
 
 // applySelectClauses sets the from, where, group by, having and window clauses
@@ -98,25 +118,28 @@ func applySelectClauses(n *ast.SelectStmt, from []ast.ResultSetNode, where ast.E
 	}
 }
 
-// limitClause returns the limit clause of a select limit.
-func limitClause(l *SelectLimit) *ast.Limit {
-	if l == nil {
-		return nil
+// LIMIT and OFFSET can arrive in separate reductions of a parenthesized query.
+func limitClause(l *SelectLimit, current *ast.Limit) *ast.Limit {
+	if l == nil || (l.LimitCount == nil && l.LimitOffset == nil) {
+		return current
 	}
-	return &ast.Limit{
-		Count:  l.LimitCount,
-		Offset: l.LimitOffset,
+	if current == nil {
+		current = &ast.Limit{}
 	}
+	if l.LimitCount != nil {
+		current.Count = l.LimitCount
+		current.WithTies = l.LimitOption == ast.LIMIT_OPTION_WITH_TIES
+	}
+	if l.LimitOffset != nil {
+		current.Offset = l.LimitOffset
+	}
+	return current
 }
 
 // limitValueClause returns the select limit of a limit value.
 func limitValueClause(count ast.ExprNode) *SelectLimit {
-	if count == nil {
-		return nil
-	}
 	if v, ok := count.(ast.ValueExpr); ok && v.GetValue() == nil {
-		// LIMIT ALL does not limit the result.
-		return nil
+		count = nil
 	}
 	return &SelectLimit{
 		LimitCount:  count,

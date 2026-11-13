@@ -61,7 +61,7 @@ func (s *Scanner) Lex(lval *yySymType) int {
 	switch tokType {
 	case IDENT:
 		lval.str = tok.Str
-	case ICONST:
+	case ICONST, PARAM:
 		lval.ival = tok.Ival
 	case FCONST, SCONST, BCONST, XCONST:
 		lval.str = tok.Str

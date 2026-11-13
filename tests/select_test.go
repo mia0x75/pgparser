@@ -19,11 +19,11 @@ func restoreNode(t *testing.T, n ast.Node) string {
 }
 
 func compactSQL(s string) string {
-	return strings.Join(strings.Fields(strings.ReplaceAll(s, "`", "")), " ")
+	return strings.Join(strings.Fields(s), " ")
 }
 
 func squashSQL(s string) string {
-	return strings.Join(strings.Fields(strings.ReplaceAll(s, "`", "")), "")
+	return strings.Join(strings.Fields(s), "")
 }
 
 // Ported from parser_ir_select_test.go: projection expressions and aliases.
@@ -43,8 +43,8 @@ func TestParseSQLSelectExpressionsAST(t *testing.T) {
 				expr  string
 				alias string
 			}{
-				{"COALESCE(email, 'unknown')", "email"},
-				{"LOWER(name)", ""},
+				{`COALESCE("email", 'unknown')`, "email"},
+				{`LOWER("name")`, ""},
 			},
 		},
 		{
@@ -54,7 +54,7 @@ func TestParseSQLSelectExpressionsAST(t *testing.T) {
 				expr  string
 				alias string
 			}{
-				{"price * quantity", "total_cost"},
+				{`"price" * "quantity"`, "total_cost"},
 			},
 		},
 		{
@@ -64,8 +64,8 @@ func TestParseSQLSelectExpressionsAST(t *testing.T) {
 				expr  string
 				alias string
 			}{
-				{"data ->> 'name'", "username"},
-				{"data -> 'meta' ->> 'id'", "user_id"},
+				{`"data" ->> 'name'`, "username"},
+				{`"data" -> 'meta' ->> 'id'`, "user_id"},
 			},
 		},
 		{
@@ -75,8 +75,8 @@ func TestParseSQLSelectExpressionsAST(t *testing.T) {
 				expr  string
 				alias string
 			}{
-				{"id", ""},
-				{"ROW_NUMBER() OVER (PARTITION BY tenant ORDER BY created_at DESC)", "seq"},
+				{`"id"`, ""},
+				{`ROW_NUMBER() OVER (PARTITION BY "tenant" ORDER BY "created_at" DESC)`, "seq"},
 			},
 		},
 	}
@@ -114,7 +114,7 @@ func TestParseSQLSelectClausesAST(t *testing.T) {
 	if st.GroupBy == nil || len(st.GroupBy.Items) != 1 {
 		t.Fatalf("group by = %#v, want 1 item", st.GroupBy)
 	}
-	if got := squashSQL(restoreNode(t, st.GroupBy.Items[0].Expr)); got != "tenant" {
+	if got := squashSQL(restoreNode(t, st.GroupBy.Items[0].Expr)); got != `"tenant"` {
 		t.Fatalf("group by = %q, want tenant", got)
 	}
 	if st.Having == nil {
@@ -184,7 +184,7 @@ func TestParseSQLSelectJoinsAST(t *testing.T) {
 	if !natural {
 		t.Fatal("expected NATURAL join")
 	}
-	for _, wantCond := range []string{"a.id = b.alpha_id", "b.id = c.beta_id", "c.id = d.gamma_id"} {
+	for _, wantCond := range []string{`"a"."id" = "b"."alpha_id"`, `"b"."id" = "c"."beta_id"`, `"c"."id" = "d"."gamma_id"`} {
 		found := false
 		for _, got := range conditions {
 			if got == squashSQL(wantCond) {
@@ -206,7 +206,7 @@ func TestParseSQLSelectCTEAndSubqueriesAST(t *testing.T) {
 	if got := st.With.CTEs[0].Name.O; got != "active_users" {
 		t.Fatalf("CTE name = %q", got)
 	}
-	if got := squashSQL(restoreNode(t, st.With.CTEs[0].Query)); !strings.Contains(got, "idFROMusers") {
+	if got := squashSQL(restoreNode(t, st.With.CTEs[0].Query)); !strings.Contains(got, `"id"FROM"users"`) {
 		t.Fatalf("CTE query = %q", got)
 	}
 	tables := collectTables(st)
@@ -293,7 +293,7 @@ func TestParseSQLSelectWildcardSchemaTable(t *testing.T) {
 	if wc == nil || wc.Schema.O != "s" || wc.Table.O != "t" {
 		t.Fatalf("wildcard = %#v, want s.t.*", wc)
 	}
-	if got := compactSQL(restoreNode(t, wc)); got != "s.t.*" {
+	if got := compactSQL(restoreNode(t, wc)); got != `"s"."t".*` {
 		t.Fatalf("restored wildcard = %q", got)
 	}
 }

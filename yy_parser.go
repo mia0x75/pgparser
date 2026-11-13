@@ -20,13 +20,7 @@ func TrimComment(txt string) string {
 // to reduce object allocations during Parse.
 type Parser struct {
 	result []ast.StmtNode
-	src    string
 	lexer  Scanner
-
-	// The following fields are used by yyParse to reduce allocation.
-	cache  []yySymType
-	yylval yySymType
-	yyVAL  yySymType
 }
 
 // New returns a Parser object.
@@ -37,16 +31,12 @@ func New() *Parser {
 		ast.NewBitLiteral == nil {
 		panic("no parser driver (forgotten import?)")
 	}
-	return &Parser{
-		cache: make([]yySymType, 200),
-	}
+	return &Parser{}
 }
 
 // Parse parses a query string to raw ast.StmtNode.
 func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, warns []error, err error) {
-	sql = preprocessSQLInput(sql)
-	parser.src = sql
-	parser.result = parser.result[:0]
+	parser.result = nil
 
 	parser.lexer.reset(sql)
 	ret := yyParse(&parser.lexer)
@@ -92,7 +82,6 @@ func (parser *Parser) ParseOneStmt(sql string) (ast.StmtNode, error) {
 	if len(stmts) != 1 {
 		return nil, ErrSyntax
 	}
-	ast.SetFlag(stmts[0])
 	return stmts[0], nil
 }
 

@@ -9,6 +9,7 @@ package parser
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -1544,12 +1545,12 @@ json_table:
 			$$ = &ast.JSONTableExpr{
 				ContextItem: exprOrNil($3),
 				PathSpec: &ast.JSONTablePathSpec{
-					String: exprStringValue($5),
+					Expr: $5,
 					Name:   $6,
 				},
-				Passing: exprsOfList($7),
+				Passing: nodesOfList($7),
 				Columns: jsonTableColumns($10),
-				OnError: jsonOnErrorName($12),
+				OnError: asJsonBehavior($12),
 			}
 		}
 	;
@@ -1592,7 +1593,7 @@ json_table_column_definition:
 				Wrapper:  jsonWrapperName($4),
 				Quotes:   jsonQuotesName($5),
 			}
-			col.OnEmpty, col.OnError = jsonBehaviorNames($6)
+			col.OnEmpty, col.OnError = splitJsonBehaviorClause($6)
 			$$ = col
 		}
 	| ColId Typename json_format_clause json_table_column_path_clause_opt
@@ -1603,11 +1604,12 @@ json_table_column_definition:
 				ColType:  "formatted",
 				Name:     $1,
 				TypeName: $2,
+				Format:   $3.(*ast.JsonFormat),
 				PathSpec: jsonTablePathSpec($4),
 				Wrapper:  jsonWrapperName($5),
 				Quotes:   jsonQuotesName($6),
 			}
-			col.OnEmpty, col.OnError = jsonBehaviorNames($7)
+			col.OnEmpty, col.OnError = splitJsonBehaviorClause($7)
 			$$ = col
 		}
 	| ColId Typename EXISTS json_table_column_path_clause_opt
@@ -1618,7 +1620,7 @@ json_table_column_definition:
 				Name:     $1,
 				TypeName: $2,
 				PathSpec: jsonTablePathSpec($4),
-				OnError:  jsonOnErrorName($5),
+				OnError:  asJsonBehavior($5),
 			}
 		}
 	| NESTED path_opt Sconst json_table_path_name_opt
@@ -1627,7 +1629,7 @@ json_table_column_definition:
 			$$ = &ast.JSONTableColumn{
 				ColType: "nested",
 				PathSpec: &ast.JSONTablePathSpec{
-					String: $3,
+					Expr: ast.NewValueExpr($3),
 					Name:   $4,
 				},
 				Columns: jsonTableColumns($7),
@@ -1639,7 +1641,7 @@ json_table_column_path_clause_opt:
 	PATH Sconst
 		{
 			$$ = &ast.JSONTablePathSpec{
-				String: $2,
+				Expr: ast.NewValueExpr($2),
 			}
 		}
 	| /* EMPTY */
@@ -5457,10 +5459,11 @@ GrantStmt:
 			$$ = &ast.GrantStmt{
 				ObjectType:  t.ObjectType,
 				Objects:     t.Objects,
+				TargetNodes: t.TargetNodes,
 				Privs:       privElems($2),
 				Users:       userSpecs($6),
 				GrantOption: $7,
-				Grantor:     roleSpecName($8),
+				Grantor:     roleSpecOrNil($8),
 			}
 		}
 	;
@@ -5472,9 +5475,11 @@ RevokeStmt:
 			$$ = &ast.RevokeStmt{
 				ObjectType: t.ObjectType,
 				Objects:    t.Objects,
+				TargetNodes: t.TargetNodes,
 				Privs:      privElems($2),
 				Users:      userSpecs($6),
 				Behavior:   ast.DropBehavior($8),
+				Grantor:    roleSpecOrNil($7),
 			}
 		}
 	| REVOKE GRANT OPTION FOR privileges ON privilege_target FROM grantee_list opt_granted_by opt_drop_behavior
@@ -5483,9 +5488,12 @@ RevokeStmt:
 			$$ = &ast.RevokeStmt{
 				ObjectType: t.ObjectType,
 				Objects:    t.Objects,
+				TargetNodes: t.TargetNodes,
 				Privs:      privElems($5),
 				Users:      userSpecs($9),
 				Behavior:   ast.DropBehavior($11),
+				GrantOption: true,
+				Grantor:    roleSpecOrNil($10),
 			}
 		}
 	;
@@ -5531,6 +5539,7 @@ privilege_target:
 			$$ = &ast.PrivilegeTarget{
 				ObjectType: ast.ObjectTypeFunction,
 				Objects:    objectWithArgsNames($2),
+				TargetNodes: $2,
 			}
 		}
 	| PROCEDURE function_with_argtypes_list
@@ -5538,6 +5547,7 @@ privilege_target:
 			$$ = &ast.PrivilegeTarget{
 				ObjectType: ast.ObjectTypeProcedure,
 				Objects:    objectWithArgsNames($2),
+				TargetNodes: $2,
 			}
 		}
 	| ROUTINE function_with_argtypes_list
@@ -5545,6 +5555,7 @@ privilege_target:
 			$$ = &ast.PrivilegeTarget{
 				ObjectType: ast.ObjectTypeRoutine,
 				Objects:    objectWithArgsNames($2),
+				TargetNodes: $2,
 			}
 		}
 	| TYPE_P any_name_list
@@ -5572,6 +5583,7 @@ privilege_target:
 		{
 			$$ = &ast.PrivilegeTarget{
 				ObjectType: ast.ObjectTypeLargeObject,
+				TargetNodes: $3,
 			}
 		}
 	| SCHEMA name_list
@@ -5687,6 +5699,9 @@ RoleSpec:
 				Roletype: int(ast.ROLESPEC_CSTRING),
 				Rolename: $1,
 			}
+			if $1 == "public" {
+				$$.(*ast.RoleSpec).Roletype = int(ast.ROLESPEC_PUBLIC)
+			}
 		}
 	| CURRENT_ROLE
 		{
@@ -5723,13 +5738,18 @@ GrantRoleStmt:
 	GRANT privilege_list TO role_list opt_granted_by
 		{
 			$$ = &ast.GrantRoleStmt{
-				Roles: roleIdentities($4),
+				Roles: grantRoleNames($2, yylex),
+				Users: $4,
+				Grantor: roleSpecOrNil($5),
 			}
 		}
 	| GRANT privilege_list TO role_list WITH grant_role_opt_list opt_granted_by
 		{
 			$$ = &ast.GrantRoleStmt{
-				Roles: roleIdentities($4),
+				Roles: grantRoleNames($2, yylex),
+				Users: $4,
+				Options: $6,
+				Grantor: roleSpecOrNil($7),
 			}
 		}
 	;
@@ -5738,13 +5758,20 @@ RevokeRoleStmt:
 	REVOKE privilege_list FROM role_list opt_granted_by opt_drop_behavior
 		{
 			$$ = &ast.RevokeRoleStmt{
-				Roles: roleIdentities($2),
+				Roles: grantRoleNames($2, yylex),
+				Users: $4,
+				Grantor: roleSpecOrNil($5),
+				Behavior: ast.DropBehavior($6),
 			}
 		}
 	| REVOKE ColId OPTION FOR privilege_list FROM role_list opt_granted_by opt_drop_behavior
 		{
 			$$ = &ast.RevokeRoleStmt{
-				Roles: roleIdentities($5),
+				Roles: grantRoleNames($5, yylex),
+				Users: $7,
+				GrantOption: $2,
+				Grantor: roleSpecOrNil($8),
+				Behavior: ast.DropBehavior($9),
 			}
 		}
 	;
@@ -7289,6 +7316,7 @@ simple_select:
 				Fields:         &ast.FieldList{Fields: $3},
 			}
 			applySelectClauses(n, $5, $6, $7, $8, $9)
+			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
 	| SELECT distinct_clause target_list into_clause from_clause where_clause group_clause having_clause window_clause
@@ -7300,6 +7328,7 @@ simple_select:
 			}
 			n.DistinctOn = byItemsFromExprs($2)
 			applySelectClauses(n, $5, $6, $7, $8, $9)
+			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
 	| select_clause UNION set_quantifier select_clause
@@ -7348,10 +7377,7 @@ opt_all_clause:
 distinct_clause:
 	DISTINCT
 		{
-			/* We use (NIL) as a placeholder to indicate that all target expressions
-			 * should be placed in the DISTINCT list during parsetree analysis.
-			 */
-			$$ = []ast.ExprNode{nil}
+			$$ = nil
 		}
 	| DISTINCT ON '(' expr_list ')'
 		{
@@ -7513,13 +7539,13 @@ into_clause:
 	;
 
 OptTempTableName:
-	TEMPORARY opt_table qualified_name  { rv := makeRangeVar($3); relationName(rv).Relpersistence = 't'; $$ = rv }
-	| TEMP opt_table qualified_name     { rv := makeRangeVar($3); relationName(rv).Relpersistence = 't'; $$ = rv }
-	| LOCAL TEMPORARY opt_table qualified_name  { rv := makeRangeVar($4); relationName(rv).Relpersistence = 't'; $$ = rv }
-	| LOCAL TEMP opt_table qualified_name  { rv := makeRangeVar($4); relationName(rv).Relpersistence = 't'; $$ = rv }
-	| GLOBAL TEMPORARY opt_table qualified_name  { rv := makeRangeVar($4); relationName(rv).Relpersistence = 't'; $$ = rv }
-	| GLOBAL TEMP opt_table qualified_name  { rv := makeRangeVar($4); relationName(rv).Relpersistence = 't'; $$ = rv }
-	| UNLOGGED opt_table qualified_name  { rv := makeRangeVar($3); relationName(rv).Relpersistence = 'u'; $$ = rv }
+	TEMPORARY opt_table qualified_name  { rv := makeRangeVar($3); rv.(*ast.RangeVar).Relpersistence = 't'; $$ = rv }
+	| TEMP opt_table qualified_name     { rv := makeRangeVar($3); rv.(*ast.RangeVar).Relpersistence = 't'; $$ = rv }
+	| LOCAL TEMPORARY opt_table qualified_name  { rv := makeRangeVar($4); rv.(*ast.RangeVar).Relpersistence = 't'; $$ = rv }
+	| LOCAL TEMP opt_table qualified_name  { rv := makeRangeVar($4); rv.(*ast.RangeVar).Relpersistence = 't'; $$ = rv }
+	| GLOBAL TEMPORARY opt_table qualified_name  { rv := makeRangeVar($4); rv.(*ast.RangeVar).Relpersistence = 't'; $$ = rv }
+	| GLOBAL TEMP opt_table qualified_name  { rv := makeRangeVar($4); rv.(*ast.RangeVar).Relpersistence = 't'; $$ = rv }
+	| UNLOGGED opt_table qualified_name  { rv := makeRangeVar($3); rv.(*ast.RangeVar).Relpersistence = 'u'; $$ = rv }
 	| TABLE qualified_name  { $$ = makeRangeVar($2) }
 	| qualified_name        { $$ = makeRangeVar($1) }
 	;
@@ -8786,6 +8812,9 @@ func_expr:
 					Args:        fn.Args,
 					Filter:      fn.Filter,
 					WithinGroup: fn.WithinGroup,
+					OrderBy: fn.OrderBy,
+					Distinct: fn.Distinct,
+					Star: fn.Star,
 				}
 			} else {
 				$$ = fn
@@ -8934,6 +8963,7 @@ func_application:
 	| func_name '(' func_arg_list opt_sort_clause ')'
 		{
 			$$ = ast.NewFuncCallExpr(funcNameString($1), exprsFromList($3)...)
+			if $4 != nil { $$.(*ast.FuncCallExpr).OrderBy = $4.(*ast.OrderByClause) }
 		}
 	| func_name '(' VARIADIC func_arg_expr opt_sort_clause ')'
 		{
@@ -8951,10 +8981,13 @@ func_application:
 	| func_name '(' DISTINCT func_arg_list opt_sort_clause ')'
 		{
 			$$ = ast.NewFuncCallExpr(funcNameString($1), exprsFromList($4)...)
+			$$.(*ast.FuncCallExpr).Distinct = true
+			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
 		}
 	| func_name '(' ALL func_arg_list opt_sort_clause ')'
 		{
 			$$ = ast.NewFuncCallExpr(funcNameString($1), exprsFromList($4)...)
+			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
 		}
 	;
 
@@ -8975,51 +9008,51 @@ func_expr_common_subexpr:
 		}
 	| CURRENT_DATE
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_DATE, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_DATE, -1, yylex)
 		}
 	| CURRENT_TIME
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME, -1, yylex)
 		}
 	| CURRENT_TIME '(' Iconst ')'
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME_N, int($3))
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME_N, $3, yylex)
 		}
 	| CURRENT_TIMESTAMP
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP, -1, yylex)
 		}
 	| CURRENT_TIMESTAMP '(' Iconst ')'
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP_N, int($3))
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP_N, $3, yylex)
 		}
 	| LOCALTIME
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIME, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIME, -1, yylex)
 		}
 	| LOCALTIME '(' Iconst ')'
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIME_N, int($3))
+			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIME_N, $3, yylex)
 		}
 	| LOCALTIMESTAMP
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP, -1, yylex)
 		}
 	| LOCALTIMESTAMP '(' Iconst ')'
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP_N, int($3))
+			$$ = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP_N, $3, yylex)
 		}
 	| CURRENT_ROLE
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_ROLE, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_ROLE, -1, yylex)
 		}
 	| CURRENT_USER
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_USER, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_USER, -1, yylex)
 		}
 	| SESSION_USER
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_SESSION_USER, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_SESSION_USER, -1, yylex)
 		}
 	| SYSTEM_USER
 		{
@@ -9031,15 +9064,15 @@ func_expr_common_subexpr:
 		}
 	| USER
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_USER, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_USER, -1, yylex)
 		}
 	| CURRENT_CATALOG
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_CATALOG, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_CATALOG, -1, yylex)
 		}
 	| CURRENT_SCHEMA
 		{
-			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_SCHEMA, -1)
+			$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_SCHEMA, -1, yylex)
 		}
 	| CAST '(' a_expr AS Typename ')'
 		{
@@ -9323,6 +9356,7 @@ func_expr_common_subexpr:
 			$$ = &ast.JsonArrayQueryConstructor{
 				Query:  $3,
 				Output: asJsonOutput($5),
+				FormatClause: asJsonFormat($4),
 				Location: -1,
 			}
 		}
@@ -9615,6 +9649,7 @@ json_value_expr:
 		{
 			$$ = &ast.JsonValueExpr{
 				RawExpr: $1,
+				FormatClause: asJsonFormat($2),
 			}
 		}
 	;
@@ -9629,10 +9664,21 @@ json_format_clause:
 		}
 	| FORMAT_LA JSON ENCODING name
 		{
-			$$ = &ast.JsonFormat{
+			f := &ast.JsonFormat{
 				FormatType: ast.JS_FORMAT_JSON,
 				Location:   -1,
 			}
+			switch strings.ToUpper($4) {
+			case "UTF8":
+				f.Encoding = ast.JS_ENC_UTF8
+			case "UTF16":
+				f.Encoding = ast.JS_ENC_UTF16
+			case "UTF32":
+				f.Encoding = ast.JS_ENC_UTF32
+			default:
+				yylex.Error("unsupported JSON encoding")
+			}
+			$$ = f
 		}
 	;
 
@@ -9644,9 +9690,13 @@ json_format_clause_opt:
 json_returning_clause_opt:
 	RETURNING Typename json_format_clause_opt
 		{
-			$$ = &ast.JsonOutput{
+			output := &ast.JsonOutput{
 				TypeName: $2,
 			}
+			if $3 != nil {
+				output.Returning = &ast.JsonReturning{FormatClause: asJsonFormat($3)}
+			}
+			$$ = output
 		}
 	| /* EMPTY */
 		{ $$ = nil }
@@ -10028,7 +10078,10 @@ AexprConst:
 		}
 	| func_name '(' func_arg_list opt_sort_clause ')' Sconst
 		{
-			$$ = ast.NewTypeCastExpr(ast.NewValueExpr($6), typeNameFromList($1))
+			tp := typeNameFromList($1)
+			if $4 != nil { yylex.Error("type modifier cannot have ORDER BY") }
+			if err := setTypeModifiers(tp, exprsFromList($3)); err != nil { yylex.Error(err.Error()) }
+			$$ = ast.NewTypeCastExpr(ast.NewValueExpr($6), tp)
 		}
 	| ConstTypename Sconst
 		{
@@ -10036,10 +10089,12 @@ AexprConst:
 		}
 	| ConstInterval Sconst opt_interval
 		{
+			setIntervalFields($1, $3)
 			$$ = ast.NewTypeCastExpr(ast.NewValueExpr($2), $1)
 		}
 	| ConstInterval '(' Iconst ')' Sconst
 		{
+			$1.PGModifiers = []string{fmt.Sprint($3)}
 			$$ = ast.NewTypeCastExpr(ast.NewValueExpr($5), $1)
 		}
 	;
@@ -10143,26 +10198,35 @@ Typename:
 	SimpleTypename opt_array_bounds
 		{
 			$$ = $1
+			$$.PGArrayBounds = arrayBounds($2)
 		}
 	| SETOF SimpleTypename opt_array_bounds
 		{
 			$$ = $2
+			$$.PGArrayBounds = arrayBounds($3)
+			$$.PGSetOf = true
 		}
 	| SimpleTypename ARRAY '[' Iconst ']'
 		{
 			$$ = $1
+			$$.PGArrayBounds = []int64{$4}
 		}
 	| SETOF SimpleTypename ARRAY '[' Iconst ']'
 		{
 			$$ = $2
+			$$.PGArrayBounds = []int64{$5}
+			$$.PGSetOf = true
 		}
 	| SimpleTypename ARRAY
 		{
 			$$ = $1
+			$$.PGArrayBounds = []int64{-1}
 		}
 	| SETOF SimpleTypename ARRAY
 		{
 			$$ = $2
+			$$.PGArrayBounds = []int64{-1}
+			$$.PGSetOf = true
 		}
 	;
 
@@ -10190,10 +10254,12 @@ SimpleTypename:
 	| ConstInterval opt_interval
 		{
 			$$ = $1
+			setIntervalFields($$, $2)
 		}
 	| ConstInterval '(' Iconst ')'
 		{
 			$$ = $1
+			$$.PGModifiers = []string{fmt.Sprint($3)}
 		}
 	| BOOLEAN_P       { $$ = newDataType("bool", -1, -1) }
 	| JSON            { $$ = newDataType("json", -1, -1) }
@@ -10204,11 +10270,14 @@ GenericType:
 		{
 			flen, dec := typeModifiers($2)
 			$$ = newDataType($1, flen, dec)
+			if err := setTypeModifiers($$, $2); err != nil { yylex.Error(err.Error()) }
 		}
 	| type_function_name '.' attr_name opt_type_modifiers
 		{
 			flen, dec := typeModifiers($4)
 			$$ = newDataType($1+"."+$3, flen, dec)
+			$$.PGName = []string{$1, $3}
+			if err := setTypeModifiers($$, $4); err != nil { yylex.Error(err.Error()) }
 		}
 	;
 
@@ -10232,16 +10301,19 @@ Numeric:
 		{
 			flen, dec := typeModifiers($2)
 			$$ = newDataType("numeric", flen, dec)
+			if err := setTypeModifiers($$, $2); err != nil { yylex.Error(err.Error()) }
 		}
 	| DEC opt_type_modifiers
 		{
 			flen, dec := typeModifiers($2)
 			$$ = newDataType("numeric", flen, dec)
+			if err := setTypeModifiers($$, $2); err != nil { yylex.Error(err.Error()) }
 		}
 	| NUMERIC opt_type_modifiers
 		{
 			flen, dec := typeModifiers($2)
 			$$ = newDataType("numeric", flen, dec)
+			if err := setTypeModifiers($$, $2); err != nil { yylex.Error(err.Error()) }
 		}
 	;
 
@@ -10370,6 +10442,7 @@ BitWithLength:
 			} else {
 				$$ = newDataType("bit", flen, -1)
 			}
+			if err := setTypeModifiers($$, $4); err != nil { yylex.Error(err.Error()) }
 		}
 	;
 
@@ -14713,7 +14786,7 @@ DefACLAction:
 				ObjectType:     ast.ObjectTypeNone,
 				Users: userSpecs($6),
 				GrantOption: $7,
-				Grantor: roleSpecName($8),
+				Grantor: roleSpecOrNil($8),
 			}
 		}
 	| REVOKE privileges ON defacl_privilege_target FROM grantee_list opt_granted_by opt_drop_behavior
@@ -14723,7 +14796,7 @@ DefACLAction:
 				Privs: privElems($2),
 				ObjectType:    ast.ObjectTypeNone,
 				Users: userSpecs($6),
-				Grantor: roleSpecName($7),
+				Grantor: roleSpecOrNil($7),
 				Behavior:   ast.DropBehavior($8),
 			}
 		}
@@ -14735,7 +14808,7 @@ DefACLAction:
 				Privs: privElems($5),
 				ObjectType:     ast.ObjectTypeNone,
 				Users: userSpecs($9),
-				Grantor: roleSpecName($10),
+				Grantor: roleSpecOrNil($10),
 				Behavior:    ast.DropBehavior($11),
 			}
 		}
@@ -16353,6 +16426,13 @@ func asJsonOutput(n ast.Node) *ast.JsonOutput {
 	return n.(*ast.JsonOutput)
 }
 
+func asJsonFormat(n ast.Node) *ast.JsonFormat {
+	if n == nil {
+		return nil
+	}
+	return n.(*ast.JsonFormat)
+}
+
 func asJsonBehavior(n ast.Node) *ast.JsonBehavior {
 	if n == nil {
 		return nil
@@ -16409,29 +16489,14 @@ func makeFuncName(parts ...string) *ast.List {
 	return &ast.List{Items: items}
 }
 
-// makeSQLValueFunction creates a SQLValueFunction node.
-func makeSQLValueFunction(op ast.SVFOp, typmod int) ast.ExprNode {
-	switch op {
-	case ast.SVFOP_CURRENT_DATE:
-		return ast.NewFuncCallExpr("current_date")
-	case ast.SVFOP_CURRENT_TIME:
-		return ast.NewFuncCallExpr("current_time")
-	case ast.SVFOP_CURRENT_TIMESTAMP:
-		return ast.NewFuncCallExpr("current_timestamp")
-	case ast.SVFOP_CURRENT_USER:
-		return ast.NewFuncCallExpr("current_user")
-	case ast.SVFOP_SESSION_USER:
-		return ast.NewFuncCallExpr("session_user")
-	case ast.SVFOP_CURRENT_CATALOG:
-		return ast.NewFuncCallExpr("current_catalog")
-	case ast.SVFOP_CURRENT_SCHEMA:
-		return ast.NewFuncCallExpr("current_schema")
-	case ast.SVFOP_LOCALTIME:
-		return ast.NewFuncCallExpr("localtime")
-	case ast.SVFOP_LOCALTIMESTAMP:
-		return ast.NewFuncCallExpr("localtimestamp")
+// makeSQLValueFunction creates a SQLValueFunction node, rejecting precision
+// values that would overflow the int32 Typmod field.
+func makeSQLValueFunction(op ast.SVFOp, typmod int64, lexer yyLexer) ast.ExprNode {
+	if typmod > math.MaxInt32 {
+		lexer.Error("time precision is out of range")
+		typmod = math.MaxInt32
 	}
-	return ast.NewFuncCallExpr("current_timestamp")
+	return &ast.SQLValueFunction{Op: op, Typmod: int32(typmod), Location: -1}
 }
 
 // makeTypeCast creates a TypeCast node.

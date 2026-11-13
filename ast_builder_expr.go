@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/mia0x75/pgparser/ast"
@@ -99,11 +98,7 @@ func whenClauses(l *ast.List) []*ast.WhenClause {
 
 // floatValueExpr returns the value expression of a floating point constant.
 func floatValueExpr(s string) ast.ExprNode {
-	f, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return ast.NewValueExpr(s)
-	}
-	return ast.NewValueExpr(f)
+	return &ast.NumericLiteral{Value: s}
 }
 
 // columnRefWithIndirection builds a column reference with an indirection list.
@@ -265,7 +260,8 @@ func groupingSetsFromList(l *ast.List) [][]ast.ExprNode {
 
 // windowFuncExpr returns the window function expression of a function call.
 func windowFuncExpr(fn *ast.FuncCallExpr, spec *ast.WindowSpec) ast.ExprNode {
-	wf := &ast.WindowFuncExpr{F: fn.FnName.O, Args: fn.Args, Star: fn.Star}
+	wf := &ast.WindowFuncExpr{F: fn.FnName.O, Args: fn.Args, Star: fn.Star,
+		Distinct: fn.Distinct, OrderBy: fn.OrderBy, Filter: fn.Filter, WithinGroup: fn.WithinGroup}
 	if spec != nil {
 		wf.Spec = *spec
 	}
@@ -287,25 +283,21 @@ func windowSpecsFromList(l *ast.List) []ast.WindowSpec {
 }
 
 // typeModifiers returns the length and the scale of a type modifier list.
-func typeModifiers(mods interface{}) (int, int) {
+func typeModifiers(mods []ast.ExprNode) (int, int) {
 	flen, dec := -1, -1
-	list, ok := mods.(*ast.List)
-	if !ok {
-		return flen, dec
-	}
-	for i, item := range list.Items {
-		ac, ok := item.(*ast.A_Const)
+	for i, item := range mods {
+		v, ok := item.(ast.ValueExpr)
 		if !ok {
 			continue
 		}
-		v, ok := ac.Val.(*ast.Integer)
+		n, ok := v.GetValue().(int64)
 		if !ok {
 			continue
 		}
 		if i == 0 {
-			flen = int(v.Ival)
+			flen = int(n)
 		} else {
-			dec = int(v.Ival)
+			dec = int(n)
 		}
 	}
 	return flen, dec

@@ -851,11 +851,15 @@ func (n *ByItem) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain("()")
 		case GroupingSetRollup:
 			ctx.WriteKeyWord("ROLLUP (")
-			restoreExprSets(ctx, n.GroupingSet.Sets)
+			if err := restoreExprSets(ctx, n.GroupingSet.Sets); err != nil {
+				return err
+			}
 			ctx.WritePlain(")")
 		case GroupingSetCube:
 			ctx.WriteKeyWord("CUBE (")
-			restoreExprSets(ctx, n.GroupingSet.Sets)
+			if err := restoreExprSets(ctx, n.GroupingSet.Sets); err != nil {
+				return err
+			}
 			ctx.WritePlain(")")
 		case GroupingSetSets:
 			ctx.WriteKeyWord("GROUPING SETS (")
@@ -1077,7 +1081,8 @@ type SelectStmt struct {
 	// only meaningful inside a stored program.
 	IntoVars []string
 	// Into is the optional SELECT ... INTO OUTFILE / DUMPFILE clause.
-	Into *SelectIntoStatement
+	Into      *SelectIntoStatement
+	IntoTable *IntoClause
 	// With is the optional common table expression clause.
 	With *WithClause
 	// IsInBraces indicates whether it's a stmt in brace.
@@ -1113,10 +1118,6 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 
 	if n.SelectStmtOpts.SQLBufferResult {
 		ctx.WriteKeyWord("SQL_BUFFER_RESULT ")
-	}
-
-	if !n.SelectStmtOpts.SQLCache {
-		ctx.WriteKeyWord("SQL_NO_CACHE ")
 	}
 
 	if n.TableHints != nil && len(n.TableHints) != 0 {
@@ -1171,6 +1172,12 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 	}
+	if n.IntoTable != nil {
+		ctx.WriteKeyWord(" INTO ")
+		if err := n.IntoTable.Restore(ctx); err != nil {
+			return err
+		}
+	}
 
 	if n.From != nil {
 		ctx.WriteKeyWord(" FROM ")
@@ -1179,9 +1186,6 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	if n.From == nil && n.Where != nil {
-		ctx.WriteKeyWord(" FROM DUAL")
-	}
 	if n.Where != nil {
 		ctx.WriteKeyWord(" WHERE ")
 		if err := n.Where.Restore(ctx); err != nil {
@@ -1280,6 +1284,20 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 	}
 
 	n = newNode.(*SelectStmt)
+	if n.IntoTable != nil {
+		node, ok := n.IntoTable.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.IntoTable = node.(*IntoClause)
+	}
+	for i, item := range n.DistinctOn {
+		node, ok := item.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.DistinctOn[i] = node.(*ByItem)
+	}
 	if n.With != nil {
 		node, ok := n.With.Accept(v)
 		if !ok {
@@ -1371,7 +1389,8 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 type ValuesStmt struct {
 	dmlNode
 
-	Rows []*RowExpr
+	Rows             []*RowExpr
+	AfterSetOperator *SetOprType
 }
 
 // Restore implements Node interface.
@@ -1381,9 +1400,16 @@ func (n *ValuesStmt) Restore(ctx *format.RestoreCtx) error {
 		if i > 0 {
 			ctx.WritePlain(", ")
 		}
-		if err := row.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while splicing ValuesStmt Row[%v]", i)
+		ctx.WritePlain("(")
+		for j, value := range row.Values {
+			if j > 0 {
+				ctx.WritePlain(", ")
+			}
+			if err := value.Restore(ctx); err != nil {
+				return err
+			}
 		}
+		ctx.WritePlain(")")
 	}
 	return nil
 }
@@ -1411,7 +1437,8 @@ func (n *ValuesStmt) Accept(v Visitor) (Node, bool) {
 type TableStmt struct {
 	dmlNode
 
-	Table *TableName
+	Table            *TableName
+	AfterSetOperator *SetOprType
 }
 
 // Restore implements Node interface.
@@ -1583,34 +1610,37 @@ func (n *SetOprSelectList) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(" ")
 	}
-
 	for i, stmt := range n.Selects {
-		switch selectStmt := stmt.(type) {
+		var op *SetOprType
+		braces := false
+		switch s := stmt.(type) {
 		case *SelectStmt:
-			if i != 0 {
-				ctx.WriteKeyWord(" " + selectStmt.AfterSetOperator.String() + " ")
-			}
-			if err := selectStmt.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore SetOprSelectList.SelectStmt")
-			}
-		case *SetOprSelectList:
-			if i != 0 {
-				ctx.WriteKeyWord(" " + selectStmt.AfterSetOperator.String() + " ")
-			}
-			ctx.WritePlain("(")
-			if err := selectStmt.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore SetOprSelectList.SetOprSelectList")
-			}
-			ctx.WritePlain(")")
+			op, braces = s.AfterSetOperator, s.IsInBraces
 		case *SetOprStmt:
-			if i != 0 && selectStmt.SelectList != nil && len(selectStmt.SelectList.Selects) > 0 {
-				if first, ok := selectStmt.SelectList.Selects[0].(*SelectStmt); ok && first.AfterSetOperator != nil {
-					ctx.WriteKeyWord(" " + first.AfterSetOperator.String() + " ")
-				}
+			op = s.AfterSetOperator
+		case *SetOprSelectList:
+			op, braces = s.AfterSetOperator, true
+		case *ValuesStmt:
+			op = s.AfterSetOperator
+		case *TableStmt:
+			op = s.AfterSetOperator
+		default:
+			return errors.Errorf("unsupported set operand %T", stmt)
+		}
+		if i > 0 {
+			if op == nil {
+				return errors.New("missing set operator")
 			}
-			if err := selectStmt.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore SetOprSelectList.SetOprStmt")
-			}
+			ctx.WriteKeyWord(" " + op.String() + " ")
+		}
+		if braces {
+			ctx.WritePlain("(")
+		}
+		if err := stmt.Restore(ctx); err != nil {
+			return err
+		}
+		if braces {
+			ctx.WritePlain(")")
 		}
 	}
 
@@ -1682,39 +1712,38 @@ type SetOprStmt struct {
 	OrderBy    *OrderByClause
 	Limit      *Limit
 	// With is the optional common table expression clause.
-	With *WithClause
+	With             *WithClause
+	AfterSetOperator *SetOprType
 }
 
 // Restore implements Node interface.
 func (n *SetOprStmt) Restore(ctx *format.RestoreCtx) error {
+	if n.IsInBraces {
+		ctx.WritePlain("(")
+	}
 	if n.With != nil {
 		if err := n.With.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore SetOprStmt.With")
 		}
 		ctx.WritePlain(" ")
 	}
-	if n.IsInBraces {
-		ctx.WritePlain("(")
-	}
 	if err := n.SelectList.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore SetOprStmt.SelectList")
 	}
-	if n.IsInBraces {
-		ctx.WritePlain(")")
-	}
-
 	if n.OrderBy != nil {
 		ctx.WritePlain(" ")
 		if err := n.OrderBy.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore SetOprStmt.OrderBy")
 		}
 	}
-
 	if n.Limit != nil {
 		ctx.WritePlain(" ")
 		if err := n.Limit.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore SetOprStmt.Limit")
 		}
+	}
+	if n.IsInBraces {
+		ctx.WritePlain(")")
 	}
 	return nil
 }
@@ -2925,21 +2954,34 @@ func (n *UpdateStmt) Accept(v Visitor) (Node, bool) {
 type Limit struct {
 	node
 
-	Count  ExprNode
-	Offset ExprNode
+	Count    ExprNode
+	Offset   ExprNode
+	WithTies bool
 }
 
 // Restore implements Node interface.
 func (n *Limit) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("LIMIT ")
+	if n.WithTies {
+		ctx.WriteKeyWord("FETCH FIRST ")
+	} else if n.Count != nil {
+		ctx.WriteKeyWord("LIMIT ")
+	}
+	if n.Count != nil {
+		if err := n.Count.Restore(ctx); err != nil {
+			return err
+		}
+	}
+	if n.WithTies {
+		ctx.WriteKeyWord(" ROWS WITH TIES")
+	}
 	if n.Offset != nil {
+		if n.Count != nil || n.WithTies {
+			ctx.WritePlain(" ")
+		}
+		ctx.WriteKeyWord("OFFSET ")
 		if err := n.Offset.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore Limit.Offset")
 		}
-		ctx.WritePlain(",")
-	}
-	if err := n.Count.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore Limit.Count")
 	}
 	return nil
 }
@@ -2950,6 +2992,7 @@ func (n *Limit) Accept(v Visitor) (Node, bool) {
 	if skipChildren {
 		return v.Leave(newNode)
 	}
+	n = newNode.(*Limit)
 	if n.Count != nil {
 		node, ok := n.Count.Accept(v)
 		if !ok {
@@ -3583,7 +3626,7 @@ func (n *FrameBound) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-func restoreExprSets(ctx *format.RestoreCtx, sets [][]ExprNode) {
+func restoreExprSets(ctx *format.RestoreCtx, sets [][]ExprNode) error {
 	for i, set := range sets {
 		if i > 0 {
 			ctx.WritePlain(", ")
@@ -3593,8 +3636,11 @@ func restoreExprSets(ctx *format.RestoreCtx, sets [][]ExprNode) {
 			if j > 0 {
 				ctx.WritePlain(", ")
 			}
-			_ = e.Restore(ctx)
+			if err := e.Restore(ctx); err != nil {
+				return err
+			}
 		}
 		ctx.WritePlain(")")
 	}
+	return nil
 }

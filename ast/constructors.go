@@ -50,7 +50,7 @@ func NewFuncCallExpr(name string, args ...ExprNode) *FuncCallExpr {
 
 // NewTypeCastExpr returns a FuncCastExpr casting expr to tp.
 func NewTypeCastExpr(expr ExprNode, tp *types.FieldType) *FuncCastExpr {
-	return &FuncCastExpr{Expr: expr, Tp: tp, FunctionType: CastBinaryOperator}
+	return &FuncCastExpr{Expr: expr, Tp: tp, FunctionType: CastFunction}
 }
 
 // NewArrayExpr returns an ArrayExpr holding the given elements.

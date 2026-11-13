@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/mia0x75/pgparser/format"
@@ -32,16 +33,18 @@ func (n *CollateExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *CollateExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*CollateExpr)
-	node, ok := n.Expr.Accept(v)
-	if !ok {
-		return n, false
+	n = node.(*CollateExpr)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(ExprNode)
 	}
-	n.Expr = node.(ExprNode)
 	return v.Leave(n)
 }
 
@@ -74,11 +77,15 @@ func (n *GroupingSet) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain("()")
 	case GroupingSetRollup:
 		ctx.WriteKeyWord("ROLLUP (")
-		restoreExprList(ctx, n.Sets[0])
+		if err := restoreExprList(ctx, n.Sets[0]); err != nil {
+			return err
+		}
 		ctx.WritePlain(")")
 	case GroupingSetCube:
 		ctx.WriteKeyWord("CUBE (")
-		restoreExprList(ctx, n.Sets[0])
+		if err := restoreExprList(ctx, n.Sets[0]); err != nil {
+			return err
+		}
 		ctx.WritePlain(")")
 	case GroupingSetSets:
 		ctx.WriteKeyWord("GROUPING SETS (")
@@ -87,7 +94,9 @@ func (n *GroupingSet) Restore(ctx *format.RestoreCtx) error {
 				ctx.WritePlain(", ")
 			}
 			ctx.WritePlain("(")
-			restoreExprList(ctx, set)
+			if err := restoreExprList(ctx, set); err != nil {
+				return err
+			}
 			ctx.WritePlain(")")
 		}
 		ctx.WritePlain(")")
@@ -97,30 +106,35 @@ func (n *GroupingSet) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *GroupingSet) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*GroupingSet)
-	for i, set := range n.Sets {
-		for j, e := range set {
-			node, ok := e.Accept(v)
-			if !ok {
-				return n, false
+	n = node.(*GroupingSet)
+	for i0 := range n.Sets {
+		for i1 := range n.Sets[i0] {
+			if n.Sets[i0][i1] != nil {
+				updated, ok := n.Sets[i0][i1].Accept(v)
+				if !ok {
+					return n, false
+				}
+				n.Sets[i0][i1] = updated.(ExprNode)
 			}
-			n.Sets[i][j] = node.(ExprNode)
 		}
 	}
 	return v.Leave(n)
 }
 
-func restoreExprList(ctx *format.RestoreCtx, exprs []ExprNode) {
+func restoreExprList(ctx *format.RestoreCtx, exprs []ExprNode) error {
 	for i, e := range exprs {
 		if i > 0 {
 			ctx.WritePlain(", ")
 		}
-		_ = e.Restore(ctx)
+		if err := e.Restore(ctx); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // XMLTableExpr is a table function of an XMLTABLE call.
@@ -140,10 +154,29 @@ type XMLTableExpr struct {
 // Restore implements Node interface.
 func (n *XMLTableExpr) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("XMLTABLE(")
+	if len(n.Namespaces) > 0 {
+		ctx.WriteKeyWord("XMLNAMESPACES(")
+		for i, namespace := range n.Namespaces {
+			if i > 0 {
+				ctx.WritePlain(", ")
+			}
+			if err := namespace.Restore(ctx); err != nil {
+				return err
+			}
+		}
+		ctx.WritePlain("), ")
+	}
 	if n.RowExpr != nil {
 		if err := n.RowExpr.Restore(ctx); err != nil {
 			return err
 		}
+	}
+	ctx.WriteKeyWord(" PASSING ")
+	if n.DocExpr == nil {
+		return fmt.Errorf("XMLTABLE has no document expression")
+	}
+	if err := n.DocExpr.Restore(ctx); err != nil {
+		return err
 	}
 	ctx.WriteKeyWord(" COLUMNS ")
 	for i, col := range n.Columns {
@@ -160,11 +193,43 @@ func (n *XMLTableExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *XMLTableExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*XMLTableExpr)
+	n = node.(*XMLTableExpr)
+	if n.RowExpr != nil {
+		updated, ok := n.RowExpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.RowExpr = updated.(ExprNode)
+	}
+	if n.DocExpr != nil {
+		updated, ok := n.DocExpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.DocExpr = updated.(ExprNode)
+	}
+	for i0 := range n.Columns {
+		if n.Columns[i0] != nil {
+			updated, ok := n.Columns[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Columns[i0] = updated.(*XMLTableColumn)
+		}
+	}
+	for i0 := range n.Namespaces {
+		if n.Namespaces[i0] != nil {
+			updated, ok := n.Namespaces[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Namespaces[i0] = updated.(*XMLTableNamespace)
+		}
+	}
 	return v.Leave(n)
 }
 
@@ -198,16 +263,45 @@ func (n *XMLTableColumn) Restore(ctx *format.RestoreCtx) error {
 	if n.ForOrdinality {
 		ctx.WriteKeyWord(" FOR ORDINALITY")
 	}
+	if n.PathExpr != nil {
+		ctx.WriteKeyWord(" PATH ")
+		if err := n.PathExpr.Restore(ctx); err != nil {
+			return err
+		}
+	}
+	if n.DefaultExpr != nil {
+		ctx.WriteKeyWord(" DEFAULT ")
+		if err := n.DefaultExpr.Restore(ctx); err != nil {
+			return err
+		}
+	}
+	if n.IsNotNull {
+		ctx.WriteKeyWord(" NOT NULL")
+	}
 	return nil
 }
 
 // Accept implements Node Accept interface.
 func (n *XMLTableColumn) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*XMLTableColumn)
+	n = node.(*XMLTableColumn)
+	if n.DefaultExpr != nil {
+		updated, ok := n.DefaultExpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.DefaultExpr = updated.(ExprNode)
+	}
+	if n.PathExpr != nil {
+		updated, ok := n.PathExpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.PathExpr = updated.(ExprNode)
+	}
 	return v.Leave(n)
 }
 
@@ -223,6 +317,9 @@ type XMLTableNamespace struct {
 
 // Restore implements Node interface.
 func (n *XMLTableNamespace) Restore(ctx *format.RestoreCtx) error {
+	if n.Name == "" {
+		ctx.WriteKeyWord("DEFAULT ")
+	}
 	if n.Expr != nil {
 		if err := n.Expr.Restore(ctx); err != nil {
 			return err
@@ -237,11 +334,18 @@ func (n *XMLTableNamespace) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *XMLTableNamespace) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*XMLTableNamespace)
+	n = node.(*XMLTableNamespace)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(ExprNode)
+	}
 	return v.Leave(n)
 }
 
@@ -254,11 +358,11 @@ type JSONTableExpr struct {
 	// PathSpec is the path specification of the JSON_TABLE call.
 	PathSpec *JSONTablePathSpec
 	// Passing holds the passing arguments of the JSON_TABLE call.
-	Passing []ExprNode
+	Passing []Node
 	// Columns are the column definitions of the table function.
 	Columns []*JSONTableColumn
 	// OnError is the error behavior of the JSON_TABLE call.
-	OnError string
+	OnError *JsonBehavior
 }
 
 // Restore implements Node interface.
@@ -270,8 +374,14 @@ func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WritePlain(", ")
-	if n.PathSpec != nil {
-		ctx.WriteString(n.PathSpec.String)
+	if n.PathSpec == nil {
+		return fmt.Errorf("JSON_TABLE has no path")
+	}
+	if err := n.PathSpec.Restore(ctx); err != nil {
+		return err
+	}
+	if len(n.Passing) > 0 {
+		return fmt.Errorf("JSON_TABLE PASSING restoration is unsupported")
 	}
 	ctx.WriteKeyWord(" COLUMNS(")
 	for i, col := range n.Columns {
@@ -283,16 +393,63 @@ func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WritePlain(")")
+	if n.OnError != nil {
+		ctx.WritePlain(" ")
+		if err := n.OnError.Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WriteKeyWord(" ON ERROR")
+	}
+	ctx.WritePlain(")")
 	return nil
 }
 
 // Accept implements Node Accept interface.
 func (n *JSONTableExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*JSONTableExpr)
+	n = node.(*JSONTableExpr)
+	if n.ContextItem != nil {
+		updated, ok := n.ContextItem.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ContextItem = updated.(ExprNode)
+	}
+	if n.PathSpec != nil {
+		updated, ok := n.PathSpec.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.PathSpec = updated.(*JSONTablePathSpec)
+	}
+	for i0 := range n.Passing {
+		if n.Passing[i0] != nil {
+			updated, ok := n.Passing[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Passing[i0] = updated.(Node)
+		}
+	}
+	for i0 := range n.Columns {
+		if n.Columns[i0] != nil {
+			updated, ok := n.Columns[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Columns[i0] = updated.(*JSONTableColumn)
+		}
+	}
+	if n.OnError != nil {
+		updated, ok := n.OnError.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnError = updated.(*JsonBehavior)
+	}
 	return v.Leave(n)
 }
 
@@ -300,15 +457,19 @@ func (n *JSONTableExpr) Accept(v Visitor) (Node, bool) {
 type JSONTablePathSpec struct {
 	node
 
-	// String is the path expression.
-	String string
+	Expr ExprNode
 	// Name is the optional path name.
 	Name string
 }
 
 // Restore implements Node interface.
 func (n *JSONTablePathSpec) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteString(n.String)
+	if n.Expr == nil {
+		return fmt.Errorf("JSON_TABLE path has no expression")
+	}
+	if err := n.Expr.Restore(ctx); err != nil {
+		return err
+	}
 	if n.Name != "" {
 		ctx.WriteKeyWord(" AS ")
 		ctx.WriteName(n.Name)
@@ -318,11 +479,18 @@ func (n *JSONTablePathSpec) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *JSONTablePathSpec) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*JSONTablePathSpec)
+	n = node.(*JSONTablePathSpec)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(ExprNode)
+	}
 	return v.Leave(n)
 }
 
@@ -336,6 +504,7 @@ type JSONTableColumn struct {
 	Name string
 	// TypeName is the column type.
 	TypeName *types.FieldType
+	Format   *JsonFormat
 	// PathSpec is the path specification of the column.
 	PathSpec *JSONTablePathSpec
 	// Wrapper is the wrapper behavior of the column.
@@ -343,32 +512,130 @@ type JSONTableColumn struct {
 	// Quotes is the quotes behavior of the column.
 	Quotes string
 	// OnEmpty is the empty behavior of the column.
-	OnEmpty string
+	OnEmpty *JsonBehavior
 	// OnError is the error behavior of the column.
-	OnError string
+	OnError *JsonBehavior
 	// Columns are the nested column definitions.
 	Columns []*JSONTableColumn
 }
 
 // Restore implements Node interface.
 func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
+	if n.ColType == "nested" {
+		ctx.WriteKeyWord("NESTED PATH ")
+		if n.PathSpec == nil {
+			return fmt.Errorf("nested JSON_TABLE column has no path")
+		}
+		if err := n.PathSpec.Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WriteKeyWord(" COLUMNS (")
+		for i, column := range n.Columns {
+			if i > 0 {
+				ctx.WritePlain(", ")
+			}
+			if err := column.Restore(ctx); err != nil {
+				return err
+			}
+		}
+		ctx.WritePlain(")")
+		return nil
+	}
 	ctx.WriteName(n.Name)
+	if n.ColType == "ordinality" {
+		ctx.WriteKeyWord(" FOR ORDINALITY")
+		return nil
+	}
+	if n.ColType == "formatted" || n.Format != nil {
+		return fmt.Errorf("JSON_TABLE FORMAT restoration is unsupported")
+	}
 	if n.TypeName != nil {
 		ctx.WritePlain(" ")
 		if err := n.TypeName.Restore(ctx); err != nil {
 			return err
 		}
 	}
+	if n.ColType == "exists" {
+		ctx.WriteKeyWord(" EXISTS")
+	}
+	if n.PathSpec != nil {
+		ctx.WriteKeyWord(" PATH ")
+		if err := n.PathSpec.Restore(ctx); err != nil {
+			return err
+		}
+	}
+	switch n.Wrapper {
+	case "conditional":
+		ctx.WriteKeyWord(" WITH CONDITIONAL WRAPPER")
+	case "unconditional":
+		ctx.WriteKeyWord(" WITH UNCONDITIONAL WRAPPER")
+	case "none":
+		ctx.WriteKeyWord(" WITHOUT WRAPPER")
+	}
+	if n.Quotes != "" {
+		ctx.WriteKeyWord(" " + n.Quotes + " QUOTES")
+	}
+	if n.OnEmpty != nil {
+		ctx.WritePlain(" ")
+		if err := n.OnEmpty.Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WriteKeyWord(" ON EMPTY")
+	}
+	if n.OnError != nil {
+		ctx.WritePlain(" ")
+		if err := n.OnError.Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WriteKeyWord(" ON ERROR")
+	}
 	return nil
 }
 
 // Accept implements Node Accept interface.
 func (n *JSONTableColumn) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*JSONTableColumn)
+	n = node.(*JSONTableColumn)
+	if n.Format != nil {
+		updated, ok := n.Format.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Format = updated.(*JsonFormat)
+	}
+	if n.PathSpec != nil {
+		updated, ok := n.PathSpec.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.PathSpec = updated.(*JSONTablePathSpec)
+	}
+	if n.OnEmpty != nil {
+		updated, ok := n.OnEmpty.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnEmpty = updated.(*JsonBehavior)
+	}
+	if n.OnError != nil {
+		updated, ok := n.OnError.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnError = updated.(*JsonBehavior)
+	}
+	for i0 := range n.Columns {
+		if n.Columns[i0] != nil {
+			updated, ok := n.Columns[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Columns[i0] = updated.(*JSONTableColumn)
+		}
+	}
 	return v.Leave(n)
 }
 
@@ -402,11 +669,20 @@ func (n *RowsFromExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *RowsFromExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*RowsFromExpr)
+	n = node.(*RowsFromExpr)
+	for i0 := range n.Functions {
+		if n.Functions[i0] != nil {
+			updated, ok := n.Functions[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Functions[i0] = updated.(*TableFunction)
+		}
+	}
 	return v.Leave(n)
 }
 
@@ -417,12 +693,13 @@ type PrivilegeTarget struct {
 	// ObjectType is the kind of the target objects.
 	ObjectType ObjectTypeType
 	// Objects are the target objects.
-	Objects []*TableName
+	Objects     []*TableName
+	TargetNodes *List
 }
 
 // Restore implements Node interface.
 func (n *PrivilegeTarget) Restore(ctx *format.RestoreCtx) error {
-	if err := writeGrantTargets(ctx, n.Objects, nil); err != nil {
+	if err := writeGrantTargets(ctx, n.Objects, nil, n.TargetNodes); err != nil {
 		return err
 	}
 	return nil
@@ -430,10 +707,26 @@ func (n *PrivilegeTarget) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *PrivilegeTarget) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	n = newNode.(*PrivilegeTarget)
+	n = node.(*PrivilegeTarget)
+	for i0 := range n.Objects {
+		if n.Objects[i0] != nil {
+			updated, ok := n.Objects[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Objects[i0] = updated.(*TableName)
+		}
+	}
+	if n.TargetNodes != nil {
+		updated, ok := n.TargetNodes.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TargetNodes = updated.(*List)
+	}
 	return v.Leave(n)
 }

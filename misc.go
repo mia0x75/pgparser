@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/mia0x75/pgparser/postgres"
@@ -50,6 +51,13 @@ func pgTypeTp(name string) byte {
 
 func newDataType(name string, flen, decimal int) *types.FieldType {
 	tp := types.NewFieldType(pgTypeTp(name))
+	tp.PGName = []string{name}
+	if flen >= 0 {
+		tp.PGModifiers = append(tp.PGModifiers, strconv.Itoa(flen))
+	}
+	if decimal >= 0 {
+		tp.PGModifiers = append(tp.PGModifiers, strconv.Itoa(decimal))
+	}
 	if flen >= 0 {
 		tp.Flen = flen
 	}

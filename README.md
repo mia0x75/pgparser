@@ -5,12 +5,14 @@
 ## 特性
 
 - 覆盖 PostgreSQL 主要语句族：`SELECT`、`INSERT`、`UPDATE`、`DELETE`、`MERGE`、DDL、权限、事务、游标、`COPY`、`EXPLAIN`、`VACUUM` 等。
-- 完整建模 `WITH`/CTE、集合运算、窗口函数、`GROUPING SETS`/`ROLLUP`/`CUBE`、`ON CONFLICT`、分区、`XMLTABLE`、`JSON_TABLE`、JSON 聚合等。
-- 保留 PostgreSQL 语义：独有的节点与字段集中在 `ast/pg_ext.go`、`ast/pg_nodes_generated.go`，不为了兼容而丢弃信息。
+- 建模 `WITH`/CTE、集合运算、窗口函数、`GROUPING SETS`/`ROLLUP`/`CUBE`、`ON CONFLICT`、分区、`XMLTABLE`、`JSON_TABLE`、JSON 聚合等。
+- PostgreSQL 特有节点与字段集中在 `ast/pg_ext.go`、`ast/pg_nodes_generated.go`；语法解析与 SQL 恢复的支持范围不同。
 - 单文件语法定义：所有产生式集中在 `parser.y`，便于对照 PostgreSQL `gram.y` 维护。
 - 无 cgo、无外部解析器运行时依赖。
 
 ## 安装
+
+要求 Go 1.27.3 或更新版本。
 
 ```bash
 go get github.com/mia0x75/pgparser
@@ -58,6 +60,8 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 
 ## 支持的 SQL
 
+以下列出语法解析范围；使用 `Restore` 时仍须检查返回错误，不能使用报错时已经写出的部分 SQL。
+
 ### 查询与 DML
 
 - `SELECT`：`DISTINCT [ON (...)]`、`FROM`/`JOIN`（含 `NATURAL`、`USING`、`LATERAL`、`TABLESAMPLE`）、`WHERE`、`GROUP BY`（含 `GROUPING SETS`/`ROLLUP`/`CUBE`）、`HAVING`、`WINDOW`、`ORDER BY`、`LIMIT`/`OFFSET`/`FETCH`、行锁。
@@ -93,13 +97,13 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 ```
 parser.y            语法定义（goyacc），单文件包含全部产生式
 parser.go           由 parser.y 生成的解析器（勿手工修改）
-lexer.go            词法分析
+lexer.go            词法分析（含参数、注释、美元引用）
 keywords.go         关键字表
 lexer_adapter.go    goyacc 词法适配
-preprocess.go       输入预处理（$/美元引用感知）
 ast_builder_*.go    语义动作使用的 AST 构造辅助
 ast/                语法树节点与 Restore/Accept
 tests/              单元测试与 PostgreSQL 回归语料
+internal/astgen/    AST visitor 代码生成工具（make generate 调用）
 ```
 
 ## 开发
@@ -109,7 +113,10 @@ tests/              单元测试与 PostgreSQL 回归语料
 解析器由 `parser.y` 通过 [golang.org/x/tools/cmd/goyacc](https://pkg.go.dev/golang.org/x/tools/cmd/goyacc) 生成：
 
 ```bash
-go run golang.org/x/tools/cmd/goyacc@v0.38.0 -o parser.go -l -p yy parser.y
+make generate
+# 等价于：
+#   go run ./internal/astgen            # 重新生成 AST visitor
+#   go run golang.org/x/tools/cmd/goyacc@v0.38.0 -o parser.go -l -p yy parser.y
 ```
 
 不要在提交中手工修改 `parser.go`。若需查看冲突，可附加 `-v y.output`（该文件已被忽略）。
@@ -118,7 +125,7 @@ go run golang.org/x/tools/cmd/goyacc@v0.38.0 -o parser.go -l -p yy parser.y
 
 ```bash
 make            # vet + test + lint
-make test       # go test -race -count=1 ./...
+make test       # go test -race -count=1 -cover ./...
 make vet        # go vet ./...
 make lint       # golangci-lint run
 ```
@@ -129,7 +136,39 @@ make lint       # golangci-lint run
 PGPARSER_TESTDATA=1 go test ./tests -run TestParseTestdataSQL -v
 ```
 
-该测试默认跳过；启用后会遍历 `tests/testdata/*.sql`，报告无法解析的语句。当前约 4 万条语句中失败约 123 条，绝大多数是 PostgreSQL 本身也会拒绝的负向用例。
+该测试默认跳过；启用后会遍历 `tests/testdata/*.sql`，报告无法解析的语句。统计与已知边界见下文。
+
+### ISSUE #1–#20 修复与接口变化
+
+本轮修复覆盖分页与集合括号、原文与精确数字、类型元数据、SELECT INTO、角色与权限、聚合/窗口属性、SQL 值函数、visitor 遍历、词法 EOF、JSON 尾随输入、解析结果独立性及无用分配/依赖。回归测试位于 `tests/audit_regression_test.go`、`ast/visitor_test.go`、`ast/pg_ext_test.go` 和 `internal/astgen/main_test.go`。
+
+- 默认恢复使用双引号标识符、`$n` 参数和 PostgreSQL 分页语法。保留 `//` 注释扩展和无值 `OPTIONS (x)`。
+- 小数、指数及超出 int64 的数字使用 `*ast.NumericLiteral` 保存数字文本；SQL 值函数使用 `*ast.SQLValueFunction`。依赖旧具体类型或输出的调用方需要适配。
+- `types.FieldType` 新增 `PGName`、`PGModifiers`、`PGArrayBounds`、`PGSetOf`、`PGInterval`；Clone 深拷贝切片，Equal 比较这些元数据。
+- CAST、`::` 和类型字面量统一恢复为 CAST，保留限定类型名、修饰符及 interval 范围；`NewTypeCastExpr` 使用 `CastFunction`，不再生成 `BINARY`。
+- 带 WITH、排序、分页或括号的 VALUES/TABLE 使用 `*ast.SetOprStmt` 包装；SELECT INTO 目标保存在 `SelectStmt.IntoTable`。
+- 角色的语义身份保存在 `RoleSpec`；`GrantStmt.Grantor` 改为 `*RoleSpec`，角色授予/撤销的 `Roles`、`Users` 改为 `*List`。函数权限目标的完整节点保存在 `TargetNodes`；未知权限名或角色授权选项会拒绝恢复。
+- `JSONTablePathSpec.String` 改为 `Expr`；JSON_TABLE 的 `Passing` 改为 `[]Node`，`OnEmpty`/`OnError` 改为 `*JsonBehavior`，FORMAT、编码和 DEFAULT 表达式保留为可遍历节点。
+- 尚未实现的 PostgreSQL 节点恢复，以及 JSON_TABLE 的 PASSING/FORMAT/DEFAULT、函数/过程/例程权限目标恢复，返回明确错误，而非静默省略内容。
+
+最新语料诊断为 **125/40644** 条失败，跳过 4620 条；基线为 123 条。新增两条均为 `INVALID_ENCODING` 负向用例被正确拒绝，其余失败集合不变。诊断包含故意非法 SQL 和依赖会话状态的语句，不是全部语料通过的门禁。
+
+### 性能验证
+
+基线与修复版在同一台 AMD Ryzen 7 5700U、linux/amd64、Go 1.27.3 上串行运行，单 CPU、每项 10 次采样，使用 benchstat 比较中位数：
+
+| Benchmark | 基线耗时 | 修复后耗时 | 基线 → 修复后分配 |
+| --- | --- | --- | --- |
+| ParserNew | 47.47µs ±64% | 139.3ns ±27% | 107776 → 160 B/op；2 → 1 allocs/op |
+| LexerOperator/8192 | 65.99ms ±80% | 37.50µs ±63% | 均为 0 B/op、0 allocs/op |
+| LexerOperator/16384 | 248.08ms ±3% | 69.95µs ±41% | 均为 0 B/op、0 allocs/op |
+| LexerOperator/32768 | 1.310s ±40% | 158.6µs ±82% | 均为 0 B/op、0 allocs/op |
+
+耗时差异的 benchstat 检验均为 p<0.001、n=10。操作符 benchmark 只测首 token，不代表整条 SQL 的解析吞吐量；环境波动较大，绝对耗时不作为性能保证。复测命令：
+
+```bash
+go test ./tests -run '^$' -bench '^Benchmark(ParserNew|LexerOperator)$' -benchmem -benchtime=100ms -count=10 -cpu=1
+```
 
 ## 许可证
 

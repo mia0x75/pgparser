@@ -5,6 +5,7 @@ import __yyfmt__ "fmt"
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -1364,6 +1365,13 @@ func asJsonOutput(n ast.Node) *ast.JsonOutput {
 	return n.(*ast.JsonOutput)
 }
 
+func asJsonFormat(n ast.Node) *ast.JsonFormat {
+	if n == nil {
+		return nil
+	}
+	return n.(*ast.JsonFormat)
+}
+
 func asJsonBehavior(n ast.Node) *ast.JsonBehavior {
 	if n == nil {
 		return nil
@@ -1420,29 +1428,14 @@ func makeFuncName(parts ...string) *ast.List {
 	return &ast.List{Items: items}
 }
 
-// makeSQLValueFunction creates a SQLValueFunction node.
-func makeSQLValueFunction(op ast.SVFOp, typmod int) ast.ExprNode {
-	switch op {
-	case ast.SVFOP_CURRENT_DATE:
-		return ast.NewFuncCallExpr("current_date")
-	case ast.SVFOP_CURRENT_TIME:
-		return ast.NewFuncCallExpr("current_time")
-	case ast.SVFOP_CURRENT_TIMESTAMP:
-		return ast.NewFuncCallExpr("current_timestamp")
-	case ast.SVFOP_CURRENT_USER:
-		return ast.NewFuncCallExpr("current_user")
-	case ast.SVFOP_SESSION_USER:
-		return ast.NewFuncCallExpr("session_user")
-	case ast.SVFOP_CURRENT_CATALOG:
-		return ast.NewFuncCallExpr("current_catalog")
-	case ast.SVFOP_CURRENT_SCHEMA:
-		return ast.NewFuncCallExpr("current_schema")
-	case ast.SVFOP_LOCALTIME:
-		return ast.NewFuncCallExpr("localtime")
-	case ast.SVFOP_LOCALTIMESTAMP:
-		return ast.NewFuncCallExpr("localtimestamp")
+// makeSQLValueFunction creates a SQLValueFunction node, rejecting precision
+// values that would overflow the int32 Typmod field.
+func makeSQLValueFunction(op ast.SVFOp, typmod int64, lexer yyLexer) ast.ExprNode {
+	if typmod > math.MaxInt32 {
+		lexer.Error("time precision is out of range")
+		typmod = math.MaxInt32
 	}
-	return ast.NewFuncCallExpr("current_timestamp")
+	return &ast.SQLValueFunction{Op: op, Typmod: int32(typmod), Location: -1}
 }
 
 // makeTypeCast creates a TypeCast node.
@@ -19009,12 +19002,12 @@ yydefault:
 			yyVAL.node = &ast.JSONTableExpr{
 				ContextItem: exprOrNil(yyDollar[3].node),
 				PathSpec: &ast.JSONTablePathSpec{
-					String: exprStringValue(yyDollar[5].expr),
-					Name:   yyDollar[6].str,
+					Expr: yyDollar[5].expr,
+					Name: yyDollar[6].str,
 				},
-				Passing: exprsOfList(yyDollar[7].list),
+				Passing: nodesOfList(yyDollar[7].list),
 				Columns: jsonTableColumns(yyDollar[10].list),
-				OnError: jsonOnErrorName(yyDollar[12].node),
+				OnError: asJsonBehavior(yyDollar[12].node),
 			}
 		}
 	case 191:
@@ -19056,7 +19049,7 @@ yydefault:
 				Wrapper:  jsonWrapperName(yyDollar[4].ival),
 				Quotes:   jsonQuotesName(yyDollar[5].ival),
 			}
-			col.OnEmpty, col.OnError = jsonBehaviorNames(yyDollar[6].node)
+			col.OnEmpty, col.OnError = splitJsonBehaviorClause(yyDollar[6].node)
 			yyVAL.node = col
 		}
 	case 197:
@@ -19066,11 +19059,12 @@ yydefault:
 				ColType:  "formatted",
 				Name:     yyDollar[1].str,
 				TypeName: yyDollar[2].tp,
+				Format:   yyDollar[3].node.(*ast.JsonFormat),
 				PathSpec: jsonTablePathSpec(yyDollar[4].node),
 				Wrapper:  jsonWrapperName(yyDollar[5].ival),
 				Quotes:   jsonQuotesName(yyDollar[6].ival),
 			}
-			col.OnEmpty, col.OnError = jsonBehaviorNames(yyDollar[7].node)
+			col.OnEmpty, col.OnError = splitJsonBehaviorClause(yyDollar[7].node)
 			yyVAL.node = col
 		}
 	case 198:
@@ -19081,7 +19075,7 @@ yydefault:
 				Name:     yyDollar[1].str,
 				TypeName: yyDollar[2].tp,
 				PathSpec: jsonTablePathSpec(yyDollar[4].node),
-				OnError:  jsonOnErrorName(yyDollar[5].node),
+				OnError:  asJsonBehavior(yyDollar[5].node),
 			}
 		}
 	case 199:
@@ -19090,8 +19084,8 @@ yydefault:
 			yyVAL.node = &ast.JSONTableColumn{
 				ColType: "nested",
 				PathSpec: &ast.JSONTablePathSpec{
-					String: yyDollar[3].str,
-					Name:   yyDollar[4].str,
+					Expr: ast.NewValueExpr(yyDollar[3].str),
+					Name: yyDollar[4].str,
 				},
 				Columns: jsonTableColumns(yyDollar[7].list),
 			}
@@ -19100,7 +19094,7 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.node = &ast.JSONTablePathSpec{
-				String: yyDollar[2].str,
+				Expr: ast.NewValueExpr(yyDollar[2].str),
 			}
 		}
 	case 201:
@@ -23573,10 +23567,11 @@ yydefault:
 			yyVAL.node = &ast.GrantStmt{
 				ObjectType:  t.ObjectType,
 				Objects:     t.Objects,
+				TargetNodes: t.TargetNodes,
 				Privs:       privElems(yyDollar[2].list),
 				Users:       userSpecs(yyDollar[6].list),
 				GrantOption: yyDollar[7].boolean,
-				Grantor:     roleSpecName(yyDollar[8].node),
+				Grantor:     roleSpecOrNil(yyDollar[8].node),
 			}
 		}
 	case 793:
@@ -23584,11 +23579,13 @@ yydefault:
 		{
 			t := yyDollar[4].node.(*ast.PrivilegeTarget)
 			yyVAL.node = &ast.RevokeStmt{
-				ObjectType: t.ObjectType,
-				Objects:    t.Objects,
-				Privs:      privElems(yyDollar[2].list),
-				Users:      userSpecs(yyDollar[6].list),
-				Behavior:   ast.DropBehavior(yyDollar[8].ival),
+				ObjectType:  t.ObjectType,
+				Objects:     t.Objects,
+				TargetNodes: t.TargetNodes,
+				Privs:       privElems(yyDollar[2].list),
+				Users:       userSpecs(yyDollar[6].list),
+				Behavior:    ast.DropBehavior(yyDollar[8].ival),
+				Grantor:     roleSpecOrNil(yyDollar[7].node),
 			}
 		}
 	case 794:
@@ -23596,11 +23593,14 @@ yydefault:
 		{
 			t := yyDollar[7].node.(*ast.PrivilegeTarget)
 			yyVAL.node = &ast.RevokeStmt{
-				ObjectType: t.ObjectType,
-				Objects:    t.Objects,
-				Privs:      privElems(yyDollar[5].list),
-				Users:      userSpecs(yyDollar[9].list),
-				Behavior:   ast.DropBehavior(yyDollar[11].ival),
+				ObjectType:  t.ObjectType,
+				Objects:     t.Objects,
+				TargetNodes: t.TargetNodes,
+				Privs:       privElems(yyDollar[5].list),
+				Users:       userSpecs(yyDollar[9].list),
+				Behavior:    ast.DropBehavior(yyDollar[11].ival),
+				GrantOption: true,
+				Grantor:     roleSpecOrNil(yyDollar[10].node),
 			}
 		}
 	case 795:
@@ -23647,24 +23647,27 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.node = &ast.PrivilegeTarget{
-				ObjectType: ast.ObjectTypeFunction,
-				Objects:    objectWithArgsNames(yyDollar[2].list),
+				ObjectType:  ast.ObjectTypeFunction,
+				Objects:     objectWithArgsNames(yyDollar[2].list),
+				TargetNodes: yyDollar[2].list,
 			}
 		}
 	case 801:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.node = &ast.PrivilegeTarget{
-				ObjectType: ast.ObjectTypeProcedure,
-				Objects:    objectWithArgsNames(yyDollar[2].list),
+				ObjectType:  ast.ObjectTypeProcedure,
+				Objects:     objectWithArgsNames(yyDollar[2].list),
+				TargetNodes: yyDollar[2].list,
 			}
 		}
 	case 802:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.node = &ast.PrivilegeTarget{
-				ObjectType: ast.ObjectTypeRoutine,
-				Objects:    objectWithArgsNames(yyDollar[2].list),
+				ObjectType:  ast.ObjectTypeRoutine,
+				Objects:     objectWithArgsNames(yyDollar[2].list),
+				TargetNodes: yyDollar[2].list,
 			}
 		}
 	case 803:
@@ -23695,7 +23698,8 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			yyVAL.node = &ast.PrivilegeTarget{
-				ObjectType: ast.ObjectTypeLargeObject,
+				ObjectType:  ast.ObjectTypeLargeObject,
+				TargetNodes: yyDollar[3].list,
 			}
 		}
 	case 807:
@@ -23851,6 +23855,9 @@ yydefault:
 				Roletype: int(ast.ROLESPEC_CSTRING),
 				Rolename: yyDollar[1].str,
 			}
+			if yyDollar[1].str == "public" {
+				yyVAL.node.(*ast.RoleSpec).Roletype = int(ast.ROLESPEC_PUBLIC)
+			}
 		}
 	case 832:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -23887,28 +23894,40 @@ yydefault:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
 			yyVAL.node = &ast.GrantRoleStmt{
-				Roles: roleIdentities(yyDollar[4].list),
+				Roles:   grantRoleNames(yyDollar[2].list, yylex),
+				Users:   yyDollar[4].list,
+				Grantor: roleSpecOrNil(yyDollar[5].node),
 			}
 		}
 	case 838:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		{
 			yyVAL.node = &ast.GrantRoleStmt{
-				Roles: roleIdentities(yyDollar[4].list),
+				Roles:   grantRoleNames(yyDollar[2].list, yylex),
+				Users:   yyDollar[4].list,
+				Options: yyDollar[6].list,
+				Grantor: roleSpecOrNil(yyDollar[7].node),
 			}
 		}
 	case 839:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.RevokeRoleStmt{
-				Roles: roleIdentities(yyDollar[2].list),
+				Roles:    grantRoleNames(yyDollar[2].list, yylex),
+				Users:    yyDollar[4].list,
+				Grantor:  roleSpecOrNil(yyDollar[5].node),
+				Behavior: ast.DropBehavior(yyDollar[6].ival),
 			}
 		}
 	case 840:
 		yyDollar = yyS[yypt-9 : yypt+1]
 		{
 			yyVAL.node = &ast.RevokeRoleStmt{
-				Roles: roleIdentities(yyDollar[5].list),
+				Roles:       grantRoleNames(yyDollar[5].list, yylex),
+				Users:       yyDollar[7].list,
+				GrantOption: yyDollar[2].str,
+				Grantor:     roleSpecOrNil(yyDollar[8].node),
+				Behavior:    ast.DropBehavior(yyDollar[9].ival),
 			}
 		}
 	case 841:
@@ -25505,6 +25524,9 @@ yydefault:
 				Fields:         &ast.FieldList{Fields: yyDollar[3].fields},
 			}
 			applySelectClauses(n, yyDollar[5].froms, yyDollar[6].expr, yyDollar[7].grpclause, yyDollar[8].expr, yyDollar[9].list)
+			if yyDollar[4].node != nil {
+				n.IntoTable = yyDollar[4].node.(*ast.IntoClause)
+			}
 			yyVAL.node = n
 		}
 	case 1093:
@@ -25517,6 +25539,9 @@ yydefault:
 			}
 			n.DistinctOn = byItemsFromExprs(yyDollar[2].exprs)
 			applySelectClauses(n, yyDollar[5].froms, yyDollar[6].expr, yyDollar[7].grpclause, yyDollar[8].expr, yyDollar[9].list)
+			if yyDollar[4].node != nil {
+				n.IntoTable = yyDollar[4].node.(*ast.IntoClause)
+			}
 			yyVAL.node = n
 		}
 	case 1094:
@@ -25571,10 +25596,7 @@ yydefault:
 	case 1103:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			/* We use (NIL) as a placeholder to indicate that all target expressions
-			 * should be placed in the DISTINCT list during parsetree analysis.
-			 */
-			yyVAL.exprs = []ast.ExprNode{nil}
+			yyVAL.exprs = nil
 		}
 	case 1104:
 		yyDollar = yyS[yypt-5 : yypt+1]
@@ -25766,49 +25788,49 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			rv := makeRangeVar(yyDollar[3].list)
-			relationName(rv).Relpersistence = 't'
+			rv.(*ast.RangeVar).Relpersistence = 't'
 			yyVAL.node = rv
 		}
 	case 1131:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			rv := makeRangeVar(yyDollar[3].list)
-			relationName(rv).Relpersistence = 't'
+			rv.(*ast.RangeVar).Relpersistence = 't'
 			yyVAL.node = rv
 		}
 	case 1132:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			rv := makeRangeVar(yyDollar[4].list)
-			relationName(rv).Relpersistence = 't'
+			rv.(*ast.RangeVar).Relpersistence = 't'
 			yyVAL.node = rv
 		}
 	case 1133:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			rv := makeRangeVar(yyDollar[4].list)
-			relationName(rv).Relpersistence = 't'
+			rv.(*ast.RangeVar).Relpersistence = 't'
 			yyVAL.node = rv
 		}
 	case 1134:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			rv := makeRangeVar(yyDollar[4].list)
-			relationName(rv).Relpersistence = 't'
+			rv.(*ast.RangeVar).Relpersistence = 't'
 			yyVAL.node = rv
 		}
 	case 1135:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			rv := makeRangeVar(yyDollar[4].list)
-			relationName(rv).Relpersistence = 't'
+			rv.(*ast.RangeVar).Relpersistence = 't'
 			yyVAL.node = rv
 		}
 	case 1136:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			rv := makeRangeVar(yyDollar[3].list)
-			relationName(rv).Relpersistence = 'u'
+			rv.(*ast.RangeVar).Relpersistence = 'u'
 			yyVAL.node = rv
 		}
 	case 1137:
@@ -27321,6 +27343,9 @@ yydefault:
 					Args:        fn.Args,
 					Filter:      fn.Filter,
 					WithinGroup: fn.WithinGroup,
+					OrderBy:     fn.OrderBy,
+					Distinct:    fn.Distinct,
+					Star:        fn.Star,
 				}
 			} else {
 				yyVAL.expr = fn
@@ -27543,6 +27568,9 @@ yydefault:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
 			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), exprsFromList(yyDollar[3].list)...)
+			if yyDollar[4].node != nil {
+				yyVAL.expr.(*ast.FuncCallExpr).OrderBy = yyDollar[4].node.(*ast.OrderByClause)
+			}
 		}
 	case 1447:
 		yyDollar = yyS[yypt-6 : yypt+1]
@@ -27564,11 +27592,18 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), exprsFromList(yyDollar[4].list)...)
+			yyVAL.expr.(*ast.FuncCallExpr).Distinct = true
+			if yyDollar[5].node != nil {
+				yyVAL.expr.(*ast.FuncCallExpr).OrderBy = yyDollar[5].node.(*ast.OrderByClause)
+			}
 		}
 	case 1451:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), exprsFromList(yyDollar[4].list)...)
+			if yyDollar[5].node != nil {
+				yyVAL.expr.(*ast.FuncCallExpr).OrderBy = yyDollar[5].node.(*ast.OrderByClause)
+			}
 		}
 	case 1452:
 		yyDollar = yyS[yypt-5 : yypt+1]
@@ -27583,62 +27618,62 @@ yydefault:
 	case 1453:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_DATE, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_DATE, -1, yylex)
 		}
 	case 1454:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME, -1, yylex)
 		}
 	case 1455:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME_N, int(yyDollar[3].ival))
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIME_N, yyDollar[3].ival, yylex)
 		}
 	case 1456:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP, -1, yylex)
 		}
 	case 1457:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP_N, int(yyDollar[3].ival))
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_TIMESTAMP_N, yyDollar[3].ival, yylex)
 		}
 	case 1458:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIME, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIME, -1, yylex)
 		}
 	case 1459:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIME_N, int(yyDollar[3].ival))
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIME_N, yyDollar[3].ival, yylex)
 		}
 	case 1460:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP, -1, yylex)
 		}
 	case 1461:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP_N, int(yyDollar[3].ival))
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_LOCALTIMESTAMP_N, yyDollar[3].ival, yylex)
 		}
 	case 1462:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_ROLE, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_ROLE, -1, yylex)
 		}
 	case 1463:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_USER, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_USER, -1, yylex)
 		}
 	case 1464:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_SESSION_USER, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_SESSION_USER, -1, yylex)
 		}
 	case 1465:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -27652,17 +27687,17 @@ yydefault:
 	case 1466:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_USER, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_USER, -1, yylex)
 		}
 	case 1467:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_CATALOG, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_CATALOG, -1, yylex)
 		}
 	case 1468:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_SCHEMA, -1)
+			yyVAL.expr = makeSQLValueFunction(ast.SVFOP_CURRENT_SCHEMA, -1, yylex)
 		}
 	case 1469:
 		yyDollar = yyS[yypt-6 : yypt+1]
@@ -27978,9 +28013,10 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.expr = &ast.JsonArrayQueryConstructor{
-				Query:    yyDollar[3].node,
-				Output:   asJsonOutput(yyDollar[5].node),
-				Location: -1,
+				Query:        yyDollar[3].node,
+				Output:       asJsonOutput(yyDollar[5].node),
+				FormatClause: asJsonFormat(yyDollar[4].node),
+				Location:     -1,
 			}
 		}
 	case 1506:
@@ -28331,7 +28367,8 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.node = &ast.JsonValueExpr{
-				RawExpr: yyDollar[1].expr,
+				RawExpr:      yyDollar[1].expr,
+				FormatClause: asJsonFormat(yyDollar[2].node),
 			}
 		}
 	case 1566:
@@ -28345,10 +28382,21 @@ yydefault:
 	case 1567:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.node = &ast.JsonFormat{
+			f := &ast.JsonFormat{
 				FormatType: ast.JS_FORMAT_JSON,
 				Location:   -1,
 			}
+			switch strings.ToUpper(yyDollar[4].str) {
+			case "UTF8":
+				f.Encoding = ast.JS_ENC_UTF8
+			case "UTF16":
+				f.Encoding = ast.JS_ENC_UTF16
+			case "UTF32":
+				f.Encoding = ast.JS_ENC_UTF32
+			default:
+				yylex.Error("unsupported JSON encoding")
+			}
+			yyVAL.node = f
 		}
 	case 1568:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -28363,9 +28411,13 @@ yydefault:
 	case 1570:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.node = &ast.JsonOutput{
+			output := &ast.JsonOutput{
 				TypeName: yyDollar[2].tp,
 			}
+			if yyDollar[3].node != nil {
+				output.Returning = &ast.JsonReturning{FormatClause: asJsonFormat(yyDollar[3].node)}
+			}
+			yyVAL.node = output
 		}
 	case 1571:
 		yyDollar = yyS[yypt-0 : yypt+1]
@@ -28890,7 +28942,14 @@ yydefault:
 	case 1665:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.expr = ast.NewTypeCastExpr(ast.NewValueExpr(yyDollar[6].str), typeNameFromList(yyDollar[1].list))
+			tp := typeNameFromList(yyDollar[1].list)
+			if yyDollar[4].node != nil {
+				yylex.Error("type modifier cannot have ORDER BY")
+			}
+			if err := setTypeModifiers(tp, exprsFromList(yyDollar[3].list)); err != nil {
+				yylex.Error(err.Error())
+			}
+			yyVAL.expr = ast.NewTypeCastExpr(ast.NewValueExpr(yyDollar[6].str), tp)
 		}
 	case 1666:
 		yyDollar = yyS[yypt-2 : yypt+1]
@@ -28900,11 +28959,13 @@ yydefault:
 	case 1667:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
+			setIntervalFields(yyDollar[1].tp, yyDollar[3].list)
 			yyVAL.expr = ast.NewTypeCastExpr(ast.NewValueExpr(yyDollar[2].str), yyDollar[1].tp)
 		}
 	case 1668:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
+			yyDollar[1].tp.PGModifiers = []string{fmt.Sprint(yyDollar[3].ival)}
 			yyVAL.expr = ast.NewTypeCastExpr(ast.NewValueExpr(yyDollar[5].str), yyDollar[1].tp)
 		}
 	case 1669:
@@ -29029,31 +29090,40 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[1].tp
+			yyVAL.tp.PGArrayBounds = arrayBounds(yyDollar[2].list)
 		}
 	case 1693:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[2].tp
+			yyVAL.tp.PGArrayBounds = arrayBounds(yyDollar[3].list)
+			yyVAL.tp.PGSetOf = true
 		}
 	case 1694:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[1].tp
+			yyVAL.tp.PGArrayBounds = []int64{yyDollar[4].ival}
 		}
 	case 1695:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[2].tp
+			yyVAL.tp.PGArrayBounds = []int64{yyDollar[5].ival}
+			yyVAL.tp.PGSetOf = true
 		}
 	case 1696:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[1].tp
+			yyVAL.tp.PGArrayBounds = []int64{-1}
 		}
 	case 1697:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[2].tp
+			yyVAL.tp.PGArrayBounds = []int64{-1}
+			yyVAL.tp.PGSetOf = true
 		}
 	case 1698:
 		yyDollar = yyS[yypt-3 : yypt+1]
@@ -29099,11 +29169,13 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[1].tp
+			setIntervalFields(yyVAL.tp, yyDollar[2].list)
 		}
 	case 1707:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			yyVAL.tp = yyDollar[1].tp
+			yyVAL.tp.PGModifiers = []string{fmt.Sprint(yyDollar[3].ival)}
 		}
 	case 1708:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -29120,12 +29192,19 @@ yydefault:
 		{
 			flen, dec := typeModifiers(yyDollar[2].exprs)
 			yyVAL.tp = newDataType(yyDollar[1].str, flen, dec)
+			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
+				yylex.Error(err.Error())
+			}
 		}
 	case 1711:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			flen, dec := typeModifiers(yyDollar[4].exprs)
 			yyVAL.tp = newDataType(yyDollar[1].str+"."+yyDollar[3].str, flen, dec)
+			yyVAL.tp.PGName = []string{yyDollar[1].str, yyDollar[3].str}
+			if err := setTypeModifiers(yyVAL.tp, yyDollar[4].exprs); err != nil {
+				yylex.Error(err.Error())
+			}
 		}
 	case 1712:
 		yyDollar = yyS[yypt-3 : yypt+1]
@@ -29177,18 +29256,27 @@ yydefault:
 		{
 			flen, dec := typeModifiers(yyDollar[2].exprs)
 			yyVAL.tp = newDataType("numeric", flen, dec)
+			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
+				yylex.Error(err.Error())
+			}
 		}
 	case 1722:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			flen, dec := typeModifiers(yyDollar[2].exprs)
 			yyVAL.tp = newDataType("numeric", flen, dec)
+			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
+				yylex.Error(err.Error())
+			}
 		}
 	case 1723:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			flen, dec := typeModifiers(yyDollar[2].exprs)
 			yyVAL.tp = newDataType("numeric", flen, dec)
+			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
+				yylex.Error(err.Error())
+			}
 		}
 	case 1724:
 		yyDollar = yyS[yypt-3 : yypt+1]
@@ -29332,6 +29420,9 @@ yydefault:
 				yyVAL.tp = newDataType("varbit", flen, -1)
 			} else {
 				yyVAL.tp = newDataType("bit", flen, -1)
+			}
+			if err := setTypeModifiers(yyVAL.tp, yyDollar[4].exprs); err != nil {
+				yylex.Error(err.Error())
 			}
 		}
 	case 1743:
@@ -33903,7 +33994,7 @@ yydefault:
 				ObjectType:  ast.ObjectTypeNone,
 				Users:       userSpecs(yyDollar[6].list),
 				GrantOption: yyDollar[7].boolean,
-				Grantor:     roleSpecName(yyDollar[8].node),
+				Grantor:     roleSpecOrNil(yyDollar[8].node),
 			}
 		}
 	case 2410:
@@ -33914,7 +34005,7 @@ yydefault:
 				Privs:      privElems(yyDollar[2].list),
 				ObjectType: ast.ObjectTypeNone,
 				Users:      userSpecs(yyDollar[6].list),
-				Grantor:    roleSpecName(yyDollar[7].node),
+				Grantor:    roleSpecOrNil(yyDollar[7].node),
 				Behavior:   ast.DropBehavior(yyDollar[8].ival),
 			}
 		}
@@ -33927,7 +34018,7 @@ yydefault:
 				Privs:       privElems(yyDollar[5].list),
 				ObjectType:  ast.ObjectTypeNone,
 				Users:       userSpecs(yyDollar[9].list),
-				Grantor:     roleSpecName(yyDollar[10].node),
+				Grantor:     roleSpecOrNil(yyDollar[10].node),
 				Behavior:    ast.DropBehavior(yyDollar[11].ival),
 			}
 		}

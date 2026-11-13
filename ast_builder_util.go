@@ -192,8 +192,9 @@ func relationName(n ast.Node) *ast.TableName {
 		}
 	case *ast.RangeVar:
 		return &ast.TableName{
-			Schema: model.NewCIStr(v.Schemaname),
-			Name:   model.NewCIStr(v.Relname),
+			Schema:         model.NewCIStr(v.Schemaname),
+			Name:           model.NewCIStr(v.Relname),
+			Relpersistence: v.Relpersistence,
 		}
 	}
 	return nil
@@ -225,6 +226,7 @@ func userSpecs(l *ast.List) []*ast.UserSpec {
 			result = append(result, &ast.UserSpec{
 				User:   &auth.UserIdentity{Username: v.Rolename},
 				IsRole: true,
+				Role:   v,
 			})
 		case *ast.String:
 			result = append(result, &ast.UserSpec{
@@ -236,10 +238,26 @@ func userSpecs(l *ast.List) []*ast.UserSpec {
 	return result
 }
 
-// privElems returns the privilege elements of a privilege list.
-func privElems(l *ast.List) []*ast.PrivElem {
+// Role membership uses privilege_list grammar, but the names are identifiers.
+func grantRoleNames(l *ast.List, lexer yyLexer) *ast.List {
 	if l == nil {
 		return nil
+	}
+	for i, item := range l.Items {
+		priv, ok := item.(*ast.AccessPriv)
+		if !ok || priv.Cols != nil {
+			lexer.Error("invalid role name list")
+			return nil
+		}
+		l.Items[i] = &ast.RoleSpec{Roletype: int(ast.ROLESPEC_CSTRING), Rolename: priv.PrivName}
+	}
+	return l
+}
+
+// PostgreSQL's grammar uses nil or an unnamed privilege for ALL.
+func privElems(l *ast.List) []*ast.PrivElem {
+	if l == nil {
+		return []*ast.PrivElem{{Priv: postgres.AllPriv, Name: "all"}}
 	}
 	var result []*ast.PrivElem
 	for _, item := range l.Items {
@@ -247,7 +265,11 @@ func privElems(l *ast.List) []*ast.PrivElem {
 		if !ok {
 			continue
 		}
-		elem := &ast.PrivElem{Priv: privilegeType(priv.PrivName)}
+		name := priv.PrivName
+		if name == "" {
+			name = "all"
+		}
+		elem := &ast.PrivElem{Priv: privilegeType(name), Name: name}
 		if priv.Cols != nil {
 			elem.Cols = columnNamesFromList(priv.Cols)
 		}
@@ -610,7 +632,9 @@ func typeNameFromList(l *ast.List) *types.FieldType {
 			parts = append(parts, s.Str)
 		}
 	}
-	return newDataType(strings.Join(parts, "."), -1, -1)
+	tp := newDataType(strings.Join(parts, "."), -1, -1)
+	tp.PGName = parts
+	return tp
 }
 
 // aliasName returns the name of an alias.
@@ -921,6 +945,8 @@ func createUserStmt(role bool, name string, options *ast.List) ast.Node {
 	return &ast.CreateUserStmt{
 		IsCreateRole: role,
 		Specs:        []*ast.UserSpec{spec},
+		RoleOptions:  options,
+		Role:         &ast.RoleSpec{Roletype: int(ast.ROLESPEC_CSTRING), Rolename: name},
 	}
 }
 
@@ -928,8 +954,10 @@ func createUserStmt(role bool, name string, options *ast.List) ast.Node {
 func alterUserStmt(role bool, spec ast.Node, options *ast.List) ast.Node {
 	stmt := &ast.AlterUserStmt{
 		IsAlterRole: role,
+		RoleOptions: options,
 	}
 	if s, ok := spec.(*ast.RoleSpec); ok {
+		stmt.Role = s
 		stmt.Specs = []*ast.UserSpec{{
 			User:   &auth.UserIdentity{Username: s.Rolename},
 			IsRole: role,
@@ -995,6 +1023,7 @@ func defElemString(def *ast.DefElem) string {
 
 // inBraces marks a select statement as written in braces.
 func inBraces(n ast.Node) ast.Node {
+	n = selectClauseNode(n)
 	switch v := n.(type) {
 	case *ast.SelectStmt:
 		v.IsInBraces = true
@@ -1674,9 +1703,7 @@ func applyXMLTableColumnOptions(col *ast.XMLTableColumn, l *ast.List) {
 		case "__pg__is_not_null":
 			if expr, ok := def.Arg.(ast.ExprNode); ok {
 				if value, ok := expr.(ast.ValueExpr); ok {
-					if b, ok := value.GetValue().(bool); ok {
-						col.IsNotNull = b
-					}
+					col.IsNotNull = value.GetValue() == int64(1) || value.GetValue() == true
 				}
 			}
 		}
@@ -1735,73 +1762,11 @@ func jsonQuotesName(value int64) string {
 	return ""
 }
 
-// jsonBehaviorNames returns the empty and error behavior names of a JSON_TABLE column.
-func jsonBehaviorNames(n ast.Node) (string, string) {
-	if n == nil {
-		return "", ""
-	}
-	list, ok := n.(*ast.List)
-	if !ok || len(list.Items) != 2 {
-		return "", ""
-	}
-	return jsonBehaviorName(list.Items[0]), jsonBehaviorName(list.Items[1])
-}
-
-// jsonOnErrorName returns the error behavior name of a JSON_TABLE call.
-func jsonOnErrorName(n ast.Node) string {
-	return jsonBehaviorName(n)
-}
-
-// jsonBehaviorName returns the name of a JSON behavior clause.
-func jsonBehaviorName(n ast.Node) string {
-	if n == nil {
-		return ""
-	}
-	behavior, ok := n.(*ast.JsonBehavior)
-	if !ok {
-		return ""
-	}
-	switch behavior.Btype {
-	case ast.JSON_BEHAVIOR_ERROR:
-		return "error"
-	case ast.JSON_BEHAVIOR_NULL:
-		return "null"
-	case ast.JSON_BEHAVIOR_DEFAULT:
-		return "default"
-	}
-	return ""
-}
-
-// exprsOfList returns the expressions of an expression list.
-func exprsOfList(l *ast.List) []ast.ExprNode {
+func nodesOfList(l *ast.List) []ast.Node {
 	if l == nil {
 		return nil
 	}
-	var result []ast.ExprNode
-	for _, item := range l.Items {
-		if expr, ok := item.(ast.ExprNode); ok {
-			result = append(result, expr)
-		}
-	}
-	return result
-}
-
-// exprStringValue returns the string value of an expression.
-func exprStringValue(e ast.ExprNode) string {
-	if e == nil {
-		return ""
-	}
-	value, ok := e.(ast.ValueExpr)
-	if !ok {
-		return ""
-	}
-	switch v := value.GetValue().(type) {
-	case string:
-		return v
-	case []byte:
-		return string(v)
-	}
-	return ""
+	return l.Items
 }
 
 // rowsFromFunctions returns the functions of a ROWS FROM call.

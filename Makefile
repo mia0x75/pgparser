@@ -5,6 +5,7 @@ GOYACC ?= go run golang.org/x/tools/cmd/goyacc@v0.38.0
 all: vet test lint
 
 generate:
+	go run ./internal/astgen
 	$(GOYACC) -o parser.go -l -p yy parser.y
 
 test:

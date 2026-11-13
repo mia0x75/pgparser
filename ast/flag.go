@@ -50,6 +50,8 @@ func (f *flagSetter) Leave(in Node) (Node, bool) {
 		x.SetFlag(x.Sel.GetFlag())
 	case *FuncCallExpr:
 		f.funcCall(x)
+	case *SQLValueFunction:
+		x.SetFlag(FlagHasFunc)
 	case *FuncCastExpr:
 		x.SetFlag(FlagHasFunc | x.Expr.GetFlag())
 	case *IsNullExpr:
@@ -140,7 +142,7 @@ func (f *flagSetter) funcCall(x *FuncCallExpr) {
 	for _, val := range x.Args {
 		flag |= val.GetFlag()
 	}
-	x.SetFlag(flag)
+	x.SetFlag(flag | functionOptionFlags(x.Filter, x.OrderBy, x.WithinGroup))
 }
 
 func (f *flagSetter) aggregateFunc(x *AggregateFuncExpr) {
@@ -148,7 +150,7 @@ func (f *flagSetter) aggregateFunc(x *AggregateFuncExpr) {
 	for _, val := range x.Args {
 		flag |= val.GetFlag()
 	}
-	x.SetFlag(flag)
+	x.SetFlag(flag | functionOptionFlags(x.Filter, x.OrderBy, x.WithinGroup))
 }
 
 func (f *flagSetter) windowFunc(x *WindowFuncExpr) {
@@ -156,5 +158,20 @@ func (f *flagSetter) windowFunc(x *WindowFuncExpr) {
 	for _, val := range x.Args {
 		flag |= val.GetFlag()
 	}
-	x.SetFlag(flag)
+	x.SetFlag(flag | functionOptionFlags(x.Filter, x.OrderBy, x.WithinGroup))
+}
+
+func functionOptionFlags(filter ExprNode, orderBy, withinGroup *OrderByClause) uint64 {
+	var flag uint64
+	if filter != nil {
+		flag |= filter.GetFlag()
+	}
+	for _, order := range []*OrderByClause{orderBy, withinGroup} {
+		if order != nil {
+			for _, item := range order.Items {
+				flag |= item.Expr.GetFlag()
+			}
+		}
+	}
+	return flag
 }

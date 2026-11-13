@@ -83,15 +83,22 @@ type List struct {
 	Items []Node
 }
 
-func (n *List) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *List) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *List) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*List); ok {
-		n = x
+	n = node.(*List)
+	for i0 := range n.Items {
+		if n.Items[i0] != nil {
+			updated, ok := n.Items[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Items[i0] = updated.(Node)
+		}
 	}
 	return v.Leave(n)
 }
@@ -101,16 +108,14 @@ type IntList struct {
 	Items []int
 }
 
-func (n *IntList) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *IntList) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *IntList) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*IntList); ok {
-		n = x
-	}
+	n = node.(*IntList)
 	return v.Leave(n)
 }
 
@@ -119,16 +124,14 @@ type OidList struct {
 	Items []Oid
 }
 
-func (n *OidList) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *OidList) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *OidList) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*OidList); ok {
-		n = x
-	}
+	n = node.(*OidList)
 	return v.Leave(n)
 }
 
@@ -137,16 +140,14 @@ type String struct {
 	Str string
 }
 
-func (n *String) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *String) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *String) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*String); ok {
-		n = x
-	}
+	n = node.(*String)
 	return v.Leave(n)
 }
 
@@ -155,16 +156,14 @@ type Integer struct {
 	Ival int64
 }
 
-func (n *Integer) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *Integer) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Integer) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*Integer); ok {
-		n = x
-	}
+	n = node.(*Integer)
 	return v.Leave(n)
 }
 
@@ -173,16 +172,14 @@ type Float struct {
 	Fval string
 }
 
-func (n *Float) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *Float) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Float) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*Float); ok {
-		n = x
-	}
+	n = node.(*Float)
 	return v.Leave(n)
 }
 
@@ -191,16 +188,14 @@ type Boolean struct {
 	Boolval bool
 }
 
-func (n *Boolean) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *Boolean) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Boolean) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*Boolean); ok {
-		n = x
-	}
+	n = node.(*Boolean)
 	return v.Leave(n)
 }
 
@@ -209,16 +204,14 @@ type BitString struct {
 	Bsval string
 }
 
-func (n *BitString) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *BitString) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *BitString) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*BitString); ok {
-		n = x
-	}
+	n = node.(*BitString)
 	return v.Leave(n)
 }
 
@@ -240,15 +233,64 @@ type CreateStmt struct {
 	IfNotExists    bool
 }
 
-func (n *CreateStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateStmt); ok {
-		n = x
+	n = node.(*CreateStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.TableElts != nil {
+		updated, ok := n.TableElts.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TableElts = updated.(*List)
+	}
+	if n.InhRelations != nil {
+		updated, ok := n.InhRelations.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.InhRelations = updated.(*List)
+	}
+	if n.Partbound != nil {
+		updated, ok := n.Partbound.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Partbound = updated.(Node)
+	}
+	if n.Partspec != nil {
+		updated, ok := n.Partspec.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Partspec = updated.(*PartitionSpec)
+	}
+	for i0 := range n.Constraints {
+		if n.Constraints[i0] != nil {
+			updated, ok := n.Constraints[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Constraints[i0] = updated.(*ColumnOption)
+		}
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -263,15 +305,41 @@ type ViewStmt struct {
 	WithCheckOption int
 }
 
-func (n *ViewStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *ViewStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ViewStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*ViewStmt); ok {
-		n = x
+	n = node.(*ViewStmt)
+	if n.View != nil {
+		updated, ok := n.View.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.View = updated.(*TableName)
+	}
+	if n.Aliases != nil {
+		updated, ok := n.Aliases.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Aliases = updated.(*List)
+	}
+	if n.Query != nil {
+		updated, ok := n.Query.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Query = updated.(Node)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -304,15 +372,55 @@ type IndexStmt struct {
 	ResetDefaultTblspc          bool
 }
 
-func (n *IndexStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *IndexStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*IndexStmt); ok {
-		n = x
+	n = node.(*IndexStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.IndexParams != nil {
+		updated, ok := n.IndexParams.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.IndexParams = updated.(*List)
+	}
+	if n.IndexIncludingParams != nil {
+		updated, ok := n.IndexIncludingParams.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.IndexIncludingParams = updated.(*List)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
+	}
+	if n.WhereClause != nil {
+		updated, ok := n.WhereClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WhereClause = updated.(Node)
+	}
+	if n.ExcludeOpNames != nil {
+		updated, ok := n.ExcludeOpNames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ExcludeOpNames = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -326,15 +434,22 @@ type DropStmt struct {
 	Concurrent bool
 }
 
-func (n *DropStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DropStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DropStmt); ok {
-		n = x
+	n = node.(*DropStmt)
+	for i0 := range n.Objects {
+		if n.Objects[i0] != nil {
+			updated, ok := n.Objects[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Objects[i0] = updated.(*TableName)
+		}
 	}
 	return v.Leave(n)
 }
@@ -350,15 +465,27 @@ type AlterTableCmd struct {
 	Missing_ok bool
 }
 
-func (n *AlterTableCmd) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterTableCmd) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTableCmd) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterTableCmd); ok {
-		n = x
+	n = node.(*AlterTableCmd)
+	if n.Newowner != nil {
+		updated, ok := n.Newowner.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Newowner = updated.(*RoleSpec)
+	}
+	if n.Def != nil {
+		updated, ok := n.Def.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Def = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -372,15 +499,20 @@ type AlterTableMoveAllStmt struct {
 	Nowait             bool
 }
 
-func (n *AlterTableMoveAllStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterTableMoveAllStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTableMoveAllStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterTableMoveAllStmt); ok {
-		n = x
+	n = node.(*AlterTableMoveAllStmt)
+	if n.Roles != nil {
+		updated, ok := n.Roles.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Roles = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -396,15 +528,20 @@ type RangeVar struct {
 	Location       ParseLoc
 }
 
-func (n *RangeVar) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RangeVar) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeVar) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RangeVar); ok {
-		n = x
+	n = node.(*RangeVar)
+	if n.Alias != nil {
+		updated, ok := n.Alias.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Alias = updated.(*Alias)
 	}
 	return v.Leave(n)
 }
@@ -415,15 +552,20 @@ type Alias struct {
 	Colnames  *List
 }
 
-func (n *Alias) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *Alias) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Alias) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*Alias); ok {
-		n = x
+	n = node.(*Alias)
+	if n.Colnames != nil {
+		updated, ok := n.Colnames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Colnames = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -440,15 +582,41 @@ type IntoClause struct {
 	SkipData       bool
 }
 
-func (n *IntoClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *IntoClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *IntoClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*IntoClause); ok {
-		n = x
+	n = node.(*IntoClause)
+	if n.Rel != nil {
+		updated, ok := n.Rel.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Rel = updated.(*TableName)
+	}
+	if n.ColNames != nil {
+		updated, ok := n.ColNames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ColNames = updated.(*List)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
+	}
+	if n.ViewQuery != nil {
+		updated, ok := n.ViewQuery.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ViewQuery = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -459,15 +627,20 @@ type ColumnRef struct {
 	Location ParseLoc
 }
 
-func (n *ColumnRef) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *ColumnRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ColumnRef) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*ColumnRef); ok {
-		n = x
+	n = node.(*ColumnRef)
+	if n.Fields != nil {
+		updated, ok := n.Fields.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Fields = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -480,15 +653,27 @@ type ResTarget struct {
 	Location    ParseLoc
 }
 
-func (n *ResTarget) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *ResTarget) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ResTarget) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*ResTarget); ok {
-		n = x
+	n = node.(*ResTarget)
+	if n.Indirection != nil {
+		updated, ok := n.Indirection.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Indirection = updated.(*List)
+	}
+	if n.Val != nil {
+		updated, ok := n.Val.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Val = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -500,15 +685,20 @@ type MultiAssignRef struct {
 	Ncolumns int
 }
 
-func (n *MultiAssignRef) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *MultiAssignRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *MultiAssignRef) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*MultiAssignRef); ok {
-		n = x
+	n = node.(*MultiAssignRef)
+	if n.Source != nil {
+		updated, ok := n.Source.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Source = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -522,15 +712,34 @@ type A_Expr struct {
 	Location ParseLoc
 }
 
-func (n *A_Expr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *A_Expr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Expr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*A_Expr); ok {
-		n = x
+	n = node.(*A_Expr)
+	if n.Name != nil {
+		updated, ok := n.Name.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Name = updated.(*List)
+	}
+	if n.Lexpr != nil {
+		updated, ok := n.Lexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Lexpr = updated.(Node)
+	}
+	if n.Rexpr != nil {
+		updated, ok := n.Rexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Rexpr = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -542,15 +751,20 @@ type A_Const struct {
 	Location ParseLoc
 }
 
-func (n *A_Const) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *A_Const) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Const) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*A_Const); ok {
-		n = x
+	n = node.(*A_Const)
+	if n.Val != nil {
+		updated, ok := n.Val.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Val = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -562,15 +776,20 @@ type TypeCast struct {
 	Location ParseLoc
 }
 
-func (n *TypeCast) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *TypeCast) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TypeCast) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*TypeCast); ok {
-		n = x
+	n = node.(*TypeCast)
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -590,15 +809,48 @@ type FuncCall struct {
 	Location       ParseLoc
 }
 
-func (n *FuncCall) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *FuncCall) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *FuncCall) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*FuncCall); ok {
-		n = x
+	n = node.(*FuncCall)
+	if n.Funcname != nil {
+		updated, ok := n.Funcname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Funcname = updated.(*List)
+	}
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
+	}
+	if n.AggOrder != nil {
+		updated, ok := n.AggOrder.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.AggOrder = updated.(*List)
+	}
+	if n.AggFilter != nil {
+		updated, ok := n.AggFilter.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.AggFilter = updated.(Node)
+	}
+	if n.Over != nil {
+		updated, ok := n.Over.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Over = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -611,15 +863,20 @@ type NamedArgExpr struct {
 	Location  ParseLoc
 }
 
-func (n *NamedArgExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *NamedArgExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *NamedArgExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*NamedArgExpr); ok {
-		n = x
+	n = node.(*NamedArgExpr)
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -636,15 +893,34 @@ type TypeName struct {
 	Location    ParseLoc
 }
 
-func (n *TypeName) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *TypeName) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TypeName) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*TypeName); ok {
-		n = x
+	n = node.(*TypeName)
+	if n.Names != nil {
+		updated, ok := n.Names.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Names = updated.(*List)
+	}
+	if n.Typmods != nil {
+		updated, ok := n.Typmods.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Typmods = updated.(*List)
+	}
+	if n.ArrayBounds != nil {
+		updated, ok := n.ArrayBounds.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ArrayBounds = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -658,15 +934,27 @@ type SortBy struct {
 	Location    ParseLoc
 }
 
-func (n *SortBy) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *SortBy) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SortBy) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*SortBy); ok {
-		n = x
+	n = node.(*SortBy)
+	if n.Node != nil {
+		updated, ok := n.Node.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Node = updated.(Node)
+	}
+	if n.UseOp != nil {
+		updated, ok := n.UseOp.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.UseOp = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -688,15 +976,69 @@ type CommonTableExpr struct {
 	Ctecolcollations *List
 }
 
-func (n *CommonTableExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CommonTableExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CommonTableExpr); ok {
-		n = x
+	n = node.(*CommonTableExpr)
+	if n.Aliascolnames != nil {
+		updated, ok := n.Aliascolnames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Aliascolnames = updated.(*List)
+	}
+	if n.Ctequery != nil {
+		updated, ok := n.Ctequery.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Ctequery = updated.(Node)
+	}
+	if n.SearchClause != nil {
+		updated, ok := n.SearchClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.SearchClause = updated.(Node)
+	}
+	if n.CycleClause != nil {
+		updated, ok := n.CycleClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.CycleClause = updated.(Node)
+	}
+	if n.Ctecolnames != nil {
+		updated, ok := n.Ctecolnames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Ctecolnames = updated.(*List)
+	}
+	if n.Ctecoltypes != nil {
+		updated, ok := n.Ctecoltypes.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Ctecoltypes = updated.(*List)
+	}
+	if n.Ctecoltypmods != nil {
+		updated, ok := n.Ctecoltypmods.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Ctecoltypmods = updated.(*List)
+	}
+	if n.Ctecolcollations != nil {
+		updated, ok := n.Ctecolcollations.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Ctecolcollations = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -709,15 +1051,20 @@ type CTESearchClause struct {
 	Location           ParseLoc
 }
 
-func (n *CTESearchClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CTESearchClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CTESearchClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CTESearchClause); ok {
-		n = x
+	n = node.(*CTESearchClause)
+	if n.SearchColList != nil {
+		updated, ok := n.SearchColList.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.SearchColList = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -736,15 +1083,34 @@ type CTECycleClause struct {
 	Location           ParseLoc
 }
 
-func (n *CTECycleClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CTECycleClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CTECycleClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CTECycleClause); ok {
-		n = x
+	n = node.(*CTECycleClause)
+	if n.CycleColList != nil {
+		updated, ok := n.CycleColList.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.CycleColList = updated.(*List)
+	}
+	if n.CycleMarkValue != nil {
+		updated, ok := n.CycleMarkValue.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.CycleMarkValue = updated.(Node)
+	}
+	if n.CycleMarkDefault != nil {
+		updated, ok := n.CycleMarkDefault.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.CycleMarkDefault = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -756,16 +1122,14 @@ type RoleSpec struct {
 	Location ParseLoc
 }
 
-func (n *RoleSpec) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RoleSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RoleSpec) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RoleSpec); ok {
-		n = x
-	}
+	n = node.(*RoleSpec)
 	return v.Leave(n)
 }
 
@@ -776,15 +1140,27 @@ type CollateClause struct {
 	Location ParseLoc
 }
 
-func (n *CollateClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CollateClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CollateClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CollateClause); ok {
-		n = x
+	n = node.(*CollateClause)
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(Node)
+	}
+	if n.Collname != nil {
+		updated, ok := n.Collname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Collname = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -796,15 +1172,20 @@ type PartitionSpec struct {
 	Location   ParseLoc
 }
 
-func (n *PartitionSpec) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *PartitionSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PartitionSpec) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*PartitionSpec); ok {
-		n = x
+	n = node.(*PartitionSpec)
+	if n.PartParams != nil {
+		updated, ok := n.PartParams.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.PartParams = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -818,15 +1199,34 @@ type PartitionElem struct {
 	Location  ParseLoc
 }
 
-func (n *PartitionElem) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *PartitionElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PartitionElem) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*PartitionElem); ok {
-		n = x
+	n = node.(*PartitionElem)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
+	}
+	if n.Collation != nil {
+		updated, ok := n.Collation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Collation = updated.(*List)
+	}
+	if n.Opclass != nil {
+		updated, ok := n.Opclass.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opclass = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -838,15 +1238,27 @@ type PartitionCmd struct {
 	Concurrent bool
 }
 
-func (n *PartitionCmd) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *PartitionCmd) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PartitionCmd) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*PartitionCmd); ok {
-		n = x
+	n = node.(*PartitionCmd)
+	if n.Name != nil {
+		updated, ok := n.Name.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Name = updated.(*TableName)
+	}
+	if n.Bound != nil {
+		updated, ok := n.Bound.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Bound = updated.(*PartitionBoundSpec)
 	}
 	return v.Leave(n)
 }
@@ -859,15 +1271,27 @@ type InferClause struct {
 	Location    ParseLoc
 }
 
-func (n *InferClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *InferClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *InferClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*InferClause); ok {
-		n = x
+	n = node.(*InferClause)
+	if n.IndexElems != nil {
+		updated, ok := n.IndexElems.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.IndexElems = updated.(*List)
+	}
+	if n.WhereClause != nil {
+		updated, ok := n.WhereClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WhereClause = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -881,15 +1305,20 @@ type DefElem struct {
 	Location     ParseLoc
 }
 
-func (n *DefElem) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DefElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DefElem) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DefElem); ok {
-		n = x
+	n = node.(*DefElem)
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -901,15 +1330,20 @@ type LockingClause struct {
 	WaitPolicy int
 }
 
-func (n *LockingClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *LockingClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *LockingClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*LockingClause); ok {
-		n = x
+	n = node.(*LockingClause)
+	if n.LockedRels != nil {
+		updated, ok := n.LockedRels.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.LockedRels = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -918,16 +1352,14 @@ type A_Star struct {
 	node
 }
 
-func (n *A_Star) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *A_Star) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Star) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*A_Star); ok {
-		n = x
-	}
+	n = node.(*A_Star)
 	return v.Leave(n)
 }
 
@@ -938,15 +1370,27 @@ type A_Indices struct {
 	Uidx    Node
 }
 
-func (n *A_Indices) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *A_Indices) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Indices) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*A_Indices); ok {
-		n = x
+	n = node.(*A_Indices)
+	if n.Lidx != nil {
+		updated, ok := n.Lidx.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Lidx = updated.(Node)
+	}
+	if n.Uidx != nil {
+		updated, ok := n.Uidx.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Uidx = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -957,15 +1401,27 @@ type A_Indirection struct {
 	Indirection *List
 }
 
-func (n *A_Indirection) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *A_Indirection) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Indirection) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*A_Indirection); ok {
-		n = x
+	n = node.(*A_Indirection)
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(Node)
+	}
+	if n.Indirection != nil {
+		updated, ok := n.Indirection.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Indirection = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -982,15 +1438,41 @@ type WindowDef struct {
 	Location        ParseLoc
 }
 
-func (n *WindowDef) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *WindowDef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *WindowDef) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*WindowDef); ok {
-		n = x
+	n = node.(*WindowDef)
+	if n.PartitionClause != nil {
+		updated, ok := n.PartitionClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.PartitionClause = updated.(*List)
+	}
+	if n.OrderClause != nil {
+		updated, ok := n.OrderClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OrderClause = updated.(*List)
+	}
+	if n.StartOffset != nil {
+		updated, ok := n.StartOffset.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.StartOffset = updated.(Node)
+	}
+	if n.EndOffset != nil {
+		updated, ok := n.EndOffset.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.EndOffset = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1008,15 +1490,55 @@ type JoinExpr struct {
 	Rtindex     int
 }
 
-func (n *JoinExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JoinExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JoinExpr); ok {
-		n = x
+	n = node.(*JoinExpr)
+	if n.Larg != nil {
+		updated, ok := n.Larg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Larg = updated.(Node)
+	}
+	if n.Rarg != nil {
+		updated, ok := n.Rarg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Rarg = updated.(Node)
+	}
+	if n.UsingClause != nil {
+		updated, ok := n.UsingClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.UsingClause = updated.(*List)
+	}
+	if n.JoinUsing != nil {
+		updated, ok := n.JoinUsing.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.JoinUsing = updated.(*Alias)
+	}
+	if n.Quals != nil {
+		updated, ok := n.Quals.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Quals = updated.(Node)
+	}
+	if n.Alias != nil {
+		updated, ok := n.Alias.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Alias = updated.(*Alias)
 	}
 	return v.Leave(n)
 }
@@ -1027,15 +1549,27 @@ type FromExpr struct {
 	Quals    Node
 }
 
-func (n *FromExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *FromExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *FromExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*FromExpr); ok {
-		n = x
+	n = node.(*FromExpr)
+	if n.Fromlist != nil {
+		updated, ok := n.Fromlist.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Fromlist = updated.(*List)
+	}
+	if n.Quals != nil {
+		updated, ok := n.Quals.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Quals = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1052,15 +1586,41 @@ type IndexElem struct {
 	NullsOrdering SortByNulls
 }
 
-func (n *IndexElem) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *IndexElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *IndexElem) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*IndexElem); ok {
-		n = x
+	n = node.(*IndexElem)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
+	}
+	if n.Collation != nil {
+		updated, ok := n.Collation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Collation = updated.(*List)
+	}
+	if n.Opclass != nil {
+		updated, ok := n.Opclass.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opclass = updated.(*List)
+	}
+	if n.Opclassopts != nil {
+		updated, ok := n.Opclassopts.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opclassopts = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1071,16 +1631,14 @@ type ParamRef struct {
 	Location ParseLoc
 }
 
-func (n *ParamRef) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *ParamRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ParamRef) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*ParamRef); ok {
-		n = x
-	}
+	n = node.(*ParamRef)
 	return v.Leave(n)
 }
 
@@ -1091,16 +1649,14 @@ type CurrentOfExpr struct {
 	CursorParam int
 }
 
-func (n *CurrentOfExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CurrentOfExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CurrentOfExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CurrentOfExpr); ok {
-		n = x
-	}
+	n = node.(*CurrentOfExpr)
 	return v.Leave(n)
 }
 
@@ -1114,15 +1670,34 @@ type SubLink struct {
 	Location    ParseLoc
 }
 
-func (n *SubLink) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *SubLink) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SubLink) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*SubLink); ok {
-		n = x
+	n = node.(*SubLink)
+	if n.Testexpr != nil {
+		updated, ok := n.Testexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Testexpr = updated.(Node)
+	}
+	if n.OperName != nil {
+		updated, ok := n.OperName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OperName = updated.(*List)
+	}
+	if n.Subselect != nil {
+		updated, ok := n.Subselect.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Subselect = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1134,15 +1709,20 @@ type BoolExpr struct {
 	Location ParseLoc
 }
 
-func (n *BoolExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *BoolExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *BoolExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*BoolExpr); ok {
-		n = x
+	n = node.(*BoolExpr)
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1157,15 +1737,20 @@ type NullTest struct {
 	Location     ParseLoc
 }
 
-func (n *NullTest) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *NullTest) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *NullTest) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*NullTest); ok {
-		n = x
+	n = node.(*NullTest)
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1179,15 +1764,20 @@ type BooleanTest struct {
 	Location     ParseLoc
 }
 
-func (n *BooleanTest) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *BooleanTest) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *BooleanTest) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*BooleanTest); ok {
-		n = x
+	n = node.(*BooleanTest)
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1199,15 +1789,27 @@ type RangeSubselect struct {
 	Alias    *Alias
 }
 
-func (n *RangeSubselect) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RangeSubselect) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeSubselect) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RangeSubselect); ok {
-		n = x
+	n = node.(*RangeSubselect)
+	if n.Subquery != nil {
+		updated, ok := n.Subquery.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Subquery = updated.(Node)
+	}
+	if n.Alias != nil {
+		updated, ok := n.Alias.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Alias = updated.(*Alias)
 	}
 	return v.Leave(n)
 }
@@ -1222,15 +1824,34 @@ type RangeFunction struct {
 	Coldeflist *List
 }
 
-func (n *RangeFunction) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RangeFunction) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeFunction) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RangeFunction); ok {
-		n = x
+	n = node.(*RangeFunction)
+	if n.Functions != nil {
+		updated, ok := n.Functions.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Functions = updated.(*List)
+	}
+	if n.Alias != nil {
+		updated, ok := n.Alias.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Alias = updated.(*Alias)
+	}
+	if n.Coldeflist != nil {
+		updated, ok := n.Coldeflist.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Coldeflist = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1244,15 +1865,41 @@ type RangeTableSample struct {
 	Location   ParseLoc
 }
 
-func (n *RangeTableSample) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RangeTableSample) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RangeTableSample); ok {
-		n = x
+	n = node.(*RangeTableSample)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(Node)
+	}
+	if n.Method != nil {
+		updated, ok := n.Method.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Method = updated.(*List)
+	}
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
+	}
+	if n.Repeatable != nil {
+		updated, ok := n.Repeatable.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Repeatable = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1266,15 +1913,34 @@ type TableLikeClause struct {
 	AncillaryData *List
 }
 
-func (n *TableLikeClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *TableLikeClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TableLikeClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*TableLikeClause); ok {
-		n = x
+	n = node.(*TableLikeClause)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.Columns != nil {
+		updated, ok := n.Columns.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Columns = updated.(*List)
+	}
+	if n.AncillaryData != nil {
+		updated, ok := n.AncillaryData.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.AncillaryData = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1286,15 +1952,27 @@ type CaseWhen struct {
 	Location ParseLoc
 }
 
-func (n *CaseWhen) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CaseWhen) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CaseWhen) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CaseWhen); ok {
-		n = x
+	n = node.(*CaseWhen)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
+	}
+	if n.Result != nil {
+		updated, ok := n.Result.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Result = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1307,15 +1985,20 @@ type CoalesceExpr struct {
 	Location       ParseLoc
 }
 
-func (n *CoalesceExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CoalesceExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CoalesceExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CoalesceExpr); ok {
-		n = x
+	n = node.(*CoalesceExpr)
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1329,15 +2012,20 @@ type MinMaxExpr struct {
 	Location     ParseLoc
 }
 
-func (n *MinMaxExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *MinMaxExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *MinMaxExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*MinMaxExpr); ok {
-		n = x
+	n = node.(*MinMaxExpr)
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1356,15 +2044,20 @@ type NullIfExpr struct {
 	Location     ParseLoc
 }
 
-func (n *NullIfExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *NullIfExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *NullIfExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*NullIfExpr); ok {
-		n = x
+	n = node.(*NullIfExpr)
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1375,15 +2068,20 @@ type A_ArrayExpr struct {
 	Location ParseLoc
 }
 
-func (n *A_ArrayExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *A_ArrayExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_ArrayExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*A_ArrayExpr); ok {
-		n = x
+	n = node.(*A_ArrayExpr)
+	if n.Elements != nil {
+		updated, ok := n.Elements.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Elements = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1396,15 +2094,27 @@ type GroupingFunc struct {
 	Location    ParseLoc
 }
 
-func (n *GroupingFunc) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *GroupingFunc) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *GroupingFunc) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*GroupingFunc); ok {
-		n = x
+	n = node.(*GroupingFunc)
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
+	}
+	if n.Refs != nil {
+		updated, ok := n.Refs.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Refs = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1430,15 +2140,48 @@ type WindowClause struct {
 	Copiedorder       bool
 }
 
-func (n *WindowClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *WindowClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *WindowClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*WindowClause); ok {
-		n = x
+	n = node.(*WindowClause)
+	if n.PartitionClause != nil {
+		updated, ok := n.PartitionClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.PartitionClause = updated.(*List)
+	}
+	if n.OrderClause != nil {
+		updated, ok := n.OrderClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OrderClause = updated.(*List)
+	}
+	if n.StartOffset != nil {
+		updated, ok := n.StartOffset.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.StartOffset = updated.(Node)
+	}
+	if n.EndOffset != nil {
+		updated, ok := n.EndOffset.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.EndOffset = updated.(Node)
+	}
+	if n.RunCondition != nil {
+		updated, ok := n.RunCondition.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.RunCondition = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1452,15 +2195,20 @@ type TruncateStmt struct {
 	Behavior    DropBehavior
 }
 
-func (n *TruncateStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *TruncateStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TruncateStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*TruncateStmt); ok {
-		n = x
+	n = node.(*TruncateStmt)
+	if n.Relations != nil {
+		updated, ok := n.Relations.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relations = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1474,15 +2222,27 @@ type CreateSeqStmt struct {
 	IfNotExists bool
 }
 
-func (n *CreateSeqStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateSeqStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateSeqStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateSeqStmt); ok {
-		n = x
+	n = node.(*CreateSeqStmt)
+	if n.Sequence != nil {
+		updated, ok := n.Sequence.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Sequence = updated.(*TableName)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1495,15 +2255,27 @@ type AlterSeqStmt struct {
 	MissingOk   bool
 }
 
-func (n *AlterSeqStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterSeqStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterSeqStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterSeqStmt); ok {
-		n = x
+	n = node.(*AlterSeqStmt)
+	if n.Sequence != nil {
+		updated, ok := n.Sequence.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Sequence = updated.(*TableName)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1516,15 +2288,20 @@ type FunctionParameter struct {
 	Defexpr Node
 }
 
-func (n *FunctionParameter) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *FunctionParameter) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *FunctionParameter) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*FunctionParameter); ok {
-		n = x
+	n = node.(*FunctionParameter)
+	if n.Defexpr != nil {
+		updated, ok := n.Defexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Defexpr = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1537,15 +2314,27 @@ type CreateEnumStmt struct {
 	Vals     *List
 }
 
-func (n *CreateEnumStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateEnumStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateEnumStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateEnumStmt); ok {
-		n = x
+	n = node.(*CreateEnumStmt)
+	if n.TypeName != nil {
+		updated, ok := n.TypeName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TypeName = updated.(*TableName)
+	}
+	if n.Vals != nil {
+		updated, ok := n.Vals.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Vals = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1560,15 +2349,20 @@ type AlterEnumStmt struct {
 	SkipIfNewvalExists bool
 }
 
-func (n *AlterEnumStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterEnumStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterEnumStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterEnumStmt); ok {
-		n = x
+	n = node.(*AlterEnumStmt)
+	if n.Typname != nil {
+		updated, ok := n.Typname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Typname = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1581,15 +2375,36 @@ type CreateDomainStmt struct {
 	Constraints []*ColumnOption
 }
 
-func (n *CreateDomainStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateDomainStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateDomainStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateDomainStmt); ok {
-		n = x
+	n = node.(*CreateDomainStmt)
+	if n.Domainname != nil {
+		updated, ok := n.Domainname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Domainname = updated.(*List)
+	}
+	if n.CollClause != nil {
+		updated, ok := n.CollClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.CollClause = updated.(*CollateClause)
+	}
+	for i0 := range n.Constraints {
+		if n.Constraints[i0] != nil {
+			updated, ok := n.Constraints[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Constraints[i0] = updated.(*ColumnOption)
+		}
 	}
 	return v.Leave(n)
 }
@@ -1604,15 +2419,27 @@ type AlterDomainStmt struct {
 	MissingOk bool
 }
 
-func (n *AlterDomainStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterDomainStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterDomainStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterDomainStmt); ok {
-		n = x
+	n = node.(*AlterDomainStmt)
+	if n.Typname != nil {
+		updated, ok := n.Typname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Typname = updated.(*List)
+	}
+	if n.Def != nil {
+		updated, ok := n.Def.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Def = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1636,15 +2463,62 @@ type CreateTrigStmt struct {
 	Constrrel      *RangeVar
 }
 
-func (n *CreateTrigStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateTrigStmt); ok {
-		n = x
+	n = node.(*CreateTrigStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.Funcname != nil {
+		updated, ok := n.Funcname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Funcname = updated.(*List)
+	}
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
+	}
+	if n.Columns != nil {
+		updated, ok := n.Columns.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Columns = updated.(*List)
+	}
+	if n.WhenClause != nil {
+		updated, ok := n.WhenClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WhenClause = updated.(Node)
+	}
+	if n.TransitionRels != nil {
+		updated, ok := n.TransitionRels.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TransitionRels = updated.(*List)
+	}
+	if n.Constrrel != nil {
+		updated, ok := n.Constrrel.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Constrrel = updated.(*RangeVar)
 	}
 	return v.Leave(n)
 }
@@ -1657,15 +2531,20 @@ type AccessPriv struct {
 	Cols     *List
 }
 
-func (n *AccessPriv) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AccessPriv) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AccessPriv) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AccessPriv); ok {
-		n = x
+	n = node.(*AccessPriv)
+	if n.Cols != nil {
+		updated, ok := n.Cols.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Cols = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1679,15 +2558,27 @@ type CreateTableAsStmt struct {
 	IfNotExists  bool
 }
 
-func (n *CreateTableAsStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateTableAsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateTableAsStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateTableAsStmt); ok {
-		n = x
+	n = node.(*CreateTableAsStmt)
+	if n.Query != nil {
+		updated, ok := n.Query.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Query = updated.(Node)
+	}
+	if n.Into != nil {
+		updated, ok := n.Into.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Into = updated.(*IntoClause)
 	}
 	return v.Leave(n)
 }
@@ -1699,15 +2590,27 @@ type VacuumRelation struct {
 	VaCols   *List
 }
 
-func (n *VacuumRelation) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *VacuumRelation) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *VacuumRelation) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*VacuumRelation); ok {
-		n = x
+	n = node.(*VacuumRelation)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.VaCols != nil {
+		updated, ok := n.VaCols.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.VaCols = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1722,15 +2625,20 @@ type TransactionStmt struct {
 	Location  ParseLoc
 }
 
-func (n *TransactionStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *TransactionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TransactionStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*TransactionStmt); ok {
-		n = x
+	n = node.(*TransactionStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1744,15 +2652,20 @@ type LockStmt struct {
 	Nowait    bool
 }
 
-func (n *LockStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *LockStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *LockStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*LockStmt); ok {
-		n = x
+	n = node.(*LockStmt)
+	if n.Relations != nil {
+		updated, ok := n.Relations.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relations = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1769,15 +2682,55 @@ type SetOperationStmt struct {
 	GroupClauses  *List
 }
 
-func (n *SetOperationStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *SetOperationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*SetOperationStmt); ok {
-		n = x
+	n = node.(*SetOperationStmt)
+	if n.Larg != nil {
+		updated, ok := n.Larg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Larg = updated.(Node)
+	}
+	if n.Rarg != nil {
+		updated, ok := n.Rarg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Rarg = updated.(Node)
+	}
+	if n.ColTypes != nil {
+		updated, ok := n.ColTypes.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ColTypes = updated.(*List)
+	}
+	if n.ColTypmods != nil {
+		updated, ok := n.ColTypmods.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ColTypmods = updated.(*List)
+	}
+	if n.ColCollations != nil {
+		updated, ok := n.ColCollations.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ColCollations = updated.(*List)
+	}
+	if n.GroupClauses != nil {
+		updated, ok := n.GroupClauses.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.GroupClauses = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1791,16 +2744,14 @@ type SortGroupClause struct {
 	Hashable        bool
 }
 
-func (n *SortGroupClause) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *SortGroupClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SortGroupClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*SortGroupClause); ok {
-		n = x
-	}
+	n = node.(*SortGroupClause)
 	return v.Leave(n)
 }
 
@@ -1816,15 +2767,27 @@ type RenameStmt struct {
 	MissingOk    bool
 }
 
-func (n *RenameStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RenameStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RenameStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RenameStmt); ok {
-		n = x
+	n = node.(*RenameStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.Object != nil {
+		updated, ok := n.Object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Object = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1838,15 +2801,27 @@ type AlterObjectSchemaStmt struct {
 	MissingOk  bool
 }
 
-func (n *AlterObjectSchemaStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterObjectSchemaStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterObjectSchemaStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterObjectSchemaStmt); ok {
-		n = x
+	n = node.(*AlterObjectSchemaStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.Object != nil {
+		updated, ok := n.Object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Object = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1859,15 +2834,34 @@ type AlterOwnerStmt struct {
 	Newowner   *RoleSpec
 }
 
-func (n *AlterOwnerStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterOwnerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterOwnerStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterOwnerStmt); ok {
-		n = x
+	n = node.(*AlterOwnerStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.Object != nil {
+		updated, ok := n.Object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Object = updated.(Node)
+	}
+	if n.Newowner != nil {
+		updated, ok := n.Newowner.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Newowner = updated.(*RoleSpec)
 	}
 	return v.Leave(n)
 }
@@ -1878,16 +2872,14 @@ type CheckPointStmt struct {
 	stmtNode
 }
 
-func (n *CheckPointStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CheckPointStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CheckPointStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CheckPointStmt); ok {
-		n = x
-	}
+	n = node.(*CheckPointStmt)
 	return v.Leave(n)
 }
 
@@ -1896,16 +2888,14 @@ type ClosePortalStmt struct {
 	Portalname string
 }
 
-func (n *ClosePortalStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *ClosePortalStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ClosePortalStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*ClosePortalStmt); ok {
-		n = x
-	}
+	n = node.(*ClosePortalStmt)
 	return v.Leave(n)
 }
 
@@ -1915,15 +2905,22 @@ type ConstraintsSetStmt struct {
 	Deferred    bool
 }
 
-func (n *ConstraintsSetStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *ConstraintsSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ConstraintsSetStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*ConstraintsSetStmt); ok {
-		n = x
+	n = node.(*ConstraintsSetStmt)
+	for i0 := range n.Constraints {
+		if n.Constraints[i0] != nil {
+			updated, ok := n.Constraints[i0].Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Constraints[i0] = updated.(*ColumnOption)
+		}
 	}
 	return v.Leave(n)
 }
@@ -1936,15 +2933,20 @@ type VariableSetStmt struct {
 	IsLocal bool
 }
 
-func (n *VariableSetStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *VariableSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *VariableSetStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*VariableSetStmt); ok {
-		n = x
+	n = node.(*VariableSetStmt)
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -1954,16 +2956,14 @@ type VariableShowStmt struct {
 	Name string
 }
 
-func (n *VariableShowStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *VariableShowStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *VariableShowStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*VariableShowStmt); ok {
-		n = x
-	}
+	n = node.(*VariableShowStmt)
 	return v.Leave(n)
 }
 
@@ -1978,15 +2978,20 @@ type SecLabelStmt struct {
 	Label      string
 }
 
-func (n *SecLabelStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *SecLabelStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SecLabelStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*SecLabelStmt); ok {
-		n = x
+	n = node.(*SecLabelStmt)
+	if n.Object != nil {
+		updated, ok := n.Object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Object = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -1998,15 +3003,20 @@ type CreateRoleStmt struct {
 	Options  *List
 }
 
-func (n *CreateRoleStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateRoleStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateRoleStmt); ok {
-		n = x
+	n = node.(*CreateRoleStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2018,15 +3028,27 @@ type AlterRoleStmt struct {
 	Action  int
 }
 
-func (n *AlterRoleStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterRoleStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterRoleStmt); ok {
-		n = x
+	n = node.(*AlterRoleStmt)
+	if n.Role != nil {
+		updated, ok := n.Role.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Role = updated.(*RoleSpec)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2038,15 +3060,27 @@ type AlterRoleSetStmt struct {
 	Setstmt  Node
 }
 
-func (n *AlterRoleSetStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterRoleSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterRoleSetStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterRoleSetStmt); ok {
-		n = x
+	n = node.(*AlterRoleSetStmt)
+	if n.Role != nil {
+		updated, ok := n.Role.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Role = updated.(*RoleSpec)
+	}
+	if n.Setstmt != nil {
+		updated, ok := n.Setstmt.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Setstmt = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -2057,15 +3091,20 @@ type DropRoleStmt struct {
 	MissingOk bool
 }
 
-func (n *DropRoleStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DropRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropRoleStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DropRoleStmt); ok {
-		n = x
+	n = node.(*DropRoleStmt)
+	if n.Roles != nil {
+		updated, ok := n.Roles.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Roles = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2076,15 +3115,20 @@ type CreatedbStmt struct {
 	Options *List
 }
 
-func (n *CreatedbStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreatedbStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatedbStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreatedbStmt); ok {
-		n = x
+	n = node.(*CreatedbStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2095,15 +3139,20 @@ type AlterDatabaseSetStmt struct {
 	Setstmt Node
 }
 
-func (n *AlterDatabaseSetStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterDatabaseSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterDatabaseSetStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterDatabaseSetStmt); ok {
-		n = x
+	n = node.(*AlterDatabaseSetStmt)
+	if n.Setstmt != nil {
+		updated, ok := n.Setstmt.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Setstmt = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -2115,15 +3164,20 @@ type DropdbStmt struct {
 	Options   *List
 }
 
-func (n *DropdbStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DropdbStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropdbStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DropdbStmt); ok {
-		n = x
+	n = node.(*DropdbStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2133,15 +3187,20 @@ type AlterSystemStmt struct {
 	Setstmt Node
 }
 
-func (n *AlterSystemStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterSystemStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterSystemStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterSystemStmt); ok {
-		n = x
+	n = node.(*AlterSystemStmt)
+	if n.Setstmt != nil {
+		updated, ok := n.Setstmt.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Setstmt = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -2151,15 +3210,20 @@ type AlterCollationStmt struct {
 	Collname *List
 }
 
-func (n *AlterCollationStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterCollationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterCollationStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterCollationStmt); ok {
-		n = x
+	n = node.(*AlterCollationStmt)
+	if n.Collname != nil {
+		updated, ok := n.Collname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Collname = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2175,15 +3239,34 @@ type DefineStmt struct {
 	Replace     bool
 }
 
-func (n *DefineStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DefineStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DefineStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DefineStmt); ok {
-		n = x
+	n = node.(*DefineStmt)
+	if n.Defnames != nil {
+		updated, ok := n.Defnames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Defnames = updated.(*List)
+	}
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
+	}
+	if n.Definition != nil {
+		updated, ok := n.Definition.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Definition = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2194,15 +3277,27 @@ type CompositeTypeStmt struct {
 	Coldeflist *List
 }
 
-func (n *CompositeTypeStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CompositeTypeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CompositeTypeStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CompositeTypeStmt); ok {
-		n = x
+	n = node.(*CompositeTypeStmt)
+	if n.Typevar != nil {
+		updated, ok := n.Typevar.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Typevar = updated.(*RangeVar)
+	}
+	if n.Coldeflist != nil {
+		updated, ok := n.Coldeflist.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Coldeflist = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2213,15 +3308,27 @@ type CreateRangeStmt struct {
 	Params   *List
 }
 
-func (n *CreateRangeStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateRangeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateRangeStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateRangeStmt); ok {
-		n = x
+	n = node.(*CreateRangeStmt)
+	if n.TypeName != nil {
+		updated, ok := n.TypeName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TypeName = updated.(*TableName)
+	}
+	if n.Params != nil {
+		updated, ok := n.Params.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Params = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2233,15 +3340,27 @@ type ObjectWithArgs struct {
 	ArgsUnspecified bool
 }
 
-func (n *ObjectWithArgs) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *ObjectWithArgs) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ObjectWithArgs) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*ObjectWithArgs); ok {
-		n = x
+	n = node.(*ObjectWithArgs)
+	if n.Objname != nil {
+		updated, ok := n.Objname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Objname = updated.(*List)
+	}
+	if n.Objargs != nil {
+		updated, ok := n.Objargs.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Objargs = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2254,15 +3373,27 @@ type CreateEventTrigStmt struct {
 	Funcname   *List
 }
 
-func (n *CreateEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateEventTrigStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateEventTrigStmt); ok {
-		n = x
+	n = node.(*CreateEventTrigStmt)
+	if n.Whenclause != nil {
+		updated, ok := n.Whenclause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Whenclause = updated.(*List)
+	}
+	if n.Funcname != nil {
+		updated, ok := n.Funcname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Funcname = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2273,16 +3404,14 @@ type AlterEventTrigStmt struct {
 	Tgenabled byte
 }
 
-func (n *AlterEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterEventTrigStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterEventTrigStmt); ok {
-		n = x
-	}
+	n = node.(*AlterEventTrigStmt)
 	return v.Leave(n)
 }
 
@@ -2297,15 +3426,34 @@ type RuleStmt struct {
 	Replace     bool
 }
 
-func (n *RuleStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RuleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RuleStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RuleStmt); ok {
-		n = x
+	n = node.(*RuleStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.WhereClause != nil {
+		updated, ok := n.WhereClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WhereClause = updated.(Node)
+	}
+	if n.Actions != nil {
+		updated, ok := n.Actions.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Actions = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2320,15 +3468,34 @@ type CreatePLangStmt struct {
 	Pltrusted   bool
 }
 
-func (n *CreatePLangStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreatePLangStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatePLangStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreatePLangStmt); ok {
-		n = x
+	n = node.(*CreatePLangStmt)
+	if n.Plhandler != nil {
+		updated, ok := n.Plhandler.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Plhandler = updated.(*List)
+	}
+	if n.Plinline != nil {
+		updated, ok := n.Plinline.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Plinline = updated.(*List)
+	}
+	if n.Plvalidator != nil {
+		updated, ok := n.Plvalidator.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Plvalidator = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2340,16 +3507,14 @@ type TriggerTransition struct {
 	IsTable bool
 }
 
-func (n *TriggerTransition) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *TriggerTransition) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TriggerTransition) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*TriggerTransition); ok {
-		n = x
-	}
+	n = node.(*TriggerTransition)
 	return v.Leave(n)
 }
 
@@ -2360,15 +3525,27 @@ type CreateFdwStmt struct {
 	Options     *List
 }
 
-func (n *CreateFdwStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateFdwStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateFdwStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateFdwStmt); ok {
-		n = x
+	n = node.(*CreateFdwStmt)
+	if n.FuncOptions != nil {
+		updated, ok := n.FuncOptions.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FuncOptions = updated.(*List)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2380,15 +3557,27 @@ type AlterFdwStmt struct {
 	Options     *List
 }
 
-func (n *AlterFdwStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterFdwStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterFdwStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterFdwStmt); ok {
-		n = x
+	n = node.(*AlterFdwStmt)
+	if n.FuncOptions != nil {
+		updated, ok := n.FuncOptions.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FuncOptions = updated.(*List)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2403,15 +3592,20 @@ type CreateForeignServerStmt struct {
 	Options     *List
 }
 
-func (n *CreateForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateForeignServerStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateForeignServerStmt); ok {
-		n = x
+	n = node.(*CreateForeignServerStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2424,15 +3618,20 @@ type AlterForeignServerStmt struct {
 	HasVersion bool
 }
 
-func (n *AlterForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterForeignServerStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterForeignServerStmt); ok {
-		n = x
+	n = node.(*AlterForeignServerStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2444,15 +3643,20 @@ type CreateForeignTableStmt struct {
 	Options    *List
 }
 
-func (n *CreateForeignTableStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateForeignTableStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateForeignTableStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateForeignTableStmt); ok {
-		n = x
+	n = node.(*CreateForeignTableStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2465,15 +3669,27 @@ type CreateUserMappingStmt struct {
 	Options     *List
 }
 
-func (n *CreateUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateUserMappingStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateUserMappingStmt); ok {
-		n = x
+	n = node.(*CreateUserMappingStmt)
+	if n.User != nil {
+		updated, ok := n.User.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.User = updated.(*RoleSpec)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2485,15 +3701,27 @@ type AlterUserMappingStmt struct {
 	Options    *List
 }
 
-func (n *AlterUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterUserMappingStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterUserMappingStmt); ok {
-		n = x
+	n = node.(*AlterUserMappingStmt)
+	if n.User != nil {
+		updated, ok := n.User.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.User = updated.(*RoleSpec)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2505,15 +3733,20 @@ type DropUserMappingStmt struct {
 	MissingOk  bool
 }
 
-func (n *DropUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DropUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropUserMappingStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DropUserMappingStmt); ok {
-		n = x
+	n = node.(*DropUserMappingStmt)
+	if n.User != nil {
+		updated, ok := n.User.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.User = updated.(*RoleSpec)
 	}
 	return v.Leave(n)
 }
@@ -2525,15 +3758,20 @@ type CreateExtensionStmt struct {
 	Options     *List
 }
 
-func (n *CreateExtensionStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateExtensionStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateExtensionStmt); ok {
-		n = x
+	n = node.(*CreateExtensionStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2544,15 +3782,20 @@ type AlterExtensionStmt struct {
 	Options *List
 }
 
-func (n *AlterExtensionStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterExtensionStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterExtensionStmt); ok {
-		n = x
+	n = node.(*AlterExtensionStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2568,15 +3811,22 @@ type AlterExtensionContentsStmt struct {
 	Object     Node
 }
 
-func (n *AlterExtensionContentsStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterExtensionContentsStmt) Restore(ctx *format.RestoreCtx) error {
+	return restorePGNode(ctx, n)
+}
 
 func (n *AlterExtensionContentsStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterExtensionContentsStmt); ok {
-		n = x
+	n = node.(*AlterExtensionContentsStmt)
+	if n.Object != nil {
+		updated, ok := n.Object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Object = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -2589,15 +3839,27 @@ type CreateTableSpaceStmt struct {
 	Options        *List
 }
 
-func (n *CreateTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateTableSpaceStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateTableSpaceStmt); ok {
-		n = x
+	n = node.(*CreateTableSpaceStmt)
+	if n.Owner != nil {
+		updated, ok := n.Owner.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Owner = updated.(*RoleSpec)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2608,16 +3870,14 @@ type DropTableSpaceStmt struct {
 	MissingOk      bool
 }
 
-func (n *DropTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DropTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropTableSpaceStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DropTableSpaceStmt); ok {
-		n = x
-	}
+	n = node.(*DropTableSpaceStmt)
 	return v.Leave(n)
 }
 
@@ -2628,15 +3888,22 @@ type AlterTableSpaceOptionsStmt struct {
 	IsReset        bool
 }
 
-func (n *AlterTableSpaceOptionsStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterTableSpaceOptionsStmt) Restore(ctx *format.RestoreCtx) error {
+	return restorePGNode(ctx, n)
+}
 
 func (n *AlterTableSpaceOptionsStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterTableSpaceOptionsStmt); ok {
-		n = x
+	n = node.(*AlterTableSpaceOptionsStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2648,15 +3915,20 @@ type CreateAmStmt struct {
 	Amtype      byte
 }
 
-func (n *CreateAmStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateAmStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateAmStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateAmStmt); ok {
-		n = x
+	n = node.(*CreateAmStmt)
+	if n.HandlerName != nil {
+		updated, ok := n.HandlerName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.HandlerName = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2672,15 +3944,41 @@ type CreatePolicyStmt struct {
 	WithCheck  Node
 }
 
-func (n *CreatePolicyStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreatePolicyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatePolicyStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreatePolicyStmt); ok {
-		n = x
+	n = node.(*CreatePolicyStmt)
+	if n.Table != nil {
+		updated, ok := n.Table.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Table = updated.(*RangeVar)
+	}
+	if n.Roles != nil {
+		updated, ok := n.Roles.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Roles = updated.(*List)
+	}
+	if n.Qual != nil {
+		updated, ok := n.Qual.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Qual = updated.(Node)
+	}
+	if n.WithCheck != nil {
+		updated, ok := n.WithCheck.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WithCheck = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -2694,15 +3992,41 @@ type AlterPolicyStmt struct {
 	WithCheck  Node
 }
 
-func (n *AlterPolicyStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterPolicyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterPolicyStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterPolicyStmt); ok {
-		n = x
+	n = node.(*AlterPolicyStmt)
+	if n.Table != nil {
+		updated, ok := n.Table.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Table = updated.(*RangeVar)
+	}
+	if n.Roles != nil {
+		updated, ok := n.Roles.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Roles = updated.(*List)
+	}
+	if n.Qual != nil {
+		updated, ok := n.Qual.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Qual = updated.(Node)
+	}
+	if n.WithCheck != nil {
+		updated, ok := n.WithCheck.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WithCheck = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -2715,15 +4039,27 @@ type CreatePublicationStmt struct {
 	ForAllTables bool
 }
 
-func (n *CreatePublicationStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreatePublicationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatePublicationStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreatePublicationStmt); ok {
-		n = x
+	n = node.(*CreatePublicationStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
+	}
+	if n.Pubobjects != nil {
+		updated, ok := n.Pubobjects.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Pubobjects = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2737,15 +4073,27 @@ type AlterPublicationStmt struct {
 	Action       DefElemAction
 }
 
-func (n *AlterPublicationStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterPublicationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterPublicationStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterPublicationStmt); ok {
-		n = x
+	n = node.(*AlterPublicationStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
+	}
+	if n.Pubobjects != nil {
+		updated, ok := n.Pubobjects.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Pubobjects = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2758,15 +4106,20 @@ type PublicationObjSpec struct {
 	Location   ParseLoc
 }
 
-func (n *PublicationObjSpec) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *PublicationObjSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PublicationObjSpec) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*PublicationObjSpec); ok {
-		n = x
+	n = node.(*PublicationObjSpec)
+	if n.Pubtable != nil {
+		updated, ok := n.Pubtable.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Pubtable = updated.(*PublicationTable)
 	}
 	return v.Leave(n)
 }
@@ -2778,15 +4131,34 @@ type PublicationTable struct {
 	Columns     *List
 }
 
-func (n *PublicationTable) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *PublicationTable) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PublicationTable) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*PublicationTable); ok {
-		n = x
+	n = node.(*PublicationTable)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.WhereClause != nil {
+		updated, ok := n.WhereClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WhereClause = updated.(Node)
+	}
+	if n.Columns != nil {
+		updated, ok := n.Columns.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Columns = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2799,15 +4171,27 @@ type CreateSubscriptionStmt struct {
 	Options     *List
 }
 
-func (n *CreateSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateSubscriptionStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateSubscriptionStmt); ok {
-		n = x
+	n = node.(*CreateSubscriptionStmt)
+	if n.Publication != nil {
+		updated, ok := n.Publication.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Publication = updated.(*List)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2821,15 +4205,27 @@ type AlterSubscriptionStmt struct {
 	Options     *List
 }
 
-func (n *AlterSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterSubscriptionStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterSubscriptionStmt); ok {
-		n = x
+	n = node.(*AlterSubscriptionStmt)
+	if n.Publication != nil {
+		updated, ok := n.Publication.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Publication = updated.(*List)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2841,16 +4237,14 @@ type DropSubscriptionStmt struct {
 	Behavior  DropBehavior
 }
 
-func (n *DropSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *DropSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropSubscriptionStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*DropSubscriptionStmt); ok {
-		n = x
-	}
+	n = node.(*DropSubscriptionStmt)
 	return v.Leave(n)
 }
 
@@ -2863,15 +4257,34 @@ type AlterObjectDependsStmt struct {
 	Remove     bool
 }
 
-func (n *AlterObjectDependsStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterObjectDependsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterObjectDependsStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterObjectDependsStmt); ok {
-		n = x
+	n = node.(*AlterObjectDependsStmt)
+	if n.Relation != nil {
+		updated, ok := n.Relation.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relation = updated.(*TableName)
+	}
+	if n.Object != nil {
+		updated, ok := n.Object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Object = updated.(Node)
+	}
+	if n.Extname != nil {
+		updated, ok := n.Extname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Extname = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -2882,15 +4295,27 @@ type AlterOperatorStmt struct {
 	Options  *List
 }
 
-func (n *AlterOperatorStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterOperatorStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterOperatorStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterOperatorStmt); ok {
-		n = x
+	n = node.(*AlterOperatorStmt)
+	if n.Opername != nil {
+		updated, ok := n.Opername.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opername = updated.(*ObjectWithArgs)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2901,15 +4326,27 @@ type AlterTypeStmt struct {
 	Options  *List
 }
 
-func (n *AlterTypeStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterTypeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTypeStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterTypeStmt); ok {
-		n = x
+	n = node.(*AlterTypeStmt)
+	if n.TypeName != nil {
+		updated, ok := n.TypeName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TypeName = updated.(*TableName)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2920,15 +4357,29 @@ type AlterDefaultPrivilegesStmt struct {
 	Action  *GrantStmt
 }
 
-func (n *AlterDefaultPrivilegesStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterDefaultPrivilegesStmt) Restore(ctx *format.RestoreCtx) error {
+	return restorePGNode(ctx, n)
+}
 
 func (n *AlterDefaultPrivilegesStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterDefaultPrivilegesStmt); ok {
-		n = x
+	n = node.(*AlterDefaultPrivilegesStmt)
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
+	}
+	if n.Action != nil {
+		updated, ok := n.Action.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Action = updated.(*GrantStmt)
 	}
 	return v.Leave(n)
 }
@@ -2939,15 +4390,27 @@ type AlterTSDictionaryStmt struct {
 	Options  *List
 }
 
-func (n *AlterTSDictionaryStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterTSDictionaryStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTSDictionaryStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterTSDictionaryStmt); ok {
-		n = x
+	n = node.(*AlterTSDictionaryStmt)
+	if n.Dictname != nil {
+		updated, ok := n.Dictname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Dictname = updated.(*List)
+	}
+	if n.Options != nil {
+		updated, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2963,15 +4426,36 @@ type AlterTSConfigurationStmt struct {
 	MissingOk bool
 }
 
-func (n *AlterTSConfigurationStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterTSConfigurationStmt) Restore(ctx *format.RestoreCtx) error {
+	return restorePGNode(ctx, n)
+}
 
 func (n *AlterTSConfigurationStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterTSConfigurationStmt); ok {
-		n = x
+	n = node.(*AlterTSConfigurationStmt)
+	if n.Cfgname != nil {
+		updated, ok := n.Cfgname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Cfgname = updated.(*List)
+	}
+	if n.Tokentype != nil {
+		updated, ok := n.Tokentype.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Tokentype = updated.(*List)
+	}
+	if n.Dicts != nil {
+		updated, ok := n.Dicts.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Dicts = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -2986,15 +4470,41 @@ type CreateStatsStmt struct {
 	IfNotExists bool
 }
 
-func (n *CreateStatsStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateStatsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateStatsStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateStatsStmt); ok {
-		n = x
+	n = node.(*CreateStatsStmt)
+	if n.Defnames != nil {
+		updated, ok := n.Defnames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Defnames = updated.(*List)
+	}
+	if n.StatTypes != nil {
+		updated, ok := n.StatTypes.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.StatTypes = updated.(*List)
+	}
+	if n.Exprs != nil {
+		updated, ok := n.Exprs.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Exprs = updated.(*List)
+	}
+	if n.Relations != nil {
+		updated, ok := n.Relations.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Relations = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3005,15 +4515,20 @@ type StatsElem struct {
 	Expr Node
 }
 
-func (n *StatsElem) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *StatsElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *StatsElem) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*StatsElem); ok {
-		n = x
+	n = node.(*StatsElem)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -3025,15 +4540,20 @@ type AlterStatsStmt struct {
 	Stxstattarget int
 }
 
-func (n *AlterStatsStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterStatsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterStatsStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterStatsStmt); ok {
-		n = x
+	n = node.(*AlterStatsStmt)
+	if n.Defnames != nil {
+		updated, ok := n.Defnames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Defnames = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3048,15 +4568,34 @@ type CreateOpClassStmt struct {
 	IsDefault    bool
 }
 
-func (n *CreateOpClassStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateOpClassStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateOpClassStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateOpClassStmt); ok {
-		n = x
+	n = node.(*CreateOpClassStmt)
+	if n.Opclassname != nil {
+		updated, ok := n.Opclassname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opclassname = updated.(*List)
+	}
+	if n.Opfamilyname != nil {
+		updated, ok := n.Opfamilyname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opfamilyname = updated.(*List)
+	}
+	if n.Items != nil {
+		updated, ok := n.Items.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Items = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3071,15 +4610,34 @@ type CreateOpClassItem struct {
 	Storedtype  *types.FieldType
 }
 
-func (n *CreateOpClassItem) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateOpClassItem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateOpClassItem) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateOpClassItem); ok {
-		n = x
+	n = node.(*CreateOpClassItem)
+	if n.Name != nil {
+		updated, ok := n.Name.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Name = updated.(*ObjectWithArgs)
+	}
+	if n.OrderFamily != nil {
+		updated, ok := n.OrderFamily.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OrderFamily = updated.(*List)
+	}
+	if n.ClassArgs != nil {
+		updated, ok := n.ClassArgs.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ClassArgs = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3090,15 +4648,20 @@ type CreateOpFamilyStmt struct {
 	Amname       string
 }
 
-func (n *CreateOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateOpFamilyStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateOpFamilyStmt); ok {
-		n = x
+	n = node.(*CreateOpFamilyStmt)
+	if n.Opfamilyname != nil {
+		updated, ok := n.Opfamilyname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opfamilyname = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3111,15 +4674,27 @@ type AlterOpFamilyStmt struct {
 	Items        *List
 }
 
-func (n *AlterOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *AlterOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterOpFamilyStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*AlterOpFamilyStmt); ok {
-		n = x
+	n = node.(*AlterOpFamilyStmt)
+	if n.Opfamilyname != nil {
+		updated, ok := n.Opfamilyname.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Opfamilyname = updated.(*List)
+	}
+	if n.Items != nil {
+		updated, ok := n.Items.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Items = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3133,15 +4708,20 @@ type CreateCastStmt struct {
 	Inout      bool
 }
 
-func (n *CreateCastStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateCastStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateCastStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateCastStmt); ok {
-		n = x
+	n = node.(*CreateCastStmt)
+	if n.Func != nil {
+		updated, ok := n.Func.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Func = updated.(*ObjectWithArgs)
 	}
 	return v.Leave(n)
 }
@@ -3155,15 +4735,27 @@ type CreateTransformStmt struct {
 	Tosql    *ObjectWithArgs
 }
 
-func (n *CreateTransformStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateTransformStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateTransformStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateTransformStmt); ok {
-		n = x
+	n = node.(*CreateTransformStmt)
+	if n.Fromsql != nil {
+		updated, ok := n.Fromsql.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Fromsql = updated.(*ObjectWithArgs)
+	}
+	if n.Tosql != nil {
+		updated, ok := n.Tosql.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Tosql = updated.(*ObjectWithArgs)
 	}
 	return v.Leave(n)
 }
@@ -3177,15 +4769,27 @@ type CreateConversionStmt struct {
 	Def             bool
 }
 
-func (n *CreateConversionStmt) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *CreateConversionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateConversionStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*CreateConversionStmt); ok {
-		n = x
+	n = node.(*CreateConversionStmt)
+	if n.ConversionName != nil {
+		updated, ok := n.ConversionName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ConversionName = updated.(*List)
+	}
+	if n.FuncName != nil {
+		updated, ok := n.FuncName.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FuncName = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3197,16 +4801,14 @@ type SQLValueFunction struct {
 	Location ParseLoc
 }
 
-func (n *SQLValueFunction) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *SQLValueFunction) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SQLValueFunction) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*SQLValueFunction); ok {
-		n = x
-	}
+	n = node.(*SQLValueFunction)
 	return v.Leave(n)
 }
 
@@ -3218,16 +4820,14 @@ type SetToDefault struct {
 	Location  ParseLoc
 }
 
-func (n *SetToDefault) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *SetToDefault) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SetToDefault) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*SetToDefault); ok {
-		n = x
-	}
+	n = node.(*SetToDefault)
 	return v.Leave(n)
 }
 
@@ -3249,15 +4849,34 @@ type XmlExpr struct {
 	Location  ParseLoc
 }
 
-func (n *XmlExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *XmlExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *XmlExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*XmlExpr); ok {
-		n = x
+	n = node.(*XmlExpr)
+	if n.NamedArgs != nil {
+		updated, ok := n.NamedArgs.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.NamedArgs = updated.(*List)
+	}
+	if n.ArgNames != nil {
+		updated, ok := n.ArgNames.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ArgNames = updated.(*List)
+	}
+	if n.Args != nil {
+		updated, ok := n.Args.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Args = updated.(*List)
 	}
 	return v.Leave(n)
 }
@@ -3271,15 +4890,20 @@ type XmlSerialize struct {
 	Location  ParseLoc
 }
 
-func (n *XmlSerialize) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *XmlSerialize) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *XmlSerialize) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*XmlSerialize); ok {
-		n = x
+	n = node.(*XmlSerialize)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -3295,15 +4919,48 @@ type RangeTableFunc struct {
 	Location   ParseLoc
 }
 
-func (n *RangeTableFunc) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RangeTableFunc) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RangeTableFunc); ok {
-		n = x
+	n = node.(*RangeTableFunc)
+	if n.Docexpr != nil {
+		updated, ok := n.Docexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Docexpr = updated.(Node)
+	}
+	if n.Rowexpr != nil {
+		updated, ok := n.Rowexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Rowexpr = updated.(Node)
+	}
+	if n.Namespaces != nil {
+		updated, ok := n.Namespaces.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Namespaces = updated.(*List)
+	}
+	if n.Columns != nil {
+		updated, ok := n.Columns.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Columns = updated.(*List)
+	}
+	if n.Alias != nil {
+		updated, ok := n.Alias.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Alias = updated.(*Alias)
 	}
 	return v.Leave(n)
 }
@@ -3319,15 +4976,27 @@ type RangeTableFuncCol struct {
 	Location      ParseLoc
 }
 
-func (n *RangeTableFuncCol) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *RangeTableFuncCol) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeTableFuncCol) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*RangeTableFuncCol); ok {
-		n = x
+	n = node.(*RangeTableFuncCol)
+	if n.Colexpr != nil {
+		updated, ok := n.Colexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Colexpr = updated.(Node)
+	}
+	if n.Coldefexpr != nil {
+		updated, ok := n.Coldefexpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Coldefexpr = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -3343,16 +5012,14 @@ type JsonFormat struct {
 	Location   ParseLoc
 }
 
-func (n *JsonFormat) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonFormat) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonFormat) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonFormat); ok {
-		n = x
-	}
+	n = node.(*JsonFormat)
 	return v.Leave(n)
 }
 
@@ -3363,15 +5030,20 @@ type JsonReturning struct {
 	Typmod       int32
 }
 
-func (n *JsonReturning) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonReturning) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonReturning) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonReturning); ok {
-		n = x
+	n = node.(*JsonReturning)
+	if n.FormatClause != nil {
+		updated, ok := n.FormatClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FormatClause = updated.(*JsonFormat)
 	}
 	return v.Leave(n)
 }
@@ -3383,15 +5055,34 @@ type JsonValueExpr struct {
 	FormatClause  *JsonFormat
 }
 
-func (n *JsonValueExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonValueExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonValueExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonValueExpr); ok {
-		n = x
+	n = node.(*JsonValueExpr)
+	if n.RawExpr != nil {
+		updated, ok := n.RawExpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.RawExpr = updated.(Node)
+	}
+	if n.FormattedExpr != nil {
+		updated, ok := n.FormattedExpr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FormattedExpr = updated.(Node)
+	}
+	if n.FormatClause != nil {
+		updated, ok := n.FormatClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FormatClause = updated.(*JsonFormat)
 	}
 	return v.Leave(n)
 }
@@ -3402,15 +5093,20 @@ type JsonOutput struct {
 	Returning *JsonReturning
 }
 
-func (n *JsonOutput) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonOutput) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonOutput) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonOutput); ok {
-		n = x
+	n = node.(*JsonOutput)
+	if n.Returning != nil {
+		updated, ok := n.Returning.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Returning = updated.(*JsonReturning)
 	}
 	return v.Leave(n)
 }
@@ -3421,15 +5117,20 @@ type JsonArgument struct {
 	Name string
 }
 
-func (n *JsonArgument) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonArgument) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonArgument) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonArgument); ok {
-		n = x
+	n = node.(*JsonArgument)
+	if n.Val != nil {
+		updated, ok := n.Val.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Val = updated.(*JsonValueExpr)
 	}
 	return v.Leave(n)
 }
@@ -3448,15 +5149,27 @@ type JsonBehavior struct {
 	Location ParseLoc
 }
 
-func (n *JsonBehavior) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonBehavior) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonBehavior) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonBehavior); ok {
-		n = x
+	n = node.(*JsonBehavior)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
+	}
+	if n.Coerce != nil {
+		updated, ok := n.Coerce.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Coerce = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -3478,15 +5191,55 @@ type JsonFuncExpr struct {
 	Location    ParseLoc
 }
 
-func (n *JsonFuncExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonFuncExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonFuncExpr); ok {
-		n = x
+	n = node.(*JsonFuncExpr)
+	if n.ContextItem != nil {
+		updated, ok := n.ContextItem.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ContextItem = updated.(*JsonValueExpr)
+	}
+	if n.Pathspec != nil {
+		updated, ok := n.Pathspec.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Pathspec = updated.(Node)
+	}
+	if n.Passing != nil {
+		updated, ok := n.Passing.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Passing = updated.(*List)
+	}
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
+	}
+	if n.OnEmpty != nil {
+		updated, ok := n.OnEmpty.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnEmpty = updated.(*JsonBehavior)
+	}
+	if n.OnError != nil {
+		updated, ok := n.OnError.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnError = updated.(*JsonBehavior)
 	}
 	return v.Leave(n)
 }
@@ -3499,15 +5252,20 @@ type JsonTablePathSpec struct {
 	Location     ParseLoc
 }
 
-func (n *JsonTablePathSpec) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonTablePathSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonTablePathSpec) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonTablePathSpec); ok {
-		n = x
+	n = node.(*JsonTablePathSpec)
+	if n.String != nil {
+		updated, ok := n.String.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.String = updated.(Node)
 	}
 	return v.Leave(n)
 }
@@ -3529,15 +5287,48 @@ type JsonTableColumn struct {
 	Location     ParseLoc
 }
 
-func (n *JsonTableColumn) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonTableColumn) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonTableColumn); ok {
-		n = x
+	n = node.(*JsonTableColumn)
+	if n.Pathspec != nil {
+		updated, ok := n.Pathspec.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Pathspec = updated.(*JsonTablePathSpec)
+	}
+	if n.FormatClause != nil {
+		updated, ok := n.FormatClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FormatClause = updated.(*JsonFormat)
+	}
+	if n.Columns != nil {
+		updated, ok := n.Columns.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Columns = updated.(*List)
+	}
+	if n.OnEmpty != nil {
+		updated, ok := n.OnEmpty.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnEmpty = updated.(*JsonBehavior)
+	}
+	if n.OnError != nil {
+		updated, ok := n.OnError.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnError = updated.(*JsonBehavior)
 	}
 	return v.Leave(n)
 }
@@ -3554,15 +5345,55 @@ type JsonTable struct {
 	Location    ParseLoc
 }
 
-func (n *JsonTable) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonTable) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonTable) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonTable); ok {
-		n = x
+	n = node.(*JsonTable)
+	if n.ContextItem != nil {
+		updated, ok := n.ContextItem.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ContextItem = updated.(*JsonValueExpr)
+	}
+	if n.Pathspec != nil {
+		updated, ok := n.Pathspec.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Pathspec = updated.(*JsonTablePathSpec)
+	}
+	if n.Passing != nil {
+		updated, ok := n.Passing.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Passing = updated.(*List)
+	}
+	if n.Columns != nil {
+		updated, ok := n.Columns.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Columns = updated.(*List)
+	}
+	if n.OnError != nil {
+		updated, ok := n.OnError.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.OnError = updated.(*JsonBehavior)
+	}
+	if n.Alias != nil {
+		updated, ok := n.Alias.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Alias = updated.(*Alias)
 	}
 	return v.Leave(n)
 }
@@ -3573,15 +5404,27 @@ type JsonKeyValue struct {
 	Value *JsonValueExpr
 }
 
-func (n *JsonKeyValue) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonKeyValue) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonKeyValue) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonKeyValue); ok {
-		n = x
+	n = node.(*JsonKeyValue)
+	if n.Key != nil {
+		updated, ok := n.Key.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Key = updated.(Node)
+	}
+	if n.Value != nil {
+		updated, ok := n.Value.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Value = updated.(*JsonValueExpr)
 	}
 	return v.Leave(n)
 }
@@ -3594,15 +5437,27 @@ type JsonParseExpr struct {
 	Location   ParseLoc
 }
 
-func (n *JsonParseExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonParseExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonParseExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonParseExpr); ok {
-		n = x
+	n = node.(*JsonParseExpr)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(*JsonValueExpr)
+	}
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
 	}
 	return v.Leave(n)
 }
@@ -3614,15 +5469,27 @@ type JsonScalarExpr struct {
 	Location ParseLoc
 }
 
-func (n *JsonScalarExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonScalarExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonScalarExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonScalarExpr); ok {
-		n = x
+	n = node.(*JsonScalarExpr)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
+	}
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
 	}
 	return v.Leave(n)
 }
@@ -3634,15 +5501,27 @@ type JsonSerializeExpr struct {
 	Location ParseLoc
 }
 
-func (n *JsonSerializeExpr) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonSerializeExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonSerializeExpr) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonSerializeExpr); ok {
-		n = x
+	n = node.(*JsonSerializeExpr)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(*JsonValueExpr)
+	}
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
 	}
 	return v.Leave(n)
 }
@@ -3656,15 +5535,27 @@ type JsonObjectConstructor struct {
 	Location     ParseLoc
 }
 
-func (n *JsonObjectConstructor) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonObjectConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonObjectConstructor) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonObjectConstructor); ok {
-		n = x
+	n = node.(*JsonObjectConstructor)
+	if n.Exprs != nil {
+		updated, ok := n.Exprs.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Exprs = updated.(*List)
+	}
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
 	}
 	return v.Leave(n)
 }
@@ -3677,15 +5568,27 @@ type JsonArrayConstructor struct {
 	Location     ParseLoc
 }
 
-func (n *JsonArrayConstructor) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonArrayConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonArrayConstructor) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonArrayConstructor); ok {
-		n = x
+	n = node.(*JsonArrayConstructor)
+	if n.Exprs != nil {
+		updated, ok := n.Exprs.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Exprs = updated.(*List)
+	}
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
 	}
 	return v.Leave(n)
 }
@@ -3699,15 +5602,36 @@ type JsonArrayQueryConstructor struct {
 	Location     ParseLoc
 }
 
-func (n *JsonArrayQueryConstructor) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonArrayQueryConstructor) Restore(ctx *format.RestoreCtx) error {
+	return restorePGNode(ctx, n)
+}
 
 func (n *JsonArrayQueryConstructor) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonArrayQueryConstructor); ok {
-		n = x
+	n = node.(*JsonArrayQueryConstructor)
+	if n.Query != nil {
+		updated, ok := n.Query.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Query = updated.(Node)
+	}
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
+	}
+	if n.FormatClause != nil {
+		updated, ok := n.FormatClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FormatClause = updated.(*JsonFormat)
 	}
 	return v.Leave(n)
 }
@@ -3721,15 +5645,41 @@ type JsonAggConstructor struct {
 	Location   ParseLoc
 }
 
-func (n *JsonAggConstructor) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonAggConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonAggConstructor) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonAggConstructor); ok {
-		n = x
+	n = node.(*JsonAggConstructor)
+	if n.Output != nil {
+		updated, ok := n.Output.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Output = updated.(*JsonOutput)
+	}
+	if n.Agg_filter != nil {
+		updated, ok := n.Agg_filter.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Agg_filter = updated.(Node)
+	}
+	if n.Agg_order != nil {
+		updated, ok := n.Agg_order.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Agg_order = updated.(*List)
+	}
+	if n.Over != nil {
+		updated, ok := n.Over.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Over = updated.(*WindowDef)
 	}
 	return v.Leave(n)
 }
@@ -3742,15 +5692,27 @@ type JsonObjectAgg struct {
 	UniqueKeys   bool
 }
 
-func (n *JsonObjectAgg) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonObjectAgg) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonObjectAgg) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonObjectAgg); ok {
-		n = x
+	n = node.(*JsonObjectAgg)
+	if n.Constructor != nil {
+		updated, ok := n.Constructor.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Constructor = updated.(*JsonAggConstructor)
+	}
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(*JsonKeyValue)
 	}
 	return v.Leave(n)
 }
@@ -3762,15 +5724,27 @@ type JsonArrayAgg struct {
 	AbsentOnNull bool
 }
 
-func (n *JsonArrayAgg) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonArrayAgg) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonArrayAgg) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonArrayAgg); ok {
-		n = x
+	n = node.(*JsonArrayAgg)
+	if n.Constructor != nil {
+		updated, ok := n.Constructor.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Constructor = updated.(*JsonAggConstructor)
+	}
+	if n.Arg != nil {
+		updated, ok := n.Arg.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Arg = updated.(*JsonValueExpr)
 	}
 	return v.Leave(n)
 }
@@ -3786,15 +5760,27 @@ type JsonIsPredicate struct {
 	Location     ParseLoc
 }
 
-func (n *JsonIsPredicate) Restore(ctx *format.RestoreCtx) error { return nil }
+func (n *JsonIsPredicate) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonIsPredicate) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	node, skip := v.Enter(n)
+	if skip {
+		return v.Leave(node)
 	}
-	if x, ok := newNode.(*JsonIsPredicate); ok {
-		n = x
+	n = node.(*JsonIsPredicate)
+	if n.Expr != nil {
+		updated, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = updated.(Node)
+	}
+	if n.FormatClause != nil {
+		updated, ok := n.FormatClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.FormatClause = updated.(*JsonFormat)
 	}
 	return v.Leave(n)
 }

@@ -3,6 +3,7 @@ package driver
 import (
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 
 	"github.com/mia0x75/pgparser/ast"
@@ -190,19 +191,23 @@ type ParamMarkerExpr struct {
 
 // Restore implements Node interface.
 func (n *ParamMarkerExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WritePlain("?")
+	if n.Offset < 0 || n.Offset >= math.MaxInt32 {
+		return errors.New("invalid PostgreSQL parameter number")
+	}
+	ctx.WritePlainf("$%d", n.Offset+1)
 	return nil
 }
 
 func newParamMarkerExpr(offset int) ast.ParamMarkerExpr {
 	return &ParamMarkerExpr{
 		Offset: offset,
+		Order:  offset,
 	}
 }
 
 // Format the ExprNode into a Writer.
 func (n *ParamMarkerExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	fmt.Fprintf(w, "$%d", n.Offset+1)
 }
 
 // Accept implements Node Accept interface.

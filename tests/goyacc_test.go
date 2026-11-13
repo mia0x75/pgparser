@@ -712,7 +712,7 @@ func TestParseSQLCharacterVaryingSynonym(t *testing.T) {
 		t.Fatalf("columns = %d, want 2", len(ct.Cols))
 	}
 	for i, col := range ct.Cols {
-		if got := col.Tp.String(); got != "varchar(20)" {
+		if got := col.Tp.String(); got != `"varchar"(20)` {
 			t.Fatalf("column %d type = %q, want varchar(20)", i, got)
 		}
 	}
@@ -723,7 +723,7 @@ func TestParseSQLCharacterVaryingSynonym(t *testing.T) {
 		if !ok {
 			t.Fatalf("field %d: expected cast, got %T", i, st.Fields.Fields[i].Expr)
 		}
-		if fc.Tp == nil || fc.Tp.String() != "varchar(20)" {
+		if fc.Tp == nil || fc.Tp.String() != `"varchar"(20)` {
 			t.Fatalf("field %d: type = %#v, want varchar(20)", i, fc.Tp)
 		}
 	}
@@ -1512,11 +1512,11 @@ func TestParseSQLSavepointAndRoutineStatements(t *testing.T) {
 }
 
 func TestParseSQLUserRoleAndPreparedStatements(t *testing.T) {
-	if st, ok := mustParseOne(t, "CREATE USER u PASSWORD 'x';").(*ast.CreateUserStmt); !ok || st.Specs[0].AuthOpt == nil || !st.Specs[0].AuthOpt.Password {
-		t.Fatalf("create user = %#v", mustParseOne(t, "CREATE USER u PASSWORD 'x';"))
+	if st, ok := mustParseOne(t, "CREATE USER u PASSWORD 'MOCK_TOKEN';").(*ast.CreateUserStmt); !ok || st.Specs[0].AuthOpt == nil || !st.Specs[0].AuthOpt.Password {
+		t.Fatalf("create user = %#v", mustParseOne(t, "CREATE USER u PASSWORD 'MOCK_TOKEN';"))
 	}
-	if st, ok := mustParseOne(t, "CREATE ROLE r WITH PASSWORD 'x';").(*ast.CreateUserStmt); !ok || !st.IsCreateRole || !st.Specs[0].AuthOpt.Password {
-		t.Fatalf("create role = %#v", mustParseOne(t, "CREATE ROLE r WITH PASSWORD 'x';"))
+	if st, ok := mustParseOne(t, "CREATE ROLE r WITH PASSWORD 'MOCK_TOKEN';").(*ast.CreateUserStmt); !ok || !st.IsCreateRole || !st.Specs[0].AuthOpt.Password {
+		t.Fatalf("create role = %#v", mustParseOne(t, "CREATE ROLE r WITH PASSWORD 'MOCK_TOKEN';"))
 	}
 	if st, ok := mustParseOne(t, "ALTER ROLE r;").(*ast.AlterUserStmt); !ok || !st.IsAlterRole {
 		t.Fatalf("alter role = %#v", mustParseOne(t, "ALTER ROLE r;"))
@@ -1533,7 +1533,7 @@ func TestParseSQLUserRoleAndPreparedStatements(t *testing.T) {
 	if !ok || st.Name != "p" || len(st.Params) != 2 || st.Stmt == nil {
 		t.Fatalf("prepare = %#v", prep)
 	}
-	if st.Params[0].String() != "int(11)" || st.Params[1].String() != "text" {
+	if st.Params[0].String() != `"int4"` || st.Params[1].String() != `"text"` {
 		t.Fatalf("prepare params = %#v", st.Params)
 	}
 	if st, ok := mustParseOne(t, "EXECUTE p(1, 'x');").(*ast.ExecuteStmt); !ok || len(st.Args) != 2 {
@@ -1546,10 +1546,10 @@ func TestParseSQLUserRoleAndPreparedStatements(t *testing.T) {
 		t.Fatalf("deallocate all = %#v", mustParseOne(t, "DEALLOCATE ALL;"))
 	}
 
-	if got := compactSQL(restoreNode(t, prep)); got != "PREPARE p (INT, TEXT) AS INSERT INTO t VALUES (?,?)" {
+	if got := compactSQL(restoreNode(t, prep)); got != `PREPARE "p" ("int4", "text") AS INSERT INTO "t" VALUES ($1,$2)` {
 		t.Fatalf("prepare restore = %q", got)
 	}
-	if got := compactSQL(restoreNode(t, mustParseOne(t, "CREATE USER u PASSWORD 'x';"))); got != "CREATE USER u PASSWORD 'x'" {
+	if got := compactSQL(restoreNode(t, mustParseOne(t, "CREATE USER u PASSWORD 'MOCK_TOKEN';"))); got != `CREATE USER "u" PASSWORD 'MOCK_TOKEN'` {
 		t.Fatalf("create user restore = %q", got)
 	}
 }

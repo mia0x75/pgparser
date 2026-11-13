@@ -992,13 +992,20 @@ func (n *SetDefaultRoleStmt) Accept(v Visitor) (Node, bool) {
 type UserSpec struct {
 	User    *auth.UserIdentity
 	AuthOpt *AuthOption
+	Role    *RoleSpec
 	IsRole  bool
 }
 
 // Restore implements Node interface.
 func (n *UserSpec) Restore(ctx *format.RestoreCtx) error {
-	if err := n.User.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore UserSpec.User")
+	if n.Role != nil {
+		if err := n.Role.Restore(ctx); err != nil {
+			return err
+		}
+	} else {
+		if err := n.User.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred while restore UserSpec.User")
+		}
 	}
 	if n.AuthOpt != nil {
 		ctx.WritePlain(" ")
@@ -1164,10 +1171,15 @@ type CreateUserStmt struct {
 	TslOptions            []*TslOption
 	ResourceOptions       []*ResourceOption
 	PasswordOrLockOptions []*PasswordOrLockOption
+	RoleOptions           *List
+	Role                  *RoleSpec
 }
 
 // Restore implements Node interface.
 func (n *CreateUserStmt) Restore(ctx *format.RestoreCtx) error {
+	if n.Role != nil {
+		return restoreRoleStatement(ctx, n.IsCreateRole, false, n.Role, n.RoleOptions)
+	}
 	if n.IsCreateRole {
 		ctx.WriteKeyWord("CREATE ROLE ")
 	} else {
@@ -1228,6 +1240,20 @@ func (n *CreateUserStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*CreateUserStmt)
+	if n.Role != nil {
+		node, ok := n.Role.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Role = node.(*RoleSpec)
+	}
+	if n.RoleOptions != nil {
+		node, ok := n.RoleOptions.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.RoleOptions = node.(*List)
+	}
 	return v.Leave(n)
 }
 
@@ -1251,10 +1277,15 @@ type AlterUserStmt struct {
 	IsAlterRole bool
 	CurrentAuth *AuthOption
 	Specs       []*UserSpec
+	RoleOptions *List
+	Role        *RoleSpec
 }
 
 // Restore implements Node interface.
 func (n *AlterUserStmt) Restore(ctx *format.RestoreCtx) error {
+	if n.Role != nil {
+		return restoreRoleStatement(ctx, n.IsAlterRole, true, n.Role, n.RoleOptions)
+	}
 	if n.IsAlterRole {
 		ctx.WriteKeyWord("ALTER ROLE ")
 	} else {
@@ -1299,6 +1330,20 @@ func (n *AlterUserStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*AlterUserStmt)
+	if n.Role != nil {
+		node, ok := n.Role.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Role = node.(*RoleSpec)
+	}
+	if n.RoleOptions != nil {
+		node, ok := n.RoleOptions.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.RoleOptions = node.(*List)
+	}
 	return v.Leave(n)
 }
 
@@ -1393,63 +1438,74 @@ type PrivElem struct {
 
 	Priv postgres.PrivilegeType
 	Cols []*ColumnName
+	Name string
 }
 
 // Restore implements Node interface.
 func (n *PrivElem) Restore(ctx *format.RestoreCtx) error {
-	switch n.Priv {
-	case 0:
-		ctx.WritePlain("/* UNSUPPORTED TYPE */")
-	case postgres.AllPriv:
-		ctx.WriteKeyWord("ALL")
-	case postgres.AlterPriv:
-		ctx.WriteKeyWord("ALTER")
-	case postgres.CreatePriv:
-		ctx.WriteKeyWord("CREATE")
-	case postgres.CreateUserPriv:
-		ctx.WriteKeyWord("CREATE USER")
-	case postgres.CreateRolePriv:
-		ctx.WriteKeyWord("CREATE ROLE")
-	case postgres.TriggerPriv:
-		ctx.WriteKeyWord("TRIGGER")
-	case postgres.DeletePriv:
-		ctx.WriteKeyWord("DELETE")
-	case postgres.DropPriv:
-		ctx.WriteKeyWord("DROP")
-	case postgres.ProcessPriv:
-		ctx.WriteKeyWord("PROCESS")
-	case postgres.ExecutePriv:
-		ctx.WriteKeyWord("EXECUTE")
-	case postgres.IndexPriv:
-		ctx.WriteKeyWord("INDEX")
-	case postgres.InsertPriv:
-		ctx.WriteKeyWord("INSERT")
-	case postgres.SelectPriv:
-		ctx.WriteKeyWord("SELECT")
-	case postgres.SuperPriv:
-		ctx.WriteKeyWord("SUPER")
-	case postgres.ShowDBPriv:
-		ctx.WriteKeyWord("SHOW DATABASES")
-	case postgres.UpdatePriv:
-		ctx.WriteKeyWord("UPDATE")
-	case postgres.GrantPriv:
-		ctx.WriteKeyWord("GRANT OPTION")
-	case postgres.ReferencesPriv:
-		ctx.WriteKeyWord("REFERENCES")
-	case postgres.CreateViewPriv:
-		ctx.WriteKeyWord("CREATE VIEW")
-	case postgres.ShowViewPriv:
-		ctx.WriteKeyWord("SHOW VIEW")
-	case postgres.UsagePriv:
-		ctx.WriteKeyWord("USAGE")
-	case postgres.ConnectPriv:
-		ctx.WriteKeyWord("CONNECT")
-	case postgres.TemporaryPriv:
-		ctx.WriteKeyWord("TEMPORARY")
-	case postgres.TruncatePriv:
-		ctx.WriteKeyWord("TRUNCATE")
-	default:
-		return errors.New("Undefined privilege type")
+	if n.Name != "" {
+		switch strings.ToLower(n.Name) {
+		case "all", "select", "insert", "update", "delete", "truncate", "references", "trigger", "maintain",
+			"usage", "create", "connect", "temporary", "temp", "execute", "set", "alter system":
+			ctx.WriteKeyWord(n.Name)
+		default:
+			return errors.New("unsupported privilege name")
+		}
+	} else {
+		switch n.Priv {
+		case 0:
+			return errors.New("unsupported privilege type")
+		case postgres.AllPriv:
+			ctx.WriteKeyWord("ALL")
+		case postgres.AlterPriv:
+			ctx.WriteKeyWord("ALTER")
+		case postgres.CreatePriv:
+			ctx.WriteKeyWord("CREATE")
+		case postgres.CreateUserPriv:
+			ctx.WriteKeyWord("CREATE USER")
+		case postgres.CreateRolePriv:
+			ctx.WriteKeyWord("CREATE ROLE")
+		case postgres.TriggerPriv:
+			ctx.WriteKeyWord("TRIGGER")
+		case postgres.DeletePriv:
+			ctx.WriteKeyWord("DELETE")
+		case postgres.DropPriv:
+			ctx.WriteKeyWord("DROP")
+		case postgres.ProcessPriv:
+			ctx.WriteKeyWord("PROCESS")
+		case postgres.ExecutePriv:
+			ctx.WriteKeyWord("EXECUTE")
+		case postgres.IndexPriv:
+			ctx.WriteKeyWord("INDEX")
+		case postgres.InsertPriv:
+			ctx.WriteKeyWord("INSERT")
+		case postgres.SelectPriv:
+			ctx.WriteKeyWord("SELECT")
+		case postgres.SuperPriv:
+			ctx.WriteKeyWord("SUPER")
+		case postgres.ShowDBPriv:
+			ctx.WriteKeyWord("SHOW DATABASES")
+		case postgres.UpdatePriv:
+			ctx.WriteKeyWord("UPDATE")
+		case postgres.GrantPriv:
+			ctx.WriteKeyWord("GRANT OPTION")
+		case postgres.ReferencesPriv:
+			ctx.WriteKeyWord("REFERENCES")
+		case postgres.CreateViewPriv:
+			ctx.WriteKeyWord("CREATE VIEW")
+		case postgres.ShowViewPriv:
+			ctx.WriteKeyWord("SHOW VIEW")
+		case postgres.UsagePriv:
+			ctx.WriteKeyWord("USAGE")
+		case postgres.ConnectPriv:
+			ctx.WriteKeyWord("CONNECT")
+		case postgres.TemporaryPriv:
+			ctx.WriteKeyWord("TEMPORARY")
+		case postgres.TruncatePriv:
+			ctx.WriteKeyWord("TRUNCATE")
+		default:
+			return errors.New("Undefined privilege type")
+		}
 	}
 	if n.Cols != nil {
 		ctx.WritePlain(" (")
@@ -1612,14 +1668,20 @@ type RevokeStmt struct {
 	Level      *GrantLevel
 	Users      []*UserSpec
 	// Objects are the objects the privileges are revoked from.
-	Objects []*TableName
+	Objects     []*TableName
+	TargetNodes *List
 	// Behavior is the drop behavior of the statement.
-	Behavior DropBehavior
+	Behavior    DropBehavior
+	GrantOption bool
+	Grantor     *RoleSpec
 }
 
 // Restore implements Node interface.
 func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("REVOKE ")
+	if n.GrantOption {
+		ctx.WriteKeyWord("GRANT OPTION FOR ")
+	}
 	for i, v := range n.Privs {
 		if i != 0 {
 			ctx.WritePlain(", ")
@@ -1635,7 +1697,7 @@ func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(" ")
 	}
-	if err := writeGrantTargets(ctx, n.Objects, n.Level); err != nil {
+	if err := writeGrantTargets(ctx, n.Objects, n.Level, n.TargetNodes); err != nil {
 		return errors.Annotate(err, "An error occurred while restore RevokeStmt.Objects")
 	}
 	ctx.WriteKeyWord(" FROM ")
@@ -1645,6 +1707,12 @@ func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		if err := v.Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore RevokeStmt.Users[%d]", i)
+		}
+	}
+	if n.Grantor != nil {
+		ctx.WriteKeyWord(" GRANTED BY ")
+		if err := n.Grantor.Restore(ctx); err != nil {
+			return err
 		}
 	}
 	switch n.Behavior {
@@ -1663,12 +1731,42 @@ func (n *RevokeStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*RevokeStmt)
+	if n.TargetNodes != nil {
+		node, ok := n.TargetNodes.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TargetNodes = node.(*List)
+	}
 	for i, val := range n.Privs {
 		node, ok := val.Accept(v)
 		if !ok {
 			return n, false
 		}
 		n.Privs[i] = node.(*PrivElem)
+	}
+	for i, object := range n.Objects {
+		node, ok := object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Objects[i] = node.(*TableName)
+	}
+	for _, user := range n.Users {
+		if user != nil && user.Role != nil {
+			node, ok := user.Role.Accept(v)
+			if !ok {
+				return n, false
+			}
+			user.Role = node.(*RoleSpec)
+		}
+	}
+	if n.Grantor != nil {
+		node, ok := n.Grantor.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Grantor = node.(*RoleSpec)
 	}
 	return v.Leave(n)
 }
@@ -1677,29 +1775,45 @@ func (n *RevokeStmt) Accept(v Visitor) (Node, bool) {
 type RevokeRoleStmt struct {
 	stmtNode
 
-	Roles []*auth.RoleIdentity
-	Users []*auth.UserIdentity
+	Roles       *List
+	Users       *List
+	GrantOption string
+	Grantor     *RoleSpec
+	Behavior    DropBehavior
 }
 
 // Restore implements Node interface.
 func (n *RevokeRoleStmt) Restore(ctx *format.RestoreCtx) error {
+	if n.Roles == nil || n.Users == nil {
+		return errors.New("role revoke has no roles or grantees")
+	}
 	ctx.WriteKeyWord("REVOKE ")
-	for i, role := range n.Roles {
-		if i != 0 {
-			ctx.WritePlain(", ")
+	if n.GrantOption != "" {
+		switch strings.ToLower(n.GrantOption) {
+		case "admin", "inherit", "set":
+		default:
+			return errors.New("unsupported role revoke option")
 		}
-		if err := role.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore RevokeRoleStmt.Roles[%d]", i)
-		}
+		ctx.WriteKeyWord(n.GrantOption + " OPTION FOR ")
+	}
+	if err := n.Roles.Restore(ctx); err != nil {
+		return err
 	}
 	ctx.WriteKeyWord(" FROM ")
-	for i, v := range n.Users {
-		if i != 0 {
-			ctx.WritePlain(", ")
+	if err := n.Users.Restore(ctx); err != nil {
+		return err
+	}
+	if n.Grantor != nil {
+		ctx.WriteKeyWord(" GRANTED BY ")
+		if err := n.Grantor.Restore(ctx); err != nil {
+			return err
 		}
-		if err := v.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore RevokeRoleStmt.Users[%d]", i)
-		}
+	}
+	switch n.Behavior {
+	case DROP_CASCADE:
+		ctx.WriteKeyWord(" CASCADE")
+	case DROP_RESTRICT:
+		ctx.WriteKeyWord(" RESTRICT")
 	}
 	return nil
 }
@@ -1711,11 +1825,35 @@ func (n *RevokeRoleStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*RevokeRoleStmt)
+	if n.Roles != nil {
+		node, ok := n.Roles.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Roles = node.(*List)
+	}
+	if n.Users != nil {
+		node, ok := n.Users.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Users = node.(*List)
+	}
+	if n.Grantor != nil {
+		node, ok := n.Grantor.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Grantor = node.(*RoleSpec)
+	}
 	return v.Leave(n)
 }
 
 // writeGrantTargets writes the targets of a GRANT or REVOKE statement.
-func writeGrantTargets(ctx *format.RestoreCtx, objects []*TableName, level *GrantLevel) error {
+func writeGrantTargets(ctx *format.RestoreCtx, objects []*TableName, level *GrantLevel, targets *List) error {
+	if targets != nil {
+		return targets.Restore(ctx)
+	}
 	if len(objects) > 0 {
 		for i, obj := range objects {
 			if i != 0 {
@@ -1743,13 +1881,14 @@ type GrantStmt struct {
 	Users      []*UserSpec
 	WithGrant  bool
 	// Objects are the objects the privileges are granted on.
-	Objects []*TableName
+	Objects     []*TableName
+	TargetNodes *List
 	// IsGrant is true for GRANT and false for REVOKE.
 	IsGrant bool
 	// GrantOption is true when the grant option is given.
 	GrantOption bool
 	// Grantor is the role granting the privileges.
-	Grantor string
+	Grantor *RoleSpec
 	// Behavior is the drop behavior of a REVOKE statement.
 	Behavior DropBehavior
 }
@@ -1758,10 +1897,8 @@ type GrantStmt struct {
 func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("GRANT ")
 	for i, v := range n.Privs {
-		if i != 0 && v.Priv != 0 {
+		if i != 0 {
 			ctx.WritePlain(", ")
-		} else if v.Priv == 0 {
-			ctx.WritePlain(" ")
 		}
 		if err := v.Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore GrantStmt.Privs[%d]", i)
@@ -1774,7 +1911,7 @@ func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(" ")
 	}
-	if err := writeGrantTargets(ctx, n.Objects, n.Level); err != nil {
+	if err := writeGrantTargets(ctx, n.Objects, n.Level, n.TargetNodes); err != nil {
 		return errors.Annotate(err, "An error occurred while restore GrantStmt.Objects")
 	}
 	ctx.WriteKeyWord(" TO ")
@@ -1786,8 +1923,14 @@ func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore GrantStmt.Users[%d]", i)
 		}
 	}
-	if n.WithGrant {
+	if n.WithGrant || n.GrantOption {
 		ctx.WriteKeyWord(" WITH GRANT OPTION")
+	}
+	if n.Grantor != nil {
+		ctx.WriteKeyWord(" GRANTED BY ")
+		if err := n.Grantor.Restore(ctx); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -1810,12 +1953,42 @@ func (n *GrantStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*GrantStmt)
+	if n.TargetNodes != nil {
+		node, ok := n.TargetNodes.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.TargetNodes = node.(*List)
+	}
 	for i, val := range n.Privs {
 		node, ok := val.Accept(v)
 		if !ok {
 			return n, false
 		}
 		n.Privs[i] = node.(*PrivElem)
+	}
+	for i, object := range n.Objects {
+		node, ok := object.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Objects[i] = node.(*TableName)
+	}
+	for _, user := range n.Users {
+		if user != nil && user.Role != nil {
+			node, ok := user.Role.Accept(v)
+			if !ok {
+				return n, false
+			}
+			user.Role = node.(*RoleSpec)
+		}
+	}
+	if n.Grantor != nil {
+		node, ok := n.Grantor.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Grantor = node.(*RoleSpec)
 	}
 	return v.Leave(n)
 }
@@ -1824,8 +1997,10 @@ func (n *GrantStmt) Accept(v Visitor) (Node, bool) {
 type GrantRoleStmt struct {
 	stmtNode
 
-	Roles []*auth.RoleIdentity
-	Users []*auth.UserIdentity
+	Roles   *List
+	Users   *List
+	Options *List
+	Grantor *RoleSpec
 }
 
 // Accept implements Node Accept interface.
@@ -1835,29 +2010,75 @@ func (n *GrantRoleStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*GrantRoleStmt)
+	if n.Roles != nil {
+		node, ok := n.Roles.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Roles = node.(*List)
+	}
+	if n.Users != nil {
+		node, ok := n.Users.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Users = node.(*List)
+	}
+	if n.Options != nil {
+		node, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = node.(*List)
+	}
+	if n.Grantor != nil {
+		node, ok := n.Grantor.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Grantor = node.(*RoleSpec)
+	}
 	return v.Leave(n)
 }
 
 // Restore implements Node interface.
 func (n *GrantRoleStmt) Restore(ctx *format.RestoreCtx) error {
+	if n.Roles == nil || n.Users == nil {
+		return errors.New("role grant has no roles or grantees")
+	}
 	ctx.WriteKeyWord("GRANT ")
-	if len(n.Roles) > 0 {
-		for i, role := range n.Roles {
-			if i != 0 {
+	if err := n.Roles.Restore(ctx); err != nil {
+		return err
+	}
+	ctx.WriteKeyWord(" TO ")
+	if err := n.Users.Restore(ctx); err != nil {
+		return err
+	}
+	if n.Options != nil && len(n.Options.Items) > 0 {
+		ctx.WriteKeyWord(" WITH ")
+		for i, item := range n.Options.Items {
+			if i > 0 {
 				ctx.WritePlain(", ")
 			}
-			if err := role.Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore GrantRoleStmt.Roles[%d]", i)
+			option, ok := item.(*DefElem)
+			if !ok || option.Arg == nil {
+				return errors.New("invalid role grant option")
+			}
+			switch strings.ToLower(option.Defname) {
+			case "admin", "inherit", "set":
+			default:
+				return errors.New("unsupported role grant option")
+			}
+			ctx.WriteKeyWord(option.Defname + " ")
+			if err := option.Arg.Restore(ctx); err != nil {
+				return err
 			}
 		}
 	}
-	ctx.WriteKeyWord(" TO ")
-	for i, v := range n.Users {
-		if i != 0 {
-			ctx.WritePlain(", ")
-		}
-		if err := v.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore GrantStmt.Users[%d]", i)
+	if n.Grantor != nil {
+		ctx.WriteKeyWord(" GRANTED BY ")
+		if err := n.Grantor.Restore(ctx); err != nil {
+			return err
 		}
 	}
 	return nil
