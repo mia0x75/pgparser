@@ -683,7 +683,35 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *AggregateFuncExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	fmt.Fprintf(w, "%s(", n.F)
+	if n.Distinct {
+		fmt.Fprint(w, "DISTINCT ")
+	}
+	if n.Star {
+		fmt.Fprint(w, "*")
+	} else {
+		for i, arg := range n.Args {
+			if i != 0 {
+				fmt.Fprint(w, ", ")
+			}
+			arg.Format(w)
+		}
+	}
+	if n.OrderBy != nil {
+		fmt.Fprint(w, " ")
+		n.OrderBy.Format(w)
+	}
+	fmt.Fprint(w, ")")
+	if n.WithinGroup != nil {
+		fmt.Fprint(w, " WITHIN GROUP (")
+		n.WithinGroup.Format(w)
+		fmt.Fprint(w, ")")
+	}
+	if n.Filter != nil {
+		fmt.Fprint(w, " FILTER (WHERE ")
+		n.Filter.Format(w)
+		fmt.Fprint(w, ")")
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -829,7 +857,34 @@ func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the window function expression into a Writer.
 func (n *WindowFuncExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	fmt.Fprintf(w, "%s(", n.F)
+	if n.Distinct {
+		fmt.Fprint(w, "DISTINCT ")
+	}
+	for i, arg := range n.Args {
+		if i != 0 {
+			fmt.Fprint(w, ", ")
+		}
+		arg.Format(w)
+	}
+	fmt.Fprint(w, ")")
+	if n.Filter != nil {
+		fmt.Fprint(w, " FILTER (WHERE ")
+		n.Filter.Format(w)
+		fmt.Fprint(w, ")")
+	}
+	if n.WithinGroup != nil {
+		fmt.Fprint(w, " WITHIN GROUP (")
+		n.WithinGroup.Format(w)
+		fmt.Fprint(w, ")")
+	}
+	if n.IgnoreNull {
+		fmt.Fprint(w, " IGNORE NULLS")
+	}
+	fmt.Fprint(w, " OVER ")
+	if n.Spec != (WindowSpec{}) {
+		n.Spec.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.

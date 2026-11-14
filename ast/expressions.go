@@ -375,7 +375,7 @@ func (n *SubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *SubqueryExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	fmt.Fprint(w, "(SELECT ...)")
 }
 
 // Accept implements Node Accept interface.
@@ -430,7 +430,13 @@ func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *CompareSubqueryExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	n.L.Format(w)
+	if n.All {
+		fmt.Fprint(w, " ALL ")
+	} else {
+		fmt.Fprint(w, " ANY ")
+	}
+	n.R.Format(w)
 }
 
 // Accept implements Node Accept interface.
@@ -477,6 +483,23 @@ func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteName(n.Name.O)
 	return nil
+}
+
+// Format formats the ColumnName into a Writer.
+func (n *ColumnName) Format(w io.Writer) {
+	if n.Schema.O != "" {
+		fmt.Fprint(w, n.Schema.O)
+		fmt.Fprint(w, ".")
+	}
+	if n.Table.O != "" {
+		fmt.Fprint(w, n.Table.O)
+		fmt.Fprint(w, ".")
+	}
+	if n.Name.O == "*" {
+		fmt.Fprint(w, "*")
+		return
+	}
+	fmt.Fprint(w, n.Name.O)
 }
 
 // Accept implements Node Accept interface.
@@ -578,7 +601,11 @@ func (n *DefaultExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *DefaultExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	if n.Name != nil {
+		n.Name.Format(w)
+	} else {
+		fmt.Fprint(w, "DEFAULT")
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -623,7 +650,14 @@ func (n *ExistsSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *ExistsSubqueryExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	if n.Not {
+		fmt.Fprint(w, "NOT EXISTS ")
+	} else {
+		fmt.Fprint(w, "EXISTS ")
+	}
+	if n.Sel != nil {
+		n.Sel.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -1004,7 +1038,7 @@ func (n *PositionExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *PositionExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	fmt.Fprintf(w, "%d", n.N)
 }
 
 // Accept implements Node Accept interface.
@@ -1136,7 +1170,14 @@ func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *RowExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	fmt.Fprint(w, "(")
+	for i, val := range n.Values {
+		if i != 0 {
+			fmt.Fprint(w, ", ")
+		}
+		val.Format(w)
+	}
+	fmt.Fprint(w, ")")
 }
 
 // Accept implements Node Accept interface.
@@ -1227,7 +1268,9 @@ func (n *ValuesExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *ValuesExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	if n.Column != nil {
+		n.Column.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -1291,7 +1334,23 @@ func (n *VariableExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *VariableExpr) Format(w io.Writer) {
-	panic("Not implemented")
+	if n.IsSystem {
+		fmt.Fprint(w, "@@")
+		if n.ExplicitScope {
+			if n.IsGlobal {
+				fmt.Fprint(w, "GLOBAL.")
+			} else {
+				fmt.Fprint(w, "SESSION.")
+			}
+		}
+	} else {
+		fmt.Fprint(w, "@")
+	}
+	fmt.Fprint(w, n.Name)
+	if n.Value != nil {
+		fmt.Fprint(w, ":=")
+		n.Value.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.

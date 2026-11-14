@@ -938,6 +938,39 @@ func (n *ByItem) Restore(ctx *format.RestoreCtx) error {
 	return nil
 }
 
+// Format formats the ByItem into a Writer.
+func (n *ByItem) Format(w io.Writer) {
+	if n.GroupingSet != nil {
+		switch n.GroupingSet.Type {
+		case GroupingSetEmpty:
+			fmt.Fprint(w, "()")
+		case GroupingSetRollup:
+			fmt.Fprint(w, "ROLLUP (")
+			// Note: restoreExprSets not available in Format, skipping
+			fmt.Fprint(w, ")")
+		case GroupingSetCube:
+			fmt.Fprint(w, "CUBE (")
+			fmt.Fprint(w, ")")
+		case GroupingSetSets:
+			fmt.Fprint(w, "GROUPING SETS (")
+			fmt.Fprint(w, ")")
+		}
+		return
+	}
+	if n.Expr != nil {
+		n.Expr.Format(w)
+	}
+	if n.Desc {
+		fmt.Fprint(w, " DESC")
+	}
+	switch n.NullOrder {
+	case 1:
+		fmt.Fprint(w, " NULLS FIRST")
+	case 2:
+		fmt.Fprint(w, " NULLS LAST")
+	}
+}
+
 // Accept implements Node Accept interface.
 func (n *ByItem) Accept(v Visitor) (Node, bool) {
 	newNode, skipChildren := v.Enter(n)
@@ -999,6 +1032,30 @@ func (n *GroupByClause) Restore(ctx *format.RestoreCtx) error {
 	return nil
 }
 
+// Format formats the GroupByClause into a Writer.
+func (n *GroupByClause) Format(w io.Writer) {
+	fmt.Fprint(w, "GROUP BY ")
+	for i, v := range n.Items {
+		if i != 0 {
+			fmt.Fprint(w, ", ")
+		}
+		v.Format(w)
+	}
+	if n.WithRollup {
+		fmt.Fprint(w, " WITH ROLLUP")
+	}
+	if n.WithCube {
+		fmt.Fprint(w, " WITH CUBE")
+	}
+	if n.HasCheckOption {
+		if n.CheckOption == model.CheckOptionLocal {
+			fmt.Fprint(w, " WITH LOCAL CHECK OPTION")
+		} else {
+			fmt.Fprint(w, " WITH CASCADED CHECK OPTION")
+		}
+	}
+}
+
 // Accept implements Node Accept interface.
 func (n *GroupByClause) Accept(v Visitor) (Node, bool) {
 	newNode, skipChildren := v.Enter(n)
@@ -1029,6 +1086,14 @@ func (n *HavingClause) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore HavingClause.Expr")
 	}
 	return nil
+}
+
+// Format formats the HavingClause into a Writer.
+func (n *HavingClause) Format(w io.Writer) {
+	fmt.Fprint(w, "HAVING ")
+	if n.Expr != nil {
+		n.Expr.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -1065,6 +1130,17 @@ func (n *OrderByClause) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	return nil
+}
+
+// Format formats the OrderByClause into a Writer.
+func (n *OrderByClause) Format(w io.Writer) {
+	fmt.Fprint(w, "ORDER BY ")
+	for i, item := range n.Items {
+		if i != 0 {
+			fmt.Fprint(w, ", ")
+		}
+		item.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -3452,6 +3528,40 @@ func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
 	return nil
 }
 
+// Format formats the WindowSpec into a Writer.
+func (n *WindowSpec) Format(w io.Writer) {
+	name := n.Name.String()
+	if name != "" {
+		fmt.Fprint(w, name)
+		if n.OnlyAlias {
+			return
+		}
+		fmt.Fprint(w, " AS ")
+	}
+	fmt.Fprint(w, "(")
+	sep := ""
+	refName := n.Ref.String()
+	if refName != "" {
+		fmt.Fprint(w, refName)
+		sep = " "
+	}
+	if n.PartitionBy != nil {
+		fmt.Fprint(w, sep)
+		n.PartitionBy.Format(w)
+		sep = " "
+	}
+	if n.OrderBy != nil {
+		fmt.Fprint(w, sep)
+		n.OrderBy.Format(w)
+		sep = " "
+	}
+	if n.Frame != nil {
+		fmt.Fprint(w, sep)
+		n.Frame.Format(w)
+	}
+	fmt.Fprint(w, ")")
+}
+
 // Accept implements Node Accept interface.
 func (n *WindowSpec) Accept(v Visitor) (Node, bool) {
 	newNode, skipChildren := v.Enter(n)
@@ -3502,6 +3612,17 @@ func (n *PartitionByClause) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	return nil
+}
+
+// Format formats the PartitionByClause into a Writer.
+func (n *PartitionByClause) Format(w io.Writer) {
+	fmt.Fprint(w, "PARTITION BY ")
+	for i, v := range n.Items {
+		if i != 0 {
+			fmt.Fprint(w, ", ")
+		}
+		v.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -3574,6 +3695,31 @@ func (n *FrameClause) Restore(ctx *format.RestoreCtx) error {
 	}
 
 	return nil
+}
+
+// Format formats the FrameClause into a Writer.
+func (n *FrameClause) Format(w io.Writer) {
+	switch n.Type {
+	case Rows:
+		fmt.Fprint(w, "ROWS")
+	case Ranges:
+		fmt.Fprint(w, "RANGE")
+	case Groups:
+		fmt.Fprint(w, "GROUPS")
+	}
+	fmt.Fprint(w, " BETWEEN ")
+	n.Extent.Start.Format(w)
+	fmt.Fprint(w, " AND ")
+	n.Extent.End.Format(w)
+	switch n.Exclusion {
+	case 0:
+	case int64(FRAMEOPTION_EXCLUDE_CURRENT_ROW):
+		fmt.Fprint(w, " EXCLUDE CURRENT ROW")
+	case int64(FRAMEOPTION_EXCLUDE_GROUP):
+		fmt.Fprint(w, " EXCLUDE GROUP")
+	case int64(FRAMEOPTION_EXCLUDE_TIES):
+		fmt.Fprint(w, " EXCLUDE TIES")
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -3656,6 +3802,33 @@ func (n *FrameBound) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	return nil
+}
+
+// Format formats the FrameBound into a Writer.
+func (n *FrameBound) Format(w io.Writer) {
+	if n.UnBounded {
+		fmt.Fprint(w, "UNBOUNDED ")
+	}
+	switch n.Type {
+	case CurrentRow:
+		fmt.Fprint(w, "CURRENT ROW")
+	case Preceding, Following:
+		if n.Unit != nil {
+			fmt.Fprint(w, "INTERVAL ")
+		}
+		if n.Expr != nil {
+			n.Expr.Format(w)
+		}
+		if n.Unit != nil {
+			fmt.Fprint(w, " ")
+			n.Unit.Format(w)
+		}
+		if n.Type == Preceding {
+			fmt.Fprint(w, " PRECEDING")
+		} else {
+			fmt.Fprint(w, " FOLLOWING")
+		}
+	}
 }
 
 // Accept implements Node Accept interface.
