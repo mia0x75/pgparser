@@ -187,8 +187,20 @@ func (bj BinaryJSON) objectGetKey(i int) []byte {
 	return bj.Value[keyOff : keyOff+keyLen]
 }
 
+// objectGetKeyWithCount returns the key at index i using a pre-computed elemCount.
+func (bj BinaryJSON) objectGetKeyWithCount(i int, elemCount int) []byte {
+	keyOff := int(endian.Uint32(bj.Value[headerSize+i*keyEntrySize:]))
+	keyLen := int(endian.Uint16(bj.Value[headerSize+i*keyEntrySize+keyLenOff:]))
+	return bj.Value[keyOff : keyOff+keyLen]
+}
+
 func (bj BinaryJSON) objectGetVal(i int) BinaryJSON {
 	elemCount := bj.GetElemCount()
+	return bj.valEntryGet(headerSize + elemCount*keyEntrySize + i*valEntrySize)
+}
+
+// objectGetValWithCount returns the value at index i using a pre-computed elemCount.
+func (bj BinaryJSON) objectGetValWithCount(i int, elemCount int) BinaryJSON {
 	return bj.valEntryGet(headerSize + elemCount*keyEntrySize + i*valEntrySize)
 }
 

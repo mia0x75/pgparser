@@ -183,7 +183,7 @@ func (bj BinaryJSON) extractTo(buf []BinaryJSON, pathExpr PathExpression) []Bina
 		elemCount := bj.GetElemCount()
 		if currentLeg.dotKey == "*" {
 			for i := range elemCount {
-				buf = bj.objectGetVal(i).extractTo(buf, subPathExpr)
+				buf = bj.objectGetValWithCount(i, elemCount).extractTo(buf, subPathExpr)
 			}
 		} else {
 			child, ok := bj.objectSearchKey(hack.Slice(currentLeg.dotKey))
@@ -201,7 +201,7 @@ func (bj BinaryJSON) extractTo(buf []BinaryJSON, pathExpr PathExpression) []Bina
 		} else if bj.TypeCode == TypeCodeObject {
 			elemCount := bj.GetElemCount()
 			for i := range elemCount {
-				buf = bj.objectGetVal(i).extractTo(buf, pathExpr)
+				buf = bj.objectGetValWithCount(i, elemCount).extractTo(buf, pathExpr)
 			}
 		}
 	}
@@ -211,10 +211,10 @@ func (bj BinaryJSON) extractTo(buf []BinaryJSON, pathExpr PathExpression) []Bina
 func (bj BinaryJSON) objectSearchKey(key []byte) (BinaryJSON, bool) {
 	elemCount := bj.GetElemCount()
 	idx := sort.Search(elemCount, func(i int) bool {
-		return bytes.Compare(bj.objectGetKey(i), key) >= 0
+		return bytes.Compare(bj.objectGetKeyWithCount(i, elemCount), key) >= 0
 	})
-	if idx < elemCount && bytes.Equal(bj.objectGetKey(idx), key) {
-		return bj.objectGetVal(idx), true
+	if idx < elemCount && bytes.Equal(bj.objectGetKeyWithCount(idx, elemCount), key) {
+		return bj.objectGetValWithCount(idx, elemCount), true
 	}
 	return BinaryJSON{}, false
 }
@@ -383,7 +383,7 @@ func (bm *binaryModifier) doInsert(path PathExpression, newBj BinaryJSON) {
 	elemCount := parentBj.GetElemCount()
 	insertKey := hack.Slice(lastLeg.dotKey)
 	insertIdx := sort.Search(elemCount, func(i int) bool {
-		return bytes.Compare(parentBj.objectGetKey(i), insertKey) >= 0
+		return bytes.Compare(parentBj.objectGetKeyWithCount(i, elemCount), insertKey) >= 0
 	})
 	keys := make([][]byte, 0, elemCount+1)
 	elems := make([]BinaryJSON, 0, elemCount+1)
@@ -392,8 +392,8 @@ func (bm *binaryModifier) doInsert(path PathExpression, newBj BinaryJSON) {
 			keys = append(keys, insertKey)
 			elems = append(elems, newBj)
 		}
-		keys = append(keys, parentBj.objectGetKey(i))
-		elems = append(elems, parentBj.objectGetVal(i))
+		keys = append(keys, parentBj.objectGetKeyWithCount(i, elemCount))
+		elems = append(elems, parentBj.objectGetValWithCount(i, elemCount))
 	}
 	if insertIdx == elemCount {
 		keys = append(keys, insertKey)
@@ -444,10 +444,10 @@ func (bm *binaryModifier) doRemove(path PathExpression) {
 	keys := make([][]byte, 0, elemCount+1)
 	elems := make([]BinaryJSON, 0, elemCount+1)
 	for i := range elemCount {
-		key := parentBj.objectGetKey(i)
+		key := parentBj.objectGetKeyWithCount(i, elemCount)
 		if !bytes.Equal(key, removeKey) {
-			keys = append(keys, parentBj.objectGetKey(i))
-			elems = append(elems, parentBj.objectGetVal(i))
+			keys = append(keys, key)
+			elems = append(elems, parentBj.objectGetValWithCount(i, elemCount))
 		}
 	}
 	bm.modifyValue = buildBinaryObject(keys, elems)
@@ -638,8 +638,8 @@ func mergeBinaryObject(objects []BinaryJSON) BinaryJSON {
 	for _, obj := range objects {
 		elemCount := obj.GetElemCount()
 		for i := range elemCount {
-			key := obj.objectGetKey(i)
-			val := obj.objectGetVal(i)
+			key := obj.objectGetKeyWithCount(i, elemCount)
+			val := obj.objectGetValWithCount(i, elemCount)
 			if old, ok := keyValMap[string(key)]; ok {
 				keyValMap[string(key)] = MergeBinary([]BinaryJSON{old, val})
 			} else {
@@ -697,8 +697,8 @@ func ContainsBinary(obj, target BinaryJSON) bool {
 		if target.TypeCode == TypeCodeObject {
 			len := target.GetElemCount()
 			for i := range len {
-				key := target.objectGetKey(i)
-				val := target.objectGetVal(i)
+				key := target.objectGetKeyWithCount(i, len)
+				val := target.objectGetValWithCount(i, len)
 				if exp, exists := obj.objectSearchKey(key); !exists || !ContainsBinary(exp, val) {
 					return false
 				}
@@ -741,10 +741,10 @@ func ContainsBinary(obj, target BinaryJSON) bool {
 func (bj BinaryJSON) GetElemDepth() int {
 	switch bj.TypeCode {
 	case TypeCodeObject:
-		len := bj.GetElemCount()
+		elemCount := bj.GetElemCount()
 		maxDepth := 0
-		for i := range len {
-			obj := bj.objectGetVal(i)
+		for i := range elemCount {
+			obj := bj.objectGetValWithCount(i, elemCount)
 			depth := obj.GetElemDepth()
 			if depth > maxDepth {
 				maxDepth = depth
@@ -752,9 +752,9 @@ func (bj BinaryJSON) GetElemDepth() int {
 		}
 		return maxDepth + 1
 	case TypeCodeArray:
-		len := bj.GetElemCount()
+		elemCount := bj.GetElemCount()
 		maxDepth := 0
-		for i := range len {
+		for i := range elemCount {
 			obj := bj.arrayGetElem(i)
 			depth := obj.GetElemDepth()
 			if depth > maxDepth {

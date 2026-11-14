@@ -10,12 +10,6 @@ import (
 // ErrSyntax returns for sql syntax error.
 var ErrSyntax = errors.New("You have an error in your SQL syntax")
 
-// TrimComment trims MySQL/MariaDB style special comment markers. PostgreSQL
-// does not use them, but the helper is kept for API parity.
-func TrimComment(txt string) string {
-	return txt
-}
-
 // Parser represents a parser instance. Some temporary objects are stored in it
 // to reduce object allocations during Parse.
 //
