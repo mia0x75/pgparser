@@ -57,52 +57,66 @@ type ValueExpr struct {
 	projectionOffset int
 }
 
-// Restore implements Node interface.
-func (n *ValueExpr) Restore(ctx *format.RestoreCtx) error {
+// valueExprString returns the string rendering of a ValueExpr's value.
+// Restore and Format share this helper so the Kind-to-string mapping stays
+// in sync. Callers handle kind-specific output details (charset prefix,
+// quoting, ctx vs Writer).
+func valueExprString(n *ValueExpr) (string, error) {
 	switch n.Kind() {
 	case types.KindNull:
-		ctx.WriteKeyWord("NULL")
+		return "NULL", nil
 	case types.KindInt64:
 		if n.Type.Flag&postgres.IsBooleanFlag != 0 {
 			if n.GetInt64() > 0 {
-				ctx.WriteKeyWord("TRUE")
-			} else {
-				ctx.WriteKeyWord("FALSE")
+				return "TRUE", nil
 			}
-		} else {
-			ctx.WritePlain(strconv.FormatInt(n.GetInt64(), 10))
+			return "FALSE", nil
 		}
+		return strconv.FormatInt(n.GetInt64(), 10), nil
 	case types.KindUint64:
-		ctx.WritePlain(strconv.FormatUint(n.GetUint64(), 10))
+		return strconv.FormatUint(n.GetUint64(), 10), nil
 	case types.KindFloat32:
-		ctx.WritePlain(strconv.FormatFloat(n.GetFloat64(), 'e', -1, 32))
+		return strconv.FormatFloat(n.GetFloat64(), 'e', -1, 32), nil
 	case types.KindFloat64:
-		ctx.WritePlain(strconv.FormatFloat(n.GetFloat64(), 'e', -1, 64))
-	case types.KindString:
-		if n.Type.Charset != "" && n.Type.Charset != postgres.DefaultCharset {
-			ctx.WritePlain("_")
-			ctx.WriteKeyWord(n.Type.Charset)
-		}
-		ctx.WriteString(n.GetString())
-	case types.KindBytes:
-		ctx.WriteString(n.GetString())
+		return strconv.FormatFloat(n.GetFloat64(), 'e', -1, 64), nil
+	case types.KindString, types.KindBytes:
+		return n.GetString(), nil
 	case types.KindMysqlDecimal:
-		ctx.WritePlain(n.GetMysqlDecimal().String())
+		return n.GetMysqlDecimal().String(), nil
 	case types.KindBinaryLiteral:
 		if n.Type.Flag&postgres.UnsignedFlag != 0 {
-			ctx.WritePlainf("x'%x'", n.GetBytes())
-		} else {
-			ctx.WritePlain(n.GetBinaryLiteral().ToBitLiteralString(true))
+			return fmt.Sprintf("x'%x'", n.GetBytes()), nil
 		}
+		return n.GetBinaryLiteral().ToBitLiteralString(true), nil
 	case types.KindMysqlDuration, types.KindMysqlEnum,
 		types.KindMysqlBit, types.KindMysqlSet, types.KindMysqlTime,
 		types.KindInterface, types.KindMinNotNull, types.KindMaxValue,
 		types.KindRaw, types.KindMysqlJSON:
-		// TODO implement Restore function
-		return errors.New("Not implemented")
+		return "", errors.New("Not implemented")
 	default:
-		return errors.New("can't format to string")
+		return "", errors.New("can't format to string")
 	}
+}
+
+// Restore implements Node interface.
+func (n *ValueExpr) Restore(ctx *format.RestoreCtx) error {
+	s, err := valueExprString(n)
+	if err != nil {
+		return err
+	}
+	if n.Kind() == types.KindString {
+		if n.Type.Charset != "" && n.Type.Charset != postgres.DefaultCharset {
+			ctx.WritePlain("_")
+			ctx.WriteKeyWord(n.Type.Charset)
+		}
+		ctx.WriteString(s)
+		return nil
+	}
+	if n.Kind() == types.KindBytes {
+		ctx.WriteString(s)
+		return nil
+	}
+	ctx.WritePlain(s)
 	return nil
 }
 
@@ -112,39 +126,16 @@ func (n *ValueExpr) GetDatumString() string {
 }
 
 // Format the ExprNode into a Writer.
+// Unsupported kinds write a placeholder instead of panicking, so a caller
+// that formats an expression cannot crash the process.
 func (n *ValueExpr) Format(w io.Writer) {
-	var s string
-	switch n.Kind() {
-	case types.KindNull:
-		s = "NULL"
-	case types.KindInt64:
-		if n.Type.Flag&postgres.IsBooleanFlag != 0 {
-			if n.GetInt64() > 0 {
-				s = "TRUE"
-			} else {
-				s = "FALSE"
-			}
-		} else {
-			s = strconv.FormatInt(n.GetInt64(), 10)
-		}
-	case types.KindUint64:
-		s = strconv.FormatUint(n.GetUint64(), 10)
-	case types.KindFloat32:
-		s = strconv.FormatFloat(n.GetFloat64(), 'e', -1, 32)
-	case types.KindFloat64:
-		s = strconv.FormatFloat(n.GetFloat64(), 'e', -1, 64)
-	case types.KindString, types.KindBytes:
-		s = strconv.Quote(n.GetString())
-	case types.KindMysqlDecimal:
-		s = n.GetMysqlDecimal().String()
-	case types.KindBinaryLiteral:
-		if n.Type.Flag&postgres.UnsignedFlag != 0 {
-			s = fmt.Sprintf("x'%x'", n.GetBytes())
-		} else {
-			s = n.GetBinaryLiteral().ToBitLiteralString(true)
-		}
-	default:
-		panic("Can't format to string")
+	s, err := valueExprString(n)
+	if err != nil {
+		fmt.Fprint(w, "<unsupported>")
+		return
+	}
+	if n.Kind() == types.KindString || n.Kind() == types.KindBytes {
+		s = strconv.Quote(s)
 	}
 	fmt.Fprint(w, s)
 }

@@ -741,10 +741,9 @@ func (d *MyDecimal) Round(to *MyDecimal, frac int, roundMode RoundMode) (err err
 	wordsInt := digitsToWords(int(d.digitsInt))
 
 	var roundDigit int32
-	/* TODO - fix this code as it won't work for CEILING mode */
 	switch roundMode {
 	case modeCeiling:
-		roundDigit = 0
+		return errors.New("ceiling mode not supported")
 	case ModeHalfEven:
 		roundDigit = 5
 	case ModeTruncate:

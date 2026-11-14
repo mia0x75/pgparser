@@ -88,8 +88,12 @@ func TestBinaryJSONType(t *testing.T) {
 	}
 	// we can't parse '9223372036854775808' to JSON::Uint64 now,
 	// because go builtin JSON parser treats that as DOUBLE.
-	if CreateBinary(uint64(1<<63)).Type() != "UNSIGNED INTEGER" {
-		t.Fatalf("got %#v, want %#v", CreateBinary(uint64(1<<63)).Type(), "UNSIGNED INTEGER")
+	bj, err := CreateBinary(uint64(1 << 63))
+	if err != nil {
+		t.Fatalf("CreateBinary failed: %v", err)
+	}
+	if bj.Type() != "UNSIGNED INTEGER" {
+		t.Fatalf("got %#v, want %#v", bj.Type(), "UNSIGNED INTEGER")
 	}
 }
 
@@ -230,7 +234,10 @@ func TestCompareBinary(t *testing.T) {
 	jNull := mustParseBinaryFromString(t, `null`)
 	jBoolTrue := mustParseBinaryFromString(t, `true`)
 	jBoolFalse := mustParseBinaryFromString(t, `false`)
-	jIntegerLarge := CreateBinary(uint64(1 << 63))
+	jIntegerLarge, err := CreateBinary(uint64(1 << 63))
+	if err != nil {
+		t.Fatalf("CreateBinary failed: %v", err)
+	}
 	jIntegerSmall := mustParseBinaryFromString(t, `3`)
 	jStringLarge := mustParseBinaryFromString(t, `"hello, world"`)
 	jStringSmall := mustParseBinaryFromString(t, `"hello"`)

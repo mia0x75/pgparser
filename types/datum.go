@@ -480,7 +480,11 @@ func (d *Datum) ToMysqlJSON() (j json.BinaryJSON, err error) {
 		err = errors.Trace(err)
 		return
 	}
-	j = json.CreateBinary(in)
+	j, err = json.CreateBinary(in)
+	if err != nil {
+		err = errors.Trace(err)
+		return
+	}
 	return
 }
 

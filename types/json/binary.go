@@ -162,7 +162,12 @@ func (bj BinaryJSON) GetKeys() BinaryJSON {
 	count := bj.GetElemCount()
 	ret := make([]BinaryJSON, 0, count)
 	for i := range count {
-		ret = append(ret, CreateBinary(string(bj.objectGetKey(i))))
+		key, err := CreateBinary(string(bj.objectGetKey(i)))
+		if err != nil {
+			// string keys are always supported by appendBinary, so this is unreachable.
+			continue
+		}
+		ret = append(ret, key)
 	}
 	return buildBinaryArray(ret)
 }
@@ -411,12 +416,12 @@ func (bj *BinaryJSON) UnmarshalJSON(data []byte) error {
 }
 
 // CreateBinary creates a BinaryJSON from interface.
-func CreateBinary(in any) BinaryJSON {
+func CreateBinary(in any) (BinaryJSON, error) {
 	typeCode, buf, err := appendBinary(nil, in)
 	if err != nil {
-		panic(err)
+		return BinaryJSON{}, err
 	}
-	return BinaryJSON{TypeCode: typeCode, Value: buf}
+	return BinaryJSON{TypeCode: typeCode, Value: buf}, nil
 }
 
 func appendBinary(buf []byte, in any) (TypeCode, []byte, error) {
