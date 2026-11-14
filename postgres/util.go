@@ -47,8 +47,6 @@ func IsIntegerType(tp byte) bool {
 // GetDefaultFieldLengthAndDecimal returns the default display length (flen) and decimal length for column.
 // Call this when no Flen assigned in ddl.
 // or column value is calculated from an expression.
-// For example: "select count(*) from t;", the column type is int64 and Flen in ResultField will be 21.
-// See https://dev.postgres.com/doc/refman/5.7/en/storage-requirements.html
 func GetDefaultFieldLengthAndDecimal(tp byte) (flen int, decimal int) {
 	val, ok := defaultLengthAndDecimal[tp]
 	if ok {

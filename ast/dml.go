@@ -1161,7 +1161,6 @@ func (n *OrderByClause) Accept(v Visitor) (Node, bool) {
 }
 
 // SelectStmt represents the select query node.
-// See https://dev.postgres.com/doc/refman/5.7/en/select.html
 type SelectStmt struct {
 	dmlNode
 	resultSetNode
@@ -1516,7 +1515,6 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // ValuesStmt is a table value constructor statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/values.html
 type ValuesStmt struct {
 	dmlNode
 
@@ -1564,7 +1562,6 @@ func (n *ValuesStmt) Accept(v Visitor) (Node, bool) {
 
 // TableStmt is a `TABLE tbl_name` statement, which is equivalent to
 // `SELECT * FROM tbl_name`.
-// See https://dev.postgres.com/doc/refman/8.0/en/table.html
 type TableStmt struct {
 	dmlNode
 
@@ -1597,7 +1594,6 @@ func (n *TableStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // WithClause is a common table expression clause.
-// See https://dev.postgres.com/doc/refman/8.0/en/with.html
 type WithClause struct {
 	node
 
@@ -1830,9 +1826,6 @@ func (n *SetOprSelectList) Accept(v Visitor) (Node, bool) {
 }
 
 // SetOprStmt represents a "union/except/intersect statement"
-// See https://dev.postgres.com/doc/refman/8.0/en/union.html
-// See https://mariadb.com/kb/en/intersect/
-// See https://mariadb.com/kb/en/except/
 type SetOprStmt struct {
 	dmlNode
 	resultSetNode
@@ -2024,7 +2017,6 @@ type ColumnNameOrUserVar struct {
 }
 
 // LoadDataStmt is a statement to load data from a specified file, then insert this rows into an existing table.
-// See https://dev.postgres.com/doc/refman/5.7/en/load-data.html
 type LoadDataStmt struct {
 	dmlNode
 
@@ -2271,7 +2263,6 @@ func (n *SelectIntoStatement) Accept(v Visitor) (Node, bool) {
 }
 
 // InsertStmt is a statement to insert new rows into an existing table.
-// See https://dev.postgres.com/doc/refman/5.7/en/insert.html
 type InsertStmt struct {
 	dmlNode
 
@@ -2288,7 +2279,7 @@ type InsertStmt struct {
 	Select      ResultSetNode
 	// OnConflict is the optional PostgreSQL `ON CONFLICT` clause.
 	OnConflict *OnConflictClause
-	// Returning is the optional RETURNING field list (MariaDB).
+	// Returning is the optional RETURNING field list (PostgreSQL).
 	Returning *FieldList
 }
 
@@ -2578,8 +2569,6 @@ func (n *InsertStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// DeleteStmt is a statement to delete rows from table.
-// See https://dev.postgres.com/doc/refman/5.7/en/delete.html
 // MergeWhenType is the action type of a MERGE WHEN clause.
 type MergeWhenType int
 
@@ -2802,7 +2791,7 @@ type DeleteStmt struct {
 	BeforeFrom   bool
 	// TableHints represents the table level Optimizer Hint for join type.
 	TableHints []*TableOptimizerHint
-	// Returning is the optional RETURNING field list (MariaDB).
+	// Returning is the optional RETURNING field list (PostgreSQL).
 	Returning *FieldList
 }
 
@@ -2974,7 +2963,6 @@ func (n *DeleteStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // UpdateStmt is a statement to update columns of existing rows in tables with new values.
-// See https://dev.postgres.com/doc/refman/5.7/en/update.html
 type UpdateStmt struct {
 	dmlNode
 
@@ -2991,7 +2979,7 @@ type UpdateStmt struct {
 	IgnoreErr     bool
 	MultipleTable bool
 	TableHints    []*TableOptimizerHint
-	// Returning is the optional RETURNING field list (MariaDB).
+	// Returning is the optional RETURNING field list (PostgreSQL).
 	Returning *FieldList
 }
 
@@ -3251,7 +3239,6 @@ const (
 )
 
 // ShowStmt is a statement to provide information about databases, tables, columns and so on.
-// See https://dev.postgres.com/doc/refman/5.7/en/show.html
 type ShowStmt struct {
 	dmlNode
 	resultSetNode
@@ -3483,8 +3470,7 @@ type WindowSpec struct {
 	OrderBy     *OrderByClause
 	Frame       *FrameClause
 
-	// OnlyAlias will set to true of the first following case.
-	// To make compatible with MySQL, we need to distinguish `select func over w` from `select func over (w)`.
+	// OnlyAlias preserves OVER w; OVER (w) copies w and cannot copy a framed window.
 	OnlyAlias bool
 }
 
@@ -3645,8 +3631,7 @@ func (n *PartitionByClause) Accept(v Visitor) (Node, bool) {
 // FrameType is the type of window function frame.
 type FrameType int
 
-// Window function frame types.
-// MySQL only supports `ROWS` and `RANGES`.
+// Window function frame types: ROWS, RANGE and GROUPS.
 const (
 	Rows = iota
 	Ranges

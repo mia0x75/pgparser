@@ -129,18 +129,9 @@ func FindColumnInfo(cols []*ColumnInfo, name string) *ColumnInfo {
 // for use of execution phase.
 const ExtraHandleID = -1
 
+// These table metadata version values are preserved for compatibility.
 const (
-	// TableInfoVersion0 means the table info version is 0.
-	// Upgrade from v2.1.1 or v2.1.2 to v2.1.3 and later, and then execute a "change/modify column" statement
-	// that does not specify a charset value for column. Then the following error may be reported:
-	// ERROR 1105 (HY000): unsupported modify charset from utf8mb4 to utf8.
-	// To eliminate this error, we will not modify the charset of this column
-	// when executing a change/modify column statement that does not specify a charset value for column.
-	// This behavior is not compatible with MySQL.
 	TableInfoVersion0 = uint16(0)
-	// ColumnInfoVersion1 means the table info version is 1.
-	// When we execute a change/modify column statement that does not specify a charset value for column,
-	// we set the charset of this column to the charset of table. This behavior is compatible with MySQL.
 	TableInfoVersion1 = uint16(1)
 	// CurrLatestTableInfoVersion means the latest table info
 	CurrLatestTableInfoVersion = TableInfoVersion1
@@ -329,7 +320,6 @@ func (t *TableInfo) IsView() bool {
 }
 
 // ViewAlgorithm is VIEW's SQL AlGORITHM characteristic.
-// See https://dev.postgres.com/doc/refman/5.7/en/view-algorithms.html
 type ViewAlgorithm int
 
 const (
@@ -352,7 +342,6 @@ func (v *ViewAlgorithm) String() string {
 }
 
 // ViewSecurity is VIEW's SQL SECURITY characteristic.
-// See https://dev.postgres.com/doc/refman/5.7/en/create-view.html
 type ViewSecurity int
 
 const (
@@ -372,7 +361,6 @@ func (v *ViewSecurity) String() string {
 }
 
 // ViewCheckOption is VIEW's WITH CHECK OPTION clause part.
-// See https://dev.postgres.com/doc/refman/5.7/en/view-check-option.html
 type ViewCheckOption int
 
 const (
@@ -498,7 +486,6 @@ const (
 
 // IndexInfo provides meta data describing a DB index.
 // It corresponds to the statement `CREATE INDEX Name ON Table (Column);`
-// See https://dev.postgres.com/doc/refman/5.7/en/create-index.html
 type IndexInfo struct {
 	ID      int64          `json:"id"`
 	Name    CIStr          `json:"idx_name"`   // Index name.

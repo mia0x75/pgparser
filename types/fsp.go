@@ -16,7 +16,6 @@ const (
 	// MinFsp is the minimum digit of fractional seconds part.
 	MinFsp = 0
 	// DefaultFsp is the default digit of fractional seconds part.
-	// MySQL use 0 as the default Fsp.
 	DefaultFsp = 0
 )
 

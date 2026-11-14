@@ -23,17 +23,17 @@ const (
 	KindString        byte = 5
 	KindBytes         byte = 6
 	KindBinaryLiteral byte = 7 // Used for BIT / HEX literals.
-	KindMysqlDecimal  byte = 8
-	KindMysqlDuration byte = 9
-	KindMysqlEnum     byte = 10
-	KindMysqlBit      byte = 11 // Used for BIT table column values.
-	KindMysqlSet      byte = 12
-	KindMysqlTime     byte = 13
+	KindDecimal       byte = 8
+	KindDuration      byte = 9
+	KindEnum          byte = 10
+	KindBit           byte = 11 // Used for BIT table column values.
+	KindSet           byte = 12
+	KindTime          byte = 13
 	KindInterface     byte = 14
 	KindMinNotNull    byte = 15
 	KindMaxValue      byte = 16
 	KindRaw           byte = 17
-	KindMysqlJSON     byte = 18
+	KindJSON          byte = 18
 )
 
 // Datum is a data box holds different kind of data.
@@ -56,11 +56,11 @@ func (d *Datum) Copy() *Datum {
 		copy(ret.b, d.b)
 	}
 	switch ret.Kind() {
-	case KindMysqlDecimal:
-		d := *d.GetMysqlDecimal()
-		ret.SetMysqlDecimal(&d)
-	case KindMysqlTime:
-		ret.SetMysqlTime(d.GetMysqlTime())
+	case KindDecimal:
+		d := *d.GetPgDecimal()
+		ret.SetPgDecimal(&d)
+	case KindTime:
+		ret.SetPgTime(d.GetPgTime())
 	}
 	return &ret
 }
@@ -210,8 +210,8 @@ func (d *Datum) GetBinaryLiteral() BinaryLiteral {
 	return d.b
 }
 
-// GetMysqlBit gets MysqlBit value
-func (d *Datum) GetMysqlBit() BinaryLiteral {
+// GetPgBit aliases GetBinaryLiteral for compatibility bit values.
+func (d *Datum) GetPgBit() BinaryLiteral {
 	return d.GetBinaryLiteral()
 }
 
@@ -221,83 +221,83 @@ func (d *Datum) SetBinaryLiteral(b BinaryLiteral) {
 	d.b = b
 }
 
-// SetMysqlBit sets MysqlBit value
-func (d *Datum) SetMysqlBit(b BinaryLiteral) {
-	d.k = KindMysqlBit
+// SetPgBit stores a BinaryLiteral with KindBit rather than KindBinaryLiteral.
+func (d *Datum) SetPgBit(b BinaryLiteral) {
+	d.k = KindBit
 	d.b = b
 }
 
-// GetMysqlDecimal gets Decimal value
-func (d *Datum) GetMysqlDecimal() *MyDecimal {
-	return d.x.(*MyDecimal)
+// GetPgDecimal exposes the stored pointer; use Copy before modifying a shared datum.
+func (d *Datum) GetPgDecimal() *PgDecimal {
+	return d.x.(*PgDecimal)
 }
 
-// SetMysqlDecimal sets Decimal value
-func (d *Datum) SetMysqlDecimal(b *MyDecimal) {
-	d.k = KindMysqlDecimal
+// SetPgDecimal retains the pointer, so subsequent changes to b are visible through the datum.
+func (d *Datum) SetPgDecimal(b *PgDecimal) {
+	d.k = KindDecimal
 	d.x = b
 }
 
-// GetMysqlDuration gets Duration value
-func (d *Datum) GetMysqlDuration() Duration {
+// GetPgDuration gets Duration value
+func (d *Datum) GetPgDuration() Duration {
 	return Duration{Duration: time.Duration(d.i), Fsp: int(d.decimal)}
 }
 
-// SetMysqlDuration sets Duration value
-func (d *Datum) SetMysqlDuration(b Duration) {
-	d.k = KindMysqlDuration
+// SetPgDuration sets Duration value
+func (d *Datum) SetPgDuration(b Duration) {
+	d.k = KindDuration
 	d.i = int64(b.Duration)
 	d.decimal = uint16(b.Fsp)
 }
 
-// GetMysqlEnum gets Enum value
-func (d *Datum) GetMysqlEnum() Enum {
+// GetPgEnum gets Enum value
+func (d *Datum) GetPgEnum() Enum {
 	str := string(hack.String(d.b))
 	return Enum{Value: uint64(d.i), Name: str}
 }
 
-// SetMysqlEnum sets Enum value
-func (d *Datum) SetMysqlEnum(b Enum) {
-	d.k = KindMysqlEnum
+// SetPgEnum sets Enum value
+func (d *Datum) SetPgEnum(b Enum) {
+	d.k = KindEnum
 	d.i = int64(b.Value)
 	sink(b.Name)
 	d.b = hack.Slice(b.Name)
 }
 
-// GetMysqlSet gets Set value
-func (d *Datum) GetMysqlSet() Set {
+// GetPgSet gets Set value
+func (d *Datum) GetPgSet() Set {
 	str := string(hack.String(d.b))
 	return Set{Value: uint64(d.i), Name: str}
 }
 
-// SetMysqlSet sets Set value
-func (d *Datum) SetMysqlSet(b Set) {
-	d.k = KindMysqlSet
+// SetPgSet sets Set value
+func (d *Datum) SetPgSet(b Set) {
+	d.k = KindSet
 	d.i = int64(b.Value)
 	sink(b.Name)
 	d.b = hack.Slice(b.Name)
 }
 
-// GetMysqlJSON gets json.BinaryJSON value
-func (d *Datum) GetMysqlJSON() json.BinaryJSON {
+// GetPgJSON gets json.BinaryJSON value
+func (d *Datum) GetPgJSON() json.BinaryJSON {
 	return json.BinaryJSON{TypeCode: byte(d.i), Value: d.b}
 }
 
-// SetMysqlJSON sets json.BinaryJSON value
-func (d *Datum) SetMysqlJSON(b json.BinaryJSON) {
-	d.k = KindMysqlJSON
+// SetPgJSON sets json.BinaryJSON value
+func (d *Datum) SetPgJSON(b json.BinaryJSON) {
+	d.k = KindJSON
 	d.i = int64(b.TypeCode)
 	d.b = b.Value
 }
 
-// GetMysqlTime gets types.Time value
-func (d *Datum) GetMysqlTime() Time {
+// GetPgTime gets types.Time value
+func (d *Datum) GetPgTime() Time {
 	return d.x.(Time)
 }
 
-// SetMysqlTime sets types.Time value
-func (d *Datum) SetMysqlTime(b Time) {
-	d.k = KindMysqlTime
+// SetPgTime sets types.Time value
+func (d *Datum) SetPgTime(b Time) {
+	d.k = KindTime
 	d.x = b
 }
 
@@ -336,20 +336,20 @@ func (d *Datum) GetValue() any {
 		return d.GetString()
 	case KindBytes:
 		return d.GetBytes()
-	case KindMysqlDecimal:
-		return d.GetMysqlDecimal()
-	case KindMysqlDuration:
-		return d.GetMysqlDuration()
-	case KindMysqlEnum:
-		return d.GetMysqlEnum()
-	case KindBinaryLiteral, KindMysqlBit:
+	case KindDecimal:
+		return d.GetPgDecimal()
+	case KindDuration:
+		return d.GetPgDuration()
+	case KindEnum:
+		return d.GetPgEnum()
+	case KindBinaryLiteral, KindBit:
 		return d.GetBinaryLiteral()
-	case KindMysqlSet:
-		return d.GetMysqlSet()
-	case KindMysqlJSON:
-		return d.GetMysqlJSON()
-	case KindMysqlTime:
-		return d.GetMysqlTime()
+	case KindSet:
+		return d.GetPgSet()
+	case KindJSON:
+		return d.GetPgJSON()
+	case KindTime:
+		return d.GetPgTime()
 	default:
 		return d.GetInterface()
 	}
@@ -380,12 +380,12 @@ func (d *Datum) SetValue(val any) {
 		d.SetString(x)
 	case []byte:
 		d.SetBytes(x)
-	case *MyDecimal:
-		d.SetMysqlDecimal(x)
+	case *PgDecimal:
+		d.SetPgDecimal(x)
 	case Duration:
-		d.SetMysqlDuration(x)
+		d.SetPgDuration(x)
 	case Enum:
-		d.SetMysqlEnum(x)
+		d.SetPgEnum(x)
 	case BinaryLiteral:
 		d.SetBinaryLiteral(x)
 	case BitLiteral: // Store as BinaryLiteral for Bit and Hex literals
@@ -393,11 +393,11 @@ func (d *Datum) SetValue(val any) {
 	case HexLiteral:
 		d.SetBinaryLiteral(BinaryLiteral(x))
 	case Set:
-		d.SetMysqlSet(x)
+		d.SetPgSet(x)
 	case json.BinaryJSON:
-		d.SetMysqlJSON(x)
+		d.SetPgJSON(x)
 	case Time:
-		d.SetMysqlTime(x)
+		d.SetPgTime(x)
 	default:
 		d.SetInterface(x)
 	}
@@ -418,19 +418,19 @@ func (d *Datum) ToString() (string, error) {
 		return d.GetString(), nil
 	case KindBytes:
 		return d.GetString(), nil
-	case KindMysqlTime:
-		return d.GetMysqlTime().String(), nil
-	case KindMysqlDuration:
-		return d.GetMysqlDuration().String(), nil
-	case KindMysqlDecimal:
-		return d.GetMysqlDecimal().String(), nil
-	case KindMysqlEnum:
-		return d.GetMysqlEnum().String(), nil
-	case KindMysqlSet:
-		return d.GetMysqlSet().String(), nil
-	case KindMysqlJSON:
-		return d.GetMysqlJSON().String(), nil
-	case KindBinaryLiteral, KindMysqlBit:
+	case KindTime:
+		return d.GetPgTime().String(), nil
+	case KindDuration:
+		return d.GetPgDuration().String(), nil
+	case KindDecimal:
+		return d.GetPgDecimal().String(), nil
+	case KindEnum:
+		return d.GetPgEnum().String(), nil
+	case KindSet:
+		return d.GetPgSet().String(), nil
+	case KindJSON:
+		return d.GetPgJSON().String(), nil
+	case KindBinaryLiteral, KindBit:
 		return d.GetBinaryLiteral().ToString(), nil
 	default:
 		return "", errors.Errorf("cannot convert %v(type %T) to string", d.GetValue(), d.GetValue())
@@ -451,13 +451,12 @@ func (d *Datum) ToBytes() ([]byte, error) {
 	}
 }
 
-// ToMysqlJSON is similar to convertToMysqlJSON, except the
-// latter parses from string, but the former uses it as primitive.
-func (d *Datum) ToMysqlJSON() (j json.BinaryJSON, err error) {
+// ToPgJSON preserves strings as JSON string values instead of parsing JSON text.
+func (d *Datum) ToPgJSON() (j json.BinaryJSON, err error) {
 	var in any
 	switch d.Kind() {
-	case KindMysqlJSON:
-		j = d.GetMysqlJSON()
+	case KindJSON:
+		j = d.GetPgJSON()
 		return
 	case KindInt64:
 		in = d.GetInt64()
@@ -465,11 +464,11 @@ func (d *Datum) ToMysqlJSON() (j json.BinaryJSON, err error) {
 		in = d.GetUint64()
 	case KindFloat32, KindFloat64:
 		in = d.GetFloat64()
-	case KindMysqlDecimal:
-		in, err = d.GetMysqlDecimal().ToFloat64()
+	case KindDecimal:
+		in, err = d.GetPgDecimal().ToFloat64()
 	case KindString, KindBytes:
 		in = d.GetString()
-	case KindBinaryLiteral, KindMysqlBit:
+	case KindBinaryLiteral, KindBit:
 		in = d.GetBinaryLiteral().ToString()
 	case KindNull:
 		in = nil
@@ -503,7 +502,7 @@ func (d *Datum) convergeType(hasUint, hasDecimal, hasFloat *bool) (x Datum) {
 		*hasFloat = true
 	case KindFloat64:
 		*hasFloat = true
-	case KindMysqlDecimal:
+	case KindDecimal:
 		*hasDecimal = true
 	}
 	return x
@@ -558,19 +557,19 @@ func NewFloat32Datum(f float32) (d Datum) {
 
 // NewDurationDatum creates a new Datum from a Duration value.
 func NewDurationDatum(dur Duration) (d Datum) {
-	d.SetMysqlDuration(dur)
+	d.SetPgDuration(dur)
 	return d
 }
 
 // NewTimeDatum creates a new Time from a Time value.
 func NewTimeDatum(t Time) (d Datum) {
-	d.SetMysqlTime(t)
+	d.SetPgTime(t)
 	return d
 }
 
-// NewDecimalDatum creates a new Datum form a MyDecimal value.
-func NewDecimalDatum(dec *MyDecimal) (d Datum) {
-	d.SetMysqlDecimal(dec)
+// NewDecimalDatum creates a new Datum form a PgDecimal value.
+func NewDecimalDatum(dec *PgDecimal) (d Datum) {
+	d.SetPgDecimal(dec)
 	return d
 }
 
@@ -580,15 +579,15 @@ func NewBinaryLiteralDatum(b BinaryLiteral) (d Datum) {
 	return d
 }
 
-// NewMysqlBitDatum creates a new MysqlBit Datum for a BinaryLiteral value.
-func NewMysqlBitDatum(b BinaryLiteral) (d Datum) {
-	d.SetMysqlBit(b)
+// NewPgBitDatum uses KindBit rather than KindBinaryLiteral for compatibility.
+func NewPgBitDatum(b BinaryLiteral) (d Datum) {
+	d.SetPgBit(b)
 	return d
 }
 
-// NewMysqlEnumDatum creates a new MysqlEnum Datum for a Enum value.
-func NewMysqlEnumDatum(e Enum) (d Datum) {
-	d.SetMysqlEnum(e)
+// NewPgEnumDatum retains compatibility ordinals instead of PostgreSQL enum OIDs.
+func NewPgEnumDatum(e Enum) (d Datum) {
+	d.SetPgEnum(e)
 	return d
 }
 

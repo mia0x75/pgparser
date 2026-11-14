@@ -100,7 +100,6 @@ func (b BinaryLiteral) Compare(b2 BinaryLiteral) int {
 
 // ParseBitStr parses bit string.
 // The string format can be b'val', B'val' or 0bval, val must be 0 or 1.
-// See https://dev.postgres.com/doc/refman/5.7/en/bit-value-literals.html
 func ParseBitStr(s string) (BinaryLiteral, error) {
 	if len(s) == 0 {
 		return nil, errors.Errorf("invalid empty string for parsing bit type")
@@ -147,7 +146,6 @@ func NewBitLiteral(s string) (BitLiteral, error) {
 }
 
 // ParseHexStr parses hexadecimal string literal.
-// See https://dev.postgres.com/doc/refman/5.7/en/hexadecimal-literals.html
 func ParseHexStr(s string) (BinaryLiteral, error) {
 	if len(s) == 0 {
 		return nil, errors.Errorf("invalid empty string for parsing hexadecimal literal")

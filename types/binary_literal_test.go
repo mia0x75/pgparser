@@ -110,7 +110,7 @@ func TestParseHexStr(t *testing.T) {
 		{"x'01+'", nil, true},
 		{"0x123", []byte{0x01, 0x23}, false},
 		{"0x10", []byte{0x10}, false},
-		{"0x4D7953514C", []byte("MySQL"), false},
+		{"0x506F737467726553514C", []byte("PostgreSQL"), false},
 		{"0x4920616D2061206C6F6E672068657820737472696E67", []byte("I am a long hex string"), false},
 		{"x'4920616D2061206C6F6E672068657820737472696E67'", []byte("I am a long hex string"), false},
 		{"X'4920616D2061206C6F6E672068657820737472696E67'", []byte("I am a long hex string"), false},

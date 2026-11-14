@@ -75,10 +75,10 @@ func TestTError(t *testing.T) {
 	if e.Error() != "[kv:1062]Duplicate entry '1' for key 'PRIMARY'" {
 		t.Fatalf("got %#v, want %#v", e.Error(), "[kv:1062]Duplicate entry '1' for key 'PRIMARY'")
 	}
-	kvMySQLErrCodes := map[ErrCode]uint16{
+	kvPgErrCodes := map[ErrCode]uint16{
 		1062: uint16(1062),
 	}
-	ErrClassToMySQLCodes[ClassKV] = kvMySQLErrCodes
+	ErrClassToPgCodes[ClassKV] = kvPgErrCodes
 	sqlErr := errors.Cause(e).(*Error).ToSQLError()
 	if sqlErr.Message != "Duplicate entry '1' for key 'PRIMARY'" {
 		t.Fatalf("got %#v, want %#v", sqlErr.Message, "Duplicate entry '1' for key 'PRIMARY'")

@@ -73,7 +73,6 @@ func restoreResourceGroupOptional(ctx *format.RestoreCtx, tp *int, state int) {
 }
 
 // CreateResourceGroupStmt is a statement to create a resource group.
-// See https://dev.postgres.com/doc/refman/8.0/en/create-resource-group.html
 type CreateResourceGroupStmt struct {
 	ddlNode
 
@@ -121,7 +120,6 @@ func (n *CreateResourceGroupStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // AlterResourceGroupStmt is a statement to alter a resource group.
-// See https://dev.postgres.com/doc/refman/8.0/en/alter-resource-group.html
 type AlterResourceGroupStmt struct {
 	ddlNode
 
@@ -162,7 +160,6 @@ func (n *AlterResourceGroupStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropResourceGroupStmt is a statement to drop a resource group.
-// See https://dev.postgres.com/doc/refman/8.0/en/drop-resource-group.html
 type DropResourceGroupStmt struct {
 	ddlNode
 

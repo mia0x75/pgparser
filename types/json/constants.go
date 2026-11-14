@@ -161,7 +161,6 @@ const (
 )
 
 // jsonTypePrecedences is for comparing two json.
-// See: https://dev.postgres.com/doc/refman/5.7/en/json.html#json-comparison
 var jsonTypePrecedences = map[string]int{
 	"BLOB":             -1,
 	"BIT":              -2,
@@ -194,19 +193,25 @@ const (
 
 var (
 	// ErrInvalidJSONText means invalid JSON text.
-	ErrInvalidJSONText = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONText, postgres.MySQLErrName[postgres.ErrInvalidJSONText])
+	ErrInvalidJSONText = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONText, postgres.PgErrName[postgres.ErrInvalidJSONText])
 	// ErrInvalidJSONPath means invalid JSON path.
-	ErrInvalidJSONPath = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONPath, postgres.MySQLErrName[postgres.ErrInvalidJSONPath])
+	ErrInvalidJSONPath = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONPath, postgres.PgErrName[postgres.ErrInvalidJSONPath])
 	// ErrInvalidJSONData means invalid JSON data.
-	ErrInvalidJSONData = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONData, postgres.MySQLErrName[postgres.ErrInvalidJSONData])
+	ErrInvalidJSONData = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONData, postgres.PgErrName[postgres.ErrInvalidJSONData])
 	// ErrInvalidJSONPathWildcard means invalid JSON path that contain wildcard characters.
-	ErrInvalidJSONPathWildcard = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONPathWildcard, postgres.MySQLErrName[postgres.ErrInvalidJSONPathWildcard])
+	ErrInvalidJSONPathWildcard = sqlerr.ClassJSON.New(
+		postgres.ErrInvalidJSONPathWildcard,
+		postgres.PgErrName[postgres.ErrInvalidJSONPathWildcard],
+	)
 	// ErrInvalidJSONContainsPathType means invalid JSON contains path type.
-	ErrInvalidJSONContainsPathType = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONContainsPathType, postgres.MySQLErrName[postgres.ErrInvalidJSONContainsPathType])
+	ErrInvalidJSONContainsPathType = sqlerr.ClassJSON.New(
+		postgres.ErrInvalidJSONContainsPathType,
+		postgres.PgErrName[postgres.ErrInvalidJSONContainsPathType],
+	)
 )
 
 func init() {
-	sqlerr.ErrClassToMySQLCodes[sqlerr.ClassJSON] = map[sqlerr.ErrCode]uint16{
+	sqlerr.ErrClassToPgCodes[sqlerr.ClassJSON] = map[sqlerr.ErrCode]uint16{
 		postgres.ErrInvalidJSONText:             postgres.ErrInvalidJSONText,
 		postgres.ErrInvalidJSONPath:             postgres.ErrInvalidJSONPath,
 		postgres.ErrInvalidJSONData:             postgres.ErrInvalidJSONData,
@@ -216,7 +221,6 @@ func init() {
 }
 
 // json_contains_path function type choices
-// See: https://dev.postgres.com/doc/refman/5.7/en/json-search-functions.html#function_json-contains-path
 const (
 	// 'all': 1 if all paths exist within the document, 0 otherwise.
 	ContainsPathAll = "all"

@@ -23,7 +23,7 @@ var (
 	ErrInvalidYear            = errors.New("invalid year")
 	ErrZeroDate               = errors.New("datetime zero in date")
 	ErrIncorrectDatetimeValue = sqlerr.ClassTypes.New(postgres.ErrTruncatedWrongValue, "Incorrect datetime value: '%s'")
-	ErrTruncatedWrongValue    = sqlerr.ClassTypes.New(postgres.ErrTruncatedWrongValue, postgres.MySQLErrName[postgres.ErrTruncatedWrongValue])
+	ErrTruncatedWrongValue    = sqlerr.ClassTypes.New(postgres.ErrTruncatedWrongValue, postgres.PgErrName[postgres.ErrTruncatedWrongValue])
 )
 
 // Time format without fractional seconds precision.
@@ -34,31 +34,23 @@ const (
 	TimeFSPFormat = "2006-01-02 15:04:05.000000"
 )
 
+// These compatibility bounds are preserved; they are not PostgreSQL date/time ranges.
 const (
-	// MinYear is the minimum for mysql year type.
 	MinYear int16 = 1901
-	// MaxYear is the maximum for mysql year type.
 	MaxYear int16 = 2155
 	// MaxDuration is the maximum for duration.
 	MaxDuration int64 = 838*10000 + 59*100 + 59
-	// MinTime is the minimum for mysql time type.
-	MinTime = -gotime.Duration(838*3600+59*60+59) * gotime.Second
-	// MaxTime is the maximum for mysql time type.
-	MaxTime = gotime.Duration(838*3600+59*60+59) * gotime.Second
+	MinTime           = -gotime.Duration(838*3600+59*60+59) * gotime.Second
+	MaxTime           = gotime.Duration(838*3600+59*60+59) * gotime.Second
 	// ZeroDatetimeStr is the string representation of a zero datetime.
 	ZeroDatetimeStr = "0000-00-00 00:00:00"
 	// ZeroDateStr is the string representation of a zero date.
 	ZeroDateStr = "0000-00-00"
 
-	// TimeMaxHour is the max hour for mysql time type.
-	TimeMaxHour = 838
-	// TimeMaxMinute is the max minute for mysql time type.
-	TimeMaxMinute = 59
-	// TimeMaxSecond is the max second for mysql time type.
-	TimeMaxSecond = 59
-	// TimeMaxValue is the maximum value for mysql time type.
-	TimeMaxValue = TimeMaxHour*10000 + TimeMaxMinute*100 + TimeMaxSecond
-	// TimeMaxValueSeconds is the maximum second value for mysql time type.
+	TimeMaxHour         = 838
+	TimeMaxMinute       = 59
+	TimeMaxSecond       = 59
+	TimeMaxValue        = TimeMaxHour*10000 + TimeMaxMinute*100 + TimeMaxSecond
 	TimeMaxValueSeconds = TimeMaxHour*3600 + TimeMaxMinute*60 + TimeMaxSecond
 )
 
@@ -68,7 +60,7 @@ var (
 	ZeroDuration = Duration{Duration: gotime.Duration(0), Fsp: DefaultFsp}
 
 	// ZeroTime is the zero value for TimeInternal type.
-	ZeroTime = MysqlTime{}
+	ZeroTime = PgTime{}
 
 	// ZeroDatetime is the zero value for datetime Time.
 	ZeroDatetime = Time{
@@ -92,21 +84,18 @@ var (
 	}
 )
 
+// Timestamp bounds remain limited to the compatibility representation.
 var (
-	// MinDatetime is the minimum for mysql datetime type.
 	MinDatetime = FromDate(1000, 1, 1, 0, 0, 0, 0)
-	// MaxDatetime is the maximum for mysql datetime type.
 	MaxDatetime = FromDate(9999, 12, 31, 23, 59, 59, 999999)
 
 	// BoundTimezone is the timezone for min and max timestamp.
 	BoundTimezone = gotime.UTC
-	// MinTimestamp is the minimum for mysql timestamp type.
-	MinTimestamp = Time{
+	MinTimestamp  = Time{
 		Time: FromDate(1970, 1, 1, 0, 0, 1, 0),
 		Type: postgres.TypeTimestamp,
 		Fsp:  DefaultFsp,
 	}
-	// MaxTimestamp is the maximum for mysql timestamp type.
 	MaxTimestamp = Time{
 		Time: FromDate(2038, 1, 19, 3, 14, 7, 999999),
 		Type: postgres.TypeTimestamp,
@@ -135,8 +124,8 @@ var (
 	}
 )
 
-// FromGoTime translates time.Time to mysql time internal representation.
-func FromGoTime(t gotime.Time) MysqlTime {
+// FromGoTime rounds to microseconds for the internal time representation.
+func FromGoTime(t gotime.Time) PgTime {
 	year, month, day := t.Date()
 	hour, minute, second := t.Clock()
 	// Nanosecond plus 500 then divided 1000 means rounding to microseconds.
@@ -145,8 +134,8 @@ func FromGoTime(t gotime.Time) MysqlTime {
 }
 
 // FromDate makes a internal time representation from the given date.
-func FromDate(year int, month int, day int, hour int, minute int, second int, microsecond int) MysqlTime {
-	return MysqlTime{
+func FromDate(year int, month int, day int, hour int, minute int, second int, microsecond int) PgTime {
+	return PgTime{
 		uint16(year),
 		uint8(month),
 		uint8(day),
@@ -165,15 +154,14 @@ func (t Time) Clock() (hour int, minute int, second int) {
 // Time is the struct for handling datetime, timestamp and date.
 // TODO: check if need a NewTime function to set Fsp default value?
 type Time struct {
-	Time MysqlTime
+	Time PgTime
 	Type uint8
 	// Fsp is short for Fractional Seconds Precision.
-	// See http://dev.postgres.com/doc/refman/5.7/en/fractional-seconds.html
 	Fsp int
 }
 
-// MaxMySQLTime returns Time with maximum mysql time type.
-func MaxMySQLTime(fsp int) Time {
+// MaxPostgreSQLTime uses the compatibility duration bound, not PostgreSQL's time-of-day range.
+func MaxPostgreSQLTime(fsp int) Time {
 	return Time{Time: FromDate(0, 0, 0, TimeMaxHour, TimeMaxMinute, TimeMaxSecond, 0), Type: postgres.TypeDuration, Fsp: fsp}
 }
 
@@ -232,9 +220,9 @@ const dateFormat = "%Y%m%d"
 // 2012-12-12 -> 20121212
 // 2012-12-12T10:10:10 -> 20121212101010
 // 2012-12-12T10:10:10.123456 -> 20121212101010.123456
-func (t Time) ToNumber() *MyDecimal {
+func (t Time) ToNumber() *PgDecimal {
 	if t.IsZero() {
-		return &MyDecimal{}
+		return &PgDecimal{}
 	}
 
 	// Fix issue #1046
@@ -257,13 +245,13 @@ func (t Time) ToNumber() *MyDecimal {
 	}
 
 	// We skip checking error here because time formatted string can be parsed certainly.
-	dec := new(MyDecimal)
+	dec := new(PgDecimal)
 	err = dec.FromString([]byte(s))
 	sqlerr.Log(errors.Trace(err))
 	return dec
 }
 
-// ConvertToDuration converts mysql datetime, timestamp and date to mysql time type.
+// ConvertToDuration discards the date so only the time-of-day contributes to the duration.
 // e.g,
 // 2012-12-12T10:10:10 -> 10:10:10
 // 2012-12-12 -> 0
@@ -286,14 +274,14 @@ func (t Time) Compare(o Time) int {
 	return compareTime(t.Time, o.Time)
 }
 
-// compareTime compare two MysqlTime.
+// compareTime compare two PgTime.
 // return:
 //
 //	0: if a == b
 //	1: if a > b
 //
 // -1: if a < b
-func compareTime(a, b MysqlTime) int {
+func compareTime(a, b PgTime) int {
 	ta := datetimeToUint64(a)
 	tb := datetimeToUint64(b)
 
@@ -436,7 +424,6 @@ func ParseDateFormat(format string) []string {
 	return seps
 }
 
-// See https://dev.postgres.com/doc/refman/5.7/en/date-and-time-literals.html.
 // The only delimiter recognized between a date and time part and a fractional seconds part is the decimal point.
 func splitDateTime(format string) (seps []string, fracStr string) {
 	if i := strings.LastIndex(format, "."); i > 0 {
@@ -487,7 +474,6 @@ func ParseYear(str string) (int16, error) {
 }
 
 // adjustYear adjusts year according to y.
-// See https://dev.postgres.com/doc/refman/5.7/en/two-digit-years.html
 func adjustYear(y int) int {
 	if y >= 0 && y <= 69 {
 		y = 2000 + y
@@ -510,11 +496,10 @@ func AdjustYear(y int64, shouldAdjust bool) (int64, error) {
 	return y, nil
 }
 
-// Duration is the type for MySQL TIME type.
+// Duration retains compatibility fractional precision; it is not PostgreSQL's time type.
 type Duration struct {
 	gotime.Duration
 	// Fsp is short for Fractional Seconds Precision.
-	// See http://dev.postgres.com/doc/refman/5.7/en/fractional-seconds.html
 	Fsp int
 }
 
@@ -576,7 +561,7 @@ func (d Duration) formatFrac(frac int) string {
 // ToNumber changes duration to number format.
 // e.g,
 // 10:10:10 -> 101010
-func (d Duration) ToNumber() *MyDecimal {
+func (d Duration) ToNumber() *PgDecimal {
 	sign, hours, minutes, seconds, fraction := splitDuration(d.Duration)
 	var (
 		s       string
@@ -594,7 +579,7 @@ func (d Duration) ToNumber() *MyDecimal {
 	}
 
 	// We skip checking error here because time formatted string can be parsed certainly.
-	dec := new(MyDecimal)
+	dec := new(PgDecimal)
 	err := dec.FromString([]byte(s))
 	sqlerr.Log(errors.Trace(err))
 	return dec
@@ -659,8 +644,8 @@ func (d Duration) MicroSecond() int {
 	return frac
 }
 
-// TruncateOverflowMySQLTime truncates d when it overflows, and return ErrTruncatedWrongVal.
-func TruncateOverflowMySQLTime(d gotime.Duration) (gotime.Duration, error) {
+// TruncateOverflowPostgreSQLTime clamps to the compatibility duration bounds, not PostgreSQL time limits.
+func TruncateOverflowPostgreSQLTime(d gotime.Duration) (gotime.Duration, error) {
 	if d > MaxTime {
 		return MaxTime, ErrTruncatedWrongVal.GenWithStackByArgs("time", d.String())
 	} else if d < MinTime {
@@ -708,7 +693,7 @@ func TimeFromDays(num int64) Time {
 	}
 }
 
-func checkDateType(t MysqlTime, allowZeroInDate, allowInvalidDate bool) error {
+func checkDateType(t PgTime, allowZeroInDate, allowInvalidDate bool) error {
 	year, month, day := t.Year(), t.Month(), t.Day()
 	if year == 0 && month == 0 && day == 0 {
 		return nil
@@ -729,9 +714,7 @@ func checkDateType(t MysqlTime, allowZeroInDate, allowInvalidDate bool) error {
 	return nil
 }
 
-func checkDateRange(t MysqlTime) error {
-	// Oddly enough, MySQL document says date range should larger than '1000-01-01',
-	// but we can insert '0001-01-01' actually.
+func checkDateRange(t PgTime) error {
 	if t.Year() < 0 || t.Month() < 0 || t.Day() < 0 {
 		return errors.Trace(ErrInvalidTimeFormat.GenWithStackByArgs(t))
 	}
@@ -762,7 +745,7 @@ func checkMonthDay(year, month, day int, allowInvalidDate bool) error {
 	return nil
 }
 
-func checkDatetimeType(t MysqlTime, allowZeroInDate, allowInvalidDate bool) error {
+func checkDatetimeType(t PgTime, allowZeroInDate, allowInvalidDate bool) error {
 	if err := checkDateType(t, allowZeroInDate, allowInvalidDate); err != nil {
 		return errors.Trace(err)
 	}
@@ -1181,7 +1164,6 @@ func IsDateFormat(format string) bool {
 
 // DateFormat returns a textual representation of the time value formatted
 // according to layout.
-// See http://dev.postgres.com/doc/refman/5.7/en/date-and-time-functions.html#function_date-format
 func (t Time) DateFormat(layout string) (string, error) {
 	var buf bytes.Buffer
 	inPatternMatch := false
@@ -1340,8 +1322,8 @@ func abbrDayOfMonth(day int) string {
 	return str
 }
 
-// mysqlTimeFix fixes the MysqlTime use the values in the context.
-func mysqlTimeFix(t *MysqlTime, ctx map[string]int) error {
+// pgTimeFix fixes the PgTime use the values in the context.
+func pgTimeFix(t *PgTime, ctx map[string]int) error {
 	// Key of the ctx is the format char, such as `%j` `%p` and so on.
 	if yearOfDay, ok := ctx["%j"]; ok {
 		// TODO: Implement the function that converts day of year to yy:mm:dd.
@@ -1370,7 +1352,7 @@ func mysqlTimeFix(t *MysqlTime, ctx map[string]int) error {
 
 // strToDate converts date string according to format, returns true on success,
 // the value will be stored in argument t or ctx.
-func strToDate(t *MysqlTime, date string, format string, ctx map[string]int) bool {
+func strToDate(t *PgTime, date string, format string, ctx map[string]int) bool {
 	date = skipWhiteSpace(date)
 	format = skipWhiteSpace(format)
 
@@ -1449,7 +1431,7 @@ var monthAbbrev = map[string]gotime.Month{
 	"Dec": gotime.December,
 }
 
-type dateFormatParser func(t *MysqlTime, date string, ctx map[string]int) (remain string, succ bool)
+type dateFormatParser func(t *PgTime, date string, ctx map[string]int) (remain string, succ bool)
 
 var dateFormatParserTable = map[string]dateFormatParser{
 	"%b": abbreviatedMonth,      // Abbreviated month name (Jan..Dec)
@@ -1472,8 +1454,7 @@ var dateFormatParserTable = map[string]dateFormatParser{
 	"%S": secondsNumeric,        // Seconds (00..59)
 	"%T": time24Hour,            // Time, 24-hour (hh:mm:ss)
 	"%Y": yearNumericFourDigits, // Year, numeric, four digits
-	// Deprecated since MySQL 5.7.5
-	"%y": yearNumericTwoDigits, // Year, numeric (two digits)
+	"%y": yearNumericTwoDigits,  // Year, numeric (two digits)
 	// TODO: Add the following...
 	// "%a": abbreviatedWeekday,         // Abbreviated weekday name (Sun..Sat)
 	// "%D": dayOfMonthWithSuffix,       // Day of the month with English suffix (0th, 1st, 2nd, 3rd)
@@ -1535,7 +1516,7 @@ func GetFormatType(format string) (isDuration, isDate bool) {
 	return
 }
 
-func matchDateWithToken(t *MysqlTime, date string, token string, ctx map[string]int) (remain string, succ bool) {
+func matchDateWithToken(t *PgTime, date string, token string, ctx map[string]int) (remain string, succ bool) {
 	if parse, ok := dateFormatParserTable[token]; ok {
 		return parse(t, date, ctx)
 	}
@@ -1561,7 +1542,7 @@ func parseDigits(input string, count int) (int, bool) {
 	return int(v), true
 }
 
-func hour24TwoDigits(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func hour24TwoDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	v, succ := parseDigits(input, 2)
 	if !succ || v >= 24 {
 		return input, false
@@ -1570,7 +1551,7 @@ func hour24TwoDigits(t *MysqlTime, input string, ctx map[string]int) (string, bo
 	return input[2:], true
 }
 
-func secondsNumeric(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func secondsNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	v, succ := parseDigits(input, 2)
 	if !succ || v >= 60 {
 		return input, false
@@ -1579,7 +1560,7 @@ func secondsNumeric(t *MysqlTime, input string, ctx map[string]int) (string, boo
 	return input[2:], true
 }
 
-func minutesNumeric(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func minutesNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	v, succ := parseDigits(input, 2)
 	if !succ || v >= 60 {
 		return input, false
@@ -1590,7 +1571,7 @@ func minutesNumeric(t *MysqlTime, input string, ctx map[string]int) (string, boo
 
 const time12HourLen = len("hh:mm:ssAM")
 
-func time12Hour(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func time12Hour(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	// hh:mm:ss AM
 	if len(input) < time12HourLen {
 		return input, false
@@ -1627,7 +1608,7 @@ func time12Hour(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
 
 const time24HourLen = len("hh:mm:ss")
 
-func time24Hour(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func time24Hour(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	// hh:mm:ss
 	if len(input) < time24HourLen {
 		return input, false
@@ -1659,7 +1640,7 @@ const (
 	constForPM
 )
 
-func isAMOrPM(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func isAMOrPM(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	if strings.HasPrefix(input, "AM") {
 		ctx["%p"] = constForAM
 	} else if strings.HasPrefix(input, "PM") {
@@ -1698,7 +1679,7 @@ func parseTwoNumeric(input string) (int, string) {
 	return int(v), input[len(str):]
 }
 
-func dayOfMonthNumeric(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func dayOfMonthNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	result := oneOrTwoDigitRegex.FindString(input) // 0..31
 	length := len(result)
 
@@ -1711,7 +1692,7 @@ func dayOfMonthNumeric(t *MysqlTime, input string, ctx map[string]int) (string, 
 	return input[length:], true
 }
 
-func hour24Numeric(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func hour24Numeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	result := oneOrTwoDigitRegex.FindString(input) // 0..23
 	length := len(result)
 
@@ -1724,7 +1705,7 @@ func hour24Numeric(t *MysqlTime, input string, ctx map[string]int) (string, bool
 	return input[length:], true
 }
 
-func hour12Numeric(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func hour12Numeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	result := oneOrTwoDigitRegex.FindString(input) // 1..12
 	length := len(result)
 
@@ -1737,7 +1718,7 @@ func hour12Numeric(t *MysqlTime, input string, ctx map[string]int) (string, bool
 	return input[length:], true
 }
 
-func microSeconds(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func microSeconds(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	if len(input) < 6 {
 		return input, false
 	}
@@ -1752,15 +1733,15 @@ func microSeconds(t *MysqlTime, input string, ctx map[string]int) (string, bool)
 	return input[6:], true
 }
 
-func yearNumericFourDigits(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func yearNumericFourDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	return yearNumericNDigits(t, input, ctx, 4)
 }
 
-func yearNumericTwoDigits(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func yearNumericTwoDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	return yearNumericNDigits(t, input, ctx, 2)
 }
 
-func yearNumericNDigits(t *MysqlTime, input string, ctx map[string]int, n int) (string, bool) {
+func yearNumericNDigits(t *PgTime, input string, ctx map[string]int, n int) (string, bool) {
 	effectiveCount, effectiveValue := 0, 0
 	for effectiveCount+1 <= n {
 		value, succeed := parseDigits(input, effectiveCount+1)
@@ -1780,7 +1761,7 @@ func yearNumericNDigits(t *MysqlTime, input string, ctx map[string]int, n int) (
 	return input[effectiveCount:], true
 }
 
-func dayOfYearThreeDigits(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func dayOfYearThreeDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	v, succ := parseDigits(input, 3)
 	if !succ || v == 0 || v > 366 {
 		return input, false
@@ -1789,18 +1770,18 @@ func dayOfYearThreeDigits(t *MysqlTime, input string, ctx map[string]int) (strin
 	return input[3:], true
 }
 
-func abbreviatedWeekday(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func abbreviatedWeekday(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	if len(input) >= 3 {
 		dayName := input[:3]
 		if _, ok := weekdayAbbrev[dayName]; ok {
-			// TODO: We need refact mysql time to support this.
+			// TODO: The internal time representation has no field for a parsed weekday.
 			return input, false
 		}
 	}
 	return input, false
 }
 
-func abbreviatedMonth(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func abbreviatedMonth(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	if len(input) >= 3 {
 		monthName := input[:3]
 		if month, ok := monthAbbrev[monthName]; ok {
@@ -1811,7 +1792,7 @@ func abbreviatedMonth(t *MysqlTime, input string, ctx map[string]int) (string, b
 	return input, false
 }
 
-func fullNameMonth(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func fullNameMonth(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	for i, month := range MonthNames {
 		if strings.HasPrefix(input, month) {
 			t.month = uint8(i + 1)
@@ -1821,7 +1802,7 @@ func fullNameMonth(t *MysqlTime, input string, ctx map[string]int) (string, bool
 	return input, false
 }
 
-func monthNumeric(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func monthNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	result := oneOrTwoDigitRegex.FindString(input) // 1..12
 	length := len(result)
 
@@ -1834,8 +1815,7 @@ func monthNumeric(t *MysqlTime, input string, ctx map[string]int) (string, bool)
 	return input[length:], true
 }
 
-// dayOfMonthWithSuffix returns different suffix according t being which day. i.e. 0 return th. 1 return st.
-func dayOfMonthWithSuffix(t *MysqlTime, input string, ctx map[string]int) (string, bool) {
+func dayOfMonthWithSuffix(t *PgTime, input string, ctx map[string]int) (string, bool) {
 	month, remain := parseOrdinalNumbers(input)
 	if month >= 0 {
 		t.month = uint8(month)

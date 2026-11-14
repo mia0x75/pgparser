@@ -1,6 +1,6 @@
 package postgres
 
-// MySQL type information.
+// These type IDs are retained for internal compatibility; they are not PostgreSQL OIDs.
 const (
 	TypeDecimal   byte = 0
 	TypeTiny      byte = 1
@@ -34,7 +34,7 @@ const (
 	TypeGeometry   byte = 0xff
 )
 
-// TypeUnspecified is an uninitialized type. TypeDecimal is not used in MySQL.
+// TypeUnspecified uses zero so an uninitialized FieldType remains unspecified.
 const TypeUnspecified = TypeDecimal
 
 // Flag information.

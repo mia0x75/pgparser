@@ -252,34 +252,34 @@ func (e *Error) NotEqual(err error) bool {
 
 // ToSQLError convert Error to postgres.SQLError.
 func (e *Error) ToSQLError() *postgres.SQLError {
-	code := e.getMySQLErrorCode()
+	code := e.getPgErrCode()
 	return postgres.NewErrf(code, "%s", e.getMsg())
 }
 
-var defaultMySQLErrorCode uint16
+var defaultPgErrCode uint16
 
-func (e *Error) getMySQLErrorCode() uint16 {
-	codeMap, ok := ErrClassToMySQLCodes[e.class]
+func (e *Error) getPgErrCode() uint16 {
+	codeMap, ok := ErrClassToPgCodes[e.class]
 	if !ok {
 		slog.Warn(fmt.Sprintf("Unknown error class: %v", e.class))
-		return defaultMySQLErrorCode
+		return defaultPgErrCode
 	}
 	code, ok := codeMap[e.code]
 	if !ok {
 		slog.Debug(fmt.Sprintf("Unknown error class: %v code: %v", e.class, e.code))
-		return defaultMySQLErrorCode
+		return defaultPgErrCode
 	}
 	return code
 }
 
 var (
-	// ErrClassToMySQLCodes is the map of ErrClass to code-map.
-	ErrClassToMySQLCodes map[ErrClass]map[ErrCode]uint16
+	// ErrClassToPgCodes is the map of ErrClass to code-map.
+	ErrClassToPgCodes map[ErrClass]map[ErrCode]uint16
 )
 
 func init() {
-	ErrClassToMySQLCodes = make(map[ErrClass]map[ErrCode]uint16)
-	defaultMySQLErrorCode = postgres.ErrUnknown
+	ErrClassToPgCodes = make(map[ErrClass]map[ErrCode]uint16)
+	defaultPgErrCode = postgres.ErrUnknown
 }
 
 // ErrorEqual returns a boolean indicating whether err1 is equal to err2.

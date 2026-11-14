@@ -15,7 +15,7 @@ func truncateStr(str string, flen int) string {
 	return str
 }
 
-// UnsignedUpperBound indicates the max uint64 values of different mysql types.
+// UnsignedUpperBound retains the width limits of the internal integer types.
 var UnsignedUpperBound = map[byte]uint64{
 	postgres.TypeTiny:     math.MaxUint8,
 	postgres.TypeShort:    math.MaxUint16,
@@ -27,7 +27,7 @@ var UnsignedUpperBound = map[byte]uint64{
 	postgres.TypeSet:      math.MaxUint64,
 }
 
-// SignedUpperBound indicates the max int64 values of different mysql types.
+// SignedUpperBound retains the width limits of the internal integer types.
 var SignedUpperBound = map[byte]int64{
 	postgres.TypeTiny:     math.MaxInt8,
 	postgres.TypeShort:    math.MaxInt16,
@@ -36,7 +36,7 @@ var SignedUpperBound = map[byte]int64{
 	postgres.TypeLonglong: math.MaxInt64,
 }
 
-// SignedLowerBound indicates the min int64 values of different mysql types.
+// SignedLowerBound retains the width limits of the internal integer types.
 var SignedLowerBound = map[byte]int64{
 	postgres.TypeTiny:     math.MinInt8,
 	postgres.TypeShort:    math.MinInt16,
@@ -139,7 +139,7 @@ func ToString(value any) (string, error) {
 		return v.String(), nil
 	case Duration:
 		return v.String(), nil
-	case *MyDecimal:
+	case *PgDecimal:
 		return v.String(), nil
 	case BinaryLiteral:
 		return v.ToString(), nil

@@ -28,13 +28,13 @@ func TestWeekBehaviour(t *testing.T) {
 
 func TestWeek(t *testing.T) {
 	tests := []struct {
-		Input  MysqlTime
+		Input  PgTime
 		Mode   int
 		Expect int
 	}{
-		{MysqlTime{2008, 2, 20, 0, 0, 0, 0}, 0, 7},
-		{MysqlTime{2008, 2, 20, 0, 0, 0, 0}, 1, 8},
-		{MysqlTime{2008, 12, 31, 0, 0, 0, 0}, 1, 53},
+		{PgTime{2008, 2, 20, 0, 0, 0, 0}, 0, 7},
+		{PgTime{2008, 2, 20, 0, 0, 0, 0}, 1, 8},
+		{PgTime{2008, 12, 31, 0, 0, 0, 0}, 1, 53},
 	}
 
 	for ith, tt := range tests {
@@ -68,35 +68,35 @@ func TestCalcDaynr(t *testing.T) {
 
 func TestCalcTimeDiff(t *testing.T) {
 	tests := []struct {
-		T1     MysqlTime
-		T2     MysqlTime
+		T1     PgTime
+		T2     PgTime
 		Sign   int
-		Expect MysqlTime
+		Expect PgTime
 	}{
 		// calcTimeDiff can be used for month = 0.
 		{
-			MysqlTime{2006, 0, 1, 12, 23, 21, 0},
-			MysqlTime{2006, 0, 3, 21, 23, 22, 0},
+			PgTime{2006, 0, 1, 12, 23, 21, 0},
+			PgTime{2006, 0, 3, 21, 23, 22, 0},
 			1,
-			MysqlTime{0, 0, 0, 57, 0, 1, 0},
+			PgTime{0, 0, 0, 57, 0, 1, 0},
 		},
 		{
-			MysqlTime{0, 0, 0, 21, 23, 24, 0},
-			MysqlTime{0, 0, 0, 11, 23, 22, 0},
+			PgTime{0, 0, 0, 21, 23, 24, 0},
+			PgTime{0, 0, 0, 11, 23, 22, 0},
 			1,
-			MysqlTime{0, 0, 0, 10, 0, 2, 0},
+			PgTime{0, 0, 0, 10, 0, 2, 0},
 		},
 		{
-			MysqlTime{0, 0, 0, 1, 2, 3, 0},
-			MysqlTime{0, 0, 0, 5, 2, 0, 0},
+			PgTime{0, 0, 0, 1, 2, 3, 0},
+			PgTime{0, 0, 0, 5, 2, 0, 0},
 			-1,
-			MysqlTime{0, 0, 0, 6, 4, 3, 0},
+			PgTime{0, 0, 0, 6, 4, 3, 0},
 		},
 	}
 
 	for i, tt := range tests {
 		seconds, microseconds, _ := calcTimeDiff(tt.T1, tt.T2, tt.Sign)
-		var result MysqlTime
+		var result PgTime
 		calcTimeFromSec(&result, seconds, microseconds)
 		if result != tt.Expect {
 			t.Fatalf("%d failed.", i)
@@ -106,15 +106,15 @@ func TestCalcTimeDiff(t *testing.T) {
 
 func TestCompareTime(t *testing.T) {
 	tests := []struct {
-		T1     MysqlTime
-		T2     MysqlTime
+		T1     PgTime
+		T2     PgTime
 		Expect int
 	}{
-		{MysqlTime{0, 0, 0, 0, 0, 0, 0}, MysqlTime{0, 0, 0, 0, 0, 0, 0}, 0},
-		{MysqlTime{0, 0, 0, 0, 1, 0, 0}, MysqlTime{0, 0, 0, 0, 0, 0, 0}, 1},
-		{MysqlTime{2006, 1, 2, 3, 4, 5, 6}, MysqlTime{2016, 1, 2, 3, 4, 5, 0}, -1},
-		{MysqlTime{0, 0, 0, 11, 22, 33, 0}, MysqlTime{0, 0, 0, 12, 21, 33, 0}, -1},
-		{MysqlTime{9999, 12, 30, 23, 59, 59, 999999}, MysqlTime{0, 1, 2, 3, 4, 5, 6}, 1},
+		{PgTime{0, 0, 0, 0, 0, 0, 0}, PgTime{0, 0, 0, 0, 0, 0, 0}, 0},
+		{PgTime{0, 0, 0, 0, 1, 0, 0}, PgTime{0, 0, 0, 0, 0, 0, 0}, 1},
+		{PgTime{2006, 1, 2, 3, 4, 5, 6}, PgTime{2016, 1, 2, 3, 4, 5, 0}, -1},
+		{PgTime{0, 0, 0, 11, 22, 33, 0}, PgTime{0, 0, 0, 12, 21, 33, 0}, -1},
+		{PgTime{9999, 12, 30, 23, 59, 59, 999999}, PgTime{0, 1, 2, 3, 4, 5, 6}, 1},
 	}
 
 	for _, tt := range tests {
@@ -164,40 +164,40 @@ func TestGetDateFromDaynr(t *testing.T) {
 
 func TestMixDateAndTime(t *testing.T) {
 	tests := []struct {
-		date   MysqlTime
-		time   MysqlTime
+		date   PgTime
+		time   PgTime
 		neg    bool
-		expect MysqlTime
+		expect PgTime
 	}{
 		{
-			date:   MysqlTime{1896, 3, 4, 0, 0, 0, 0},
-			time:   MysqlTime{0, 0, 0, 12, 23, 24, 5},
+			date:   PgTime{1896, 3, 4, 0, 0, 0, 0},
+			time:   PgTime{0, 0, 0, 12, 23, 24, 5},
 			neg:    false,
-			expect: MysqlTime{1896, 3, 4, 12, 23, 24, 5},
+			expect: PgTime{1896, 3, 4, 12, 23, 24, 5},
 		},
 		{
-			date:   MysqlTime{1896, 3, 4, 0, 0, 0, 0},
-			time:   MysqlTime{0, 0, 0, 24, 23, 24, 5},
+			date:   PgTime{1896, 3, 4, 0, 0, 0, 0},
+			time:   PgTime{0, 0, 0, 24, 23, 24, 5},
 			neg:    false,
-			expect: MysqlTime{1896, 3, 5, 0, 23, 24, 5},
+			expect: PgTime{1896, 3, 5, 0, 23, 24, 5},
 		},
 		{
-			date:   MysqlTime{2016, 12, 31, 0, 0, 0, 0},
-			time:   MysqlTime{0, 0, 0, 24, 0, 0, 0},
+			date:   PgTime{2016, 12, 31, 0, 0, 0, 0},
+			time:   PgTime{0, 0, 0, 24, 0, 0, 0},
 			neg:    false,
-			expect: MysqlTime{2017, 1, 1, 0, 0, 0, 0},
+			expect: PgTime{2017, 1, 1, 0, 0, 0, 0},
 		},
 		{
-			date:   MysqlTime{2016, 12, 0, 0, 0, 0, 0},
-			time:   MysqlTime{0, 0, 0, 24, 0, 0, 0},
+			date:   PgTime{2016, 12, 0, 0, 0, 0, 0},
+			time:   PgTime{0, 0, 0, 24, 0, 0, 0},
 			neg:    false,
-			expect: MysqlTime{2016, 12, 1, 0, 0, 0, 0},
+			expect: PgTime{2016, 12, 1, 0, 0, 0, 0},
 		},
 		{
-			date:   MysqlTime{2017, 1, 12, 3, 23, 15, 0},
-			time:   MysqlTime{0, 0, 0, 2, 21, 10, 0},
+			date:   PgTime{2017, 1, 12, 3, 23, 15, 0},
+			time:   PgTime{0, 0, 0, 2, 21, 10, 0},
 			neg:    true,
-			expect: MysqlTime{2017, 1, 12, 1, 2, 5, 0},
+			expect: PgTime{2017, 1, 12, 1, 2, 5, 0},
 		},
 	}
 
@@ -211,22 +211,22 @@ func TestMixDateAndTime(t *testing.T) {
 
 func TestIsLeapYear(t *testing.T) {
 	tests := []struct {
-		T      MysqlTime
+		T      PgTime
 		Expect bool
 	}{
-		{MysqlTime{1960, 1, 1, 0, 0, 0, 0}, true},
-		{MysqlTime{1963, 2, 21, 0, 0, 0, 0}, false},
-		{MysqlTime{2008, 11, 25, 0, 0, 0, 0}, true},
-		{MysqlTime{2017, 4, 24, 0, 0, 0, 0}, false},
-		{MysqlTime{1988, 2, 29, 0, 0, 0, 0}, true},
-		{MysqlTime{2000, 3, 15, 0, 0, 0, 0}, true},
-		{MysqlTime{1992, 5, 3, 0, 0, 0, 0}, true},
-		{MysqlTime{2024, 10, 1, 0, 0, 0, 0}, true},
-		{MysqlTime{2016, 6, 29, 0, 0, 0, 0}, true},
-		{MysqlTime{2015, 6, 29, 0, 0, 0, 0}, false},
-		{MysqlTime{2014, 9, 31, 0, 0, 0, 0}, false},
-		{MysqlTime{2001, 12, 7, 0, 0, 0, 0}, false},
-		{MysqlTime{1989, 7, 6, 0, 0, 0, 0}, false},
+		{PgTime{1960, 1, 1, 0, 0, 0, 0}, true},
+		{PgTime{1963, 2, 21, 0, 0, 0, 0}, false},
+		{PgTime{2008, 11, 25, 0, 0, 0, 0}, true},
+		{PgTime{2017, 4, 24, 0, 0, 0, 0}, false},
+		{PgTime{1988, 2, 29, 0, 0, 0, 0}, true},
+		{PgTime{2000, 3, 15, 0, 0, 0, 0}, true},
+		{PgTime{1992, 5, 3, 0, 0, 0, 0}, true},
+		{PgTime{2024, 10, 1, 0, 0, 0, 0}, true},
+		{PgTime{2016, 6, 29, 0, 0, 0, 0}, true},
+		{PgTime{2015, 6, 29, 0, 0, 0, 0}, false},
+		{PgTime{2014, 9, 31, 0, 0, 0, 0}, false},
+		{PgTime{2001, 12, 7, 0, 0, 0, 0}, false},
+		{PgTime{1989, 7, 6, 0, 0, 0, 0}, false},
 	}
 
 	for _, tt := range tests {

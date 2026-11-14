@@ -1,13 +1,12 @@
 package postgres
 
 const (
-	// DefaultMySQLState is default state of the mySQL
-	DefaultMySQLState = "HY000"
+	// Preserve the compatibility fallback for codes without an explicit state.
+	DefaultPgState = "HY000"
 )
 
-// MySQLState maps error code to MySQL SQLSTATE value.
-// The values are taken from ANSI SQL and ODBC and are more standardized.
-var MySQLState = map[uint16]string{
+// These SQLSTATE mappings are retained for compatibility, not PostgreSQL server error assignments.
+var PgState = map[uint16]string{
 	ErrDupKey:                              "23000",
 	ErrOutofMemory:                         "HY001",
 	ErrOutOfSortMemory:                     "HY001",

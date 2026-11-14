@@ -38,7 +38,6 @@ func acceptStmtList(v Visitor, list []StmtNode) ([]StmtNode, bool) {
 }
 
 // BeginEndStmt is a compound statement: `[label:] BEGIN ... END [label]`.
-// See https://dev.postgres.com/doc/refman/8.0/en/begin-end.html
 type BeginEndStmt struct {
 	stmtNode
 
@@ -91,7 +90,6 @@ func (n *BeginEndStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DeclareStmt is a variable declaration: `DECLARE var [, var]... type [DEFAULT expr]`.
-// See https://dev.postgres.com/doc/refman/8.0/en/declare-local-variable.html
 type DeclareStmt struct {
 	stmtNode
 
@@ -178,7 +176,7 @@ func (c *HandlerCondition) Restore(ctx *format.RestoreCtx) error {
 	return nil
 }
 
-// NewErrnoHandlerCondition builds a handler condition from a MySQL error code.
+// NewErrnoHandlerCondition preserves numeric handler conditions for compatibility.
 func NewErrnoHandlerCondition(v any) *HandlerCondition {
 	return &HandlerCondition{Type: HandlerConditionErrorCode, Value: fmt.Sprintf("%v", v)}
 }
@@ -329,7 +327,6 @@ type IfClause struct {
 }
 
 // IfStmt is an `IF ... THEN ... [ELSEIF ...] [ELSE ...] END IF` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/if.html
 type IfStmt struct {
 	stmtNode
 
@@ -399,7 +396,6 @@ type CaseWhenStmt struct {
 }
 
 // CaseStmt is a `CASE ... WHEN ... THEN ... [ELSE ...] END CASE` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/case.html
 type CaseStmt struct {
 	stmtNode
 
@@ -474,7 +470,6 @@ func (n *CaseStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // WhileStmt is a `[label:] WHILE cond DO ... END WHILE [label]` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/while.html
 type WhileStmt struct {
 	stmtNode
 
@@ -529,7 +524,6 @@ func (n *WhileStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // RepeatStmt is a `[label:] REPEAT ... UNTIL cond END REPEAT [label]` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/repeat.html
 type RepeatStmt struct {
 	stmtNode
 
@@ -584,7 +578,6 @@ func (n *RepeatStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // LoopStmt is a `[label:] LOOP ... END LOOP [label]` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/loop.html
 type LoopStmt struct {
 	stmtNode
 
@@ -629,7 +622,6 @@ func (n *LoopStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // LeaveStmt is a `LEAVE label` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/leave.html
 type LeaveStmt struct {
 	stmtNode
 
@@ -653,7 +645,6 @@ func (n *LeaveStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // IterateStmt is an `ITERATE label` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/iterate.html
 type IterateStmt struct {
 	stmtNode
 
@@ -677,7 +668,6 @@ func (n *IterateStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // OpenStmt is an `OPEN cursor_name` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/open.html
 type OpenStmt struct {
 	stmtNode
 
@@ -701,7 +691,6 @@ func (n *OpenStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // CloseStmt is a `CLOSE cursor_name` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/close.html
 type CloseStmt struct {
 	stmtNode
 
@@ -725,7 +714,6 @@ func (n *CloseStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // FetchStmt is a `FETCH cursor_name INTO var [, var]...` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/fetch.html
 type FetchStmt struct {
 	stmtNode
 
@@ -767,7 +755,6 @@ type SignalInfoItem struct {
 }
 
 // SignalStmt is a `SIGNAL condition [SET item = expr, ...]` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/signal.html
 type SignalStmt struct {
 	stmtNode
 
@@ -815,7 +802,6 @@ func (n *SignalStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // ResignalStmt is a `RESIGNAL [condition] [SET item = expr, ...]` statement.
-// See https://dev.postgres.com/doc/refman/8.0/en/resignal.html
 type ResignalStmt struct {
 	stmtNode
 

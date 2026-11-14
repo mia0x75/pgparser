@@ -9,7 +9,7 @@ import (
 
 var zeroSet = Set{Name: "", Value: 0}
 
-// Set is for MySQL Set type.
+// Set retains an internal compatibility bitset; it is not a PostgreSQL data type.
 type Set struct {
 	Name  string
 	Value uint64

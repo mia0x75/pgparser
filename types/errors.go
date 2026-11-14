@@ -9,7 +9,10 @@ var (
 	// ErrDataTooLong is returned when converts a string value that is longer than field type length.
 	ErrDataTooLong = sqlerr.ClassTypes.New(codeDataTooLong, "Data Too Long")
 	// ErrIllegalValueForType is returned when value of type is illegal.
-	ErrIllegalValueForType = sqlerr.ClassTypes.New(codeIllegalValueForType, postgres.MySQLErrName[postgres.ErrIllegalValueForType])
+	ErrIllegalValueForType = sqlerr.ClassTypes.New(
+		codeIllegalValueForType,
+		postgres.PgErrName[postgres.ErrIllegalValueForType],
+	)
 	// ErrTruncated is returned when data has been truncated during conversion.
 	ErrTruncated = sqlerr.ClassTypes.New(codeTruncated, "Data Truncated")
 	// ErrTruncatedWrongVal is returned when data has been truncated during conversion.
@@ -25,9 +28,9 @@ var (
 	// ErrTooBigSet is returned when too many strings for column.
 	ErrTooBigSet = sqlerr.ClassTypes.New(codeTooBigSet, "Too Big Set")
 	// ErrTooBigScale is returned when type DECIMAL/NUMERIC scale is bigger than postgres.MaxDecimalScale.
-	ErrTooBigScale = sqlerr.ClassTypes.New(codeTooBigScale, postgres.MySQLErrName[postgres.ErrTooBigScale])
+	ErrTooBigScale = sqlerr.ClassTypes.New(codeTooBigScale, postgres.PgErrName[postgres.ErrTooBigScale])
 	// ErrTooBigPrecision is returned when type DECIMAL/NUMERIC precision is bigger than postgres.MaxDecimalWidth
-	ErrTooBigPrecision = sqlerr.ClassTypes.New(codeTooBigPrecision, postgres.MySQLErrName[postgres.ErrTooBigPrecision])
+	ErrTooBigPrecision = sqlerr.ClassTypes.New(codeTooBigPrecision, postgres.PgErrName[postgres.ErrTooBigPrecision])
 	// ErrWrongFieldSpec is return when incorrect column specifier for column.
 	ErrWrongFieldSpec = sqlerr.ClassTypes.New(codeWrongFieldSpec, "Wrong Field Spec")
 	// ErrBadNumber is return when parsing an invalid binary decimal number.
@@ -39,12 +42,14 @@ var (
 	// ErrCastNegIntAsUnsigned is returned when a negative integer be casted to an unsigned int.
 	ErrCastNegIntAsUnsigned = sqlerr.ClassTypes.New(codeUnknown, msgCastNegIntAsUnsigned)
 	// ErrMBiggerThanD is returned when precision less than the scale.
-	ErrMBiggerThanD = sqlerr.ClassTypes.New(codeMBiggerThanD, postgres.MySQLErrName[postgres.ErrMBiggerThanD])
+	ErrMBiggerThanD = sqlerr.ClassTypes.New(codeMBiggerThanD, postgres.PgErrName[postgres.ErrMBiggerThanD])
 	// ErrWarnDataOutOfRange is returned when the value in a numeric column that is outside the permissible range of the column data type.
-	// See https://dev.postgres.com/doc/refman/5.5/en/out-of-range-and-overflow.html for details
-	ErrWarnDataOutOfRange = sqlerr.ClassTypes.New(codeDataOutOfRange, postgres.MySQLErrName[postgres.ErrWarnDataOutOfRange])
+	ErrWarnDataOutOfRange = sqlerr.ClassTypes.New(codeDataOutOfRange, postgres.PgErrName[postgres.ErrWarnDataOutOfRange])
 	// ErrDuplicatedValueInType is returned when enum column has duplicated value.
-	ErrDuplicatedValueInType = sqlerr.ClassTypes.New(codeDuplicatedValueInType, postgres.MySQLErrName[postgres.ErrDuplicatedValueInType])
+	ErrDuplicatedValueInType = sqlerr.ClassTypes.New(
+		codeDuplicatedValueInType,
+		postgres.PgErrName[postgres.ErrDuplicatedValueInType],
+	)
 )
 
 const (
@@ -70,14 +75,14 @@ const (
 )
 
 var (
-	msgOverflow             = postgres.MySQLErrName[postgres.ErrDataOutOfRange]
-	msgTruncatedWrongVal    = postgres.MySQLErrName[postgres.ErrTruncatedWrongValue]
+	msgOverflow             = postgres.PgErrName[postgres.ErrDataOutOfRange]
+	msgTruncatedWrongVal    = postgres.PgErrName[postgres.ErrTruncatedWrongValue]
 	msgCastAsSignedOverflow = "Cast to signed converted positive out-of-range integer to it's negative complement"
 	msgCastNegIntAsUnsigned = "Cast to unsigned converted negative integer to it's positive complement"
 )
 
 func init() {
-	typesMySQLErrCodes := map[sqlerr.ErrCode]uint16{
+	typesPgErrCodes := map[sqlerr.ErrCode]uint16{
 		codeDataTooLong:           postgres.ErrDataTooLong,
 		codeIllegalValueForType:   postgres.ErrIllegalValueForType,
 		codeTruncated:             postgres.WarnDataTruncated,
@@ -96,5 +101,5 @@ func init() {
 		codeDataOutOfRange:        postgres.ErrWarnDataOutOfRange,
 		codeDuplicatedValueInType: postgres.ErrDuplicatedValueInType,
 	}
-	sqlerr.ErrClassToMySQLCodes[sqlerr.ClassTypes] = typesMySQLErrCodes
+	sqlerr.ErrClassToPgCodes[sqlerr.ClassTypes] = typesPgErrCodes
 }

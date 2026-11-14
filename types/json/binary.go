@@ -19,21 +19,17 @@ import (
 )
 
 /*
-   The binary JSON format from MySQL 5.7 is as follows:
+   This internal binary format is retained for random access; it is not PostgreSQL jsonb storage:
 
    JSON doc ::= type value
    type ::=
        0x01 |       // large JSON object
        0x03 |       // large JSON array
        0x04 |       // literal (true/false/null)
-       0x05 |       // int16
-       0x06 |       // uint16
-       0x07 |       // int32
-       0x08 |       // uint32
        0x09 |       // int64
        0x0a |       // uint64
        0x0b |       // double
-       0x0c |       // utf8mb4 string
+       0x0c |       // UTF-8 string
 
    value ::=
        object  |
@@ -61,22 +57,19 @@ import (
    value-entry ::= type offset-or-inlined-value
 
    // This field holds either the offset to where the value is stored,
-   // or the value itself if it is small enough to be inlined (that is,
-   // if it is a JSON literal or a small enough [u]int).
+   // or the value itself for an inlined JSON literal.
    offset-or-inlined-value ::= uint32
 
-   key ::= utf8mb4-data
+   key ::= utf8-data
 
    literal ::=
        0x00 |   // JSON null literal
        0x01 |   // JSON true literal
        0x02 |   // JSON false literal
 
-   number ::=  ....    // little-endian format for [u]int(16|32|64), whereas
-                       // double is stored in a platform-independent, eight-byte
-                       // format using float8store()
+   number ::=  ....    // little-endian int64/uint64 or IEEE 754 float64 bits
 
-   string ::= data-length utf8mb4-data
+   string ::= data-length utf8-data
 
    data-length ::= uint8*    // If the high bit of a byte is 1, the length
                              // field is continued in the next byte,

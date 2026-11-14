@@ -9,27 +9,16 @@ import (
 )
 
 /*
-	From MySQL 5.7, JSON path expression grammar:
+	This compatibility syntax describes recognized path legs, not PostgreSQL SQL/JSON paths:
 		pathExpression ::= scope (pathLeg)*
-		scope ::= [ columnReference ] '$'
-		columnReference ::= // omit...
+		scope ::= '$'
 		pathLeg ::= member | arrayLocation | '**'
 		member ::= '.' (keyName | '*')
 		arrayLocation ::= '[' (non-negative-integer | '*') ']'
-		keyName ::= ECMAScript-identifier | ECMAScript-string-literal
+		keyName ::= [a-zA-Z_][a-zA-Z0-9_]* | double-quoted-key
 
-	And some implementation limits in MySQL 5.7:
-		1) columnReference in scope must be empty now;
-		2) double asterisk(**) could not be last leg;
-
-	Examples:
-		select json_extract('{"a": "b", "c": [1, "2"]}', '$.a') -> "b"
-		select json_extract('{"a": "b", "c": [1, "2"]}', '$.c') -> [1, "2"]
-		select json_extract('{"a": "b", "c": [1, "2"]}', '$.a', '$.c') -> ["b", [1, "2"]]
-		select json_extract('{"a": "b", "c": [1, "2"]}', '$.c[0]') -> 1
-		select json_extract('{"a": "b", "c": [1, "2"]}', '$.c[2]') -> NULL
-		select json_extract('{"a": "b", "c": [1, "2"]}', '$.c[*]') -> [1, "2"]
-		select json_extract('{"a": "b", "c": [1, "2"]}', '$.*') -> ["b", [1, "2"]]
+	A recursive-descent leg (**) cannot be the final leg.
+	Quoted keys use compatibility escape rules, not strict JSON string validation.
 */
 
 // [a-zA-Z_][a-zA-Z0-9_]* matches any identifier;
@@ -109,8 +98,7 @@ func (pe PathExpression) ContainsAnyAsterisk() bool {
 	return pe.flags.containsAnyAsterisk()
 }
 
-// ParseJSONPathExpr parses a JSON path expression. Returns a PathExpression
-// object which can be used in JSON_EXTRACT, JSON_SET and so on.
+// ParseJSONPathExpr builds compatibility paths for BinaryJSON extraction and modification.
 func ParseJSONPathExpr(pathExpr string) (pe PathExpression, err error) {
 	// Find the position of first '$'. If any no-blank characters in
 	// pathExpr[0: dollarIndex), return an ErrInvalidJSONPath error.

@@ -39,7 +39,6 @@ func (n *ServerOption) Accept(v Visitor) (Node, bool) {
 }
 
 // CreateServerStmt is a statement to create a foreign server.
-// See https://dev.postgres.com/doc/refman/8.0/en/create-server.html
 type CreateServerStmt struct {
 	ddlNode
 
@@ -87,7 +86,6 @@ func (n *CreateServerStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // AlterServerStmt is a statement to alter a foreign server.
-// See https://dev.postgres.com/doc/refman/8.0/en/alter-server.html
 type AlterServerStmt struct {
 	ddlNode
 
@@ -132,7 +130,6 @@ func (n *AlterServerStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropServerStmt is a statement to drop a foreign server.
-// See https://dev.postgres.com/doc/refman/8.0/en/drop-server.html
 type DropServerStmt struct {
 	ddlNode
 

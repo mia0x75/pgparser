@@ -31,7 +31,7 @@ func init() {
 	ast.NewValueExpr = newValueExpr
 	ast.NewParamMarkerExpr = newParamMarkerExpr
 	ast.NewDecimal = func(str string) (any, error) {
-		dec := new(types.MyDecimal)
+		dec := new(types.PgDecimal)
 		err := dec.FromString(hack.Slice(str))
 		return dec, err
 	}
@@ -81,17 +81,17 @@ func valueExprString(n *ValueExpr) (string, error) {
 		return strconv.FormatFloat(n.GetFloat64(), 'e', -1, 64), nil
 	case types.KindString, types.KindBytes:
 		return n.GetString(), nil
-	case types.KindMysqlDecimal:
-		return n.GetMysqlDecimal().String(), nil
+	case types.KindDecimal:
+		return n.GetPgDecimal().String(), nil
 	case types.KindBinaryLiteral:
 		if n.Type.Flag&postgres.UnsignedFlag != 0 {
 			return fmt.Sprintf("x'%x'", n.GetBytes()), nil
 		}
 		return n.GetBinaryLiteral().ToBitLiteralString(true), nil
-	case types.KindMysqlDuration, types.KindMysqlEnum,
-		types.KindMysqlBit, types.KindMysqlSet, types.KindMysqlTime,
+	case types.KindDuration, types.KindEnum,
+		types.KindBit, types.KindSet, types.KindTime,
 		types.KindInterface, types.KindMinNotNull, types.KindMaxValue,
-		types.KindRaw, types.KindMysqlJSON:
+		types.KindRaw, types.KindJSON:
 		return "", errors.New("Not implemented")
 	default:
 		return "", errors.New("can't format to string")

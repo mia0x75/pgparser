@@ -178,7 +178,6 @@ func (n *CreateSchemaStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // CreateDatabaseStmt is a statement to create a database.
-// See https://dev.postgres.com/doc/refman/5.7/en/create-database.html
 type CreateDatabaseStmt struct {
 	ddlNode
 
@@ -222,7 +221,6 @@ func (n *CreateDatabaseStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // AlterDatabaseStmt is a statement to alter a database.
-// See https://dev.postgres.com/doc/refman/5.7/en/alter-database.html
 type AlterDatabaseStmt struct {
 	ddlNode
 
@@ -279,8 +277,6 @@ func (n *AlterDatabaseStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// DropDatabaseStmt is a statement to drop a database and all tables in the database.
-// See https://dev.postgres.com/doc/refman/5.7/en/drop-database.html
 // CommentStmt is a PostgreSQL `COMMENT ON ... IS ...` statement.
 type CommentStmt struct {
 	ddlNode
@@ -483,7 +479,6 @@ func (n *IndexColName) Accept(v Visitor) (Node, bool) {
 }
 
 // ReferenceDef is used for parsing foreign key reference option from SQL.
-// See http://dev.postgres.com/doc/refman/5.7/en/create-table-foreign-keys.html
 type ReferenceDef struct {
 	node
 
@@ -881,8 +876,6 @@ func (n *ColumnOption) Accept(v Visitor) (Node, bool) {
 //	| index_type
 //	| WITH PARSER parser_name
 //	| COMMENT 'string'
-//
-// See http://dev.postgres.com/doc/refman/5.7/en/create-table.html
 type IndexOption struct {
 	node
 
@@ -1188,7 +1181,6 @@ func (n *ColumnDef) Validate() bool {
 }
 
 // CreateTableStmt is a statement to create a table.
-// See https://dev.postgres.com/doc/refman/5.7/en/create-table.html
 type CreateTableStmt struct {
 	ddlNode
 
@@ -1433,7 +1425,6 @@ func (n *CreateTableStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropTableStmt is a statement to drop one or more tables.
-// See https://dev.postgres.com/doc/refman/5.7/en/drop-table.html
 type DropTableStmt struct {
 	ddlNode
 
@@ -1483,7 +1474,6 @@ func (n *DropTableStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropFunctionStmt is a statement to drop a stored function.
-// See https://dev.postgres.com/doc/refman/8.0/en/drop-function.html
 type DropFunctionStmt struct {
 	ddlNode
 
@@ -1537,7 +1527,6 @@ func (n *DropFunctionStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropProcedureStmt is a statement to drop a stored procedure.
-// See https://dev.postgres.com/doc/refman/8.0/en/drop-procedure.html
 type DropProcedureStmt struct {
 	ddlNode
 
@@ -1591,7 +1580,6 @@ func (n *DropProcedureStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropTriggerStmt is a statement to drop a trigger.
-// See https://dev.postgres.com/doc/refman/8.0/en/drop-trigger.html
 type DropTriggerStmt struct {
 	ddlNode
 
@@ -1635,7 +1623,6 @@ func (n *DropTriggerStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // RenameTableStmt is a statement to rename a table.
-// See http://dev.postgres.com/doc/refman/5.7/en/rename-table.html
 type RenameTableStmt struct {
 	ddlNode
 
@@ -1730,7 +1717,6 @@ func (n *TableToTable) Accept(v Visitor) (Node, bool) {
 }
 
 // CreateViewStmt is a statement to create a View.
-// See https://dev.postgres.com/doc/refman/5.7/en/create-view.html
 type CreateViewStmt struct {
 	ddlNode
 
@@ -1817,7 +1803,6 @@ func (n *CreateViewStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // CreateIndexStmt is a statement to create an index.
-// See https://dev.postgres.com/doc/refman/5.7/en/create-index.html
 type CreateIndexStmt struct {
 	ddlNode
 
@@ -1972,7 +1957,6 @@ func (n *CreateIndexStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropIndexStmt is a statement to drop the index.
-// See https://dev.postgres.com/doc/refman/5.7/en/drop-index.html
 type DropIndexStmt struct {
 	ddlNode
 
@@ -2055,7 +2039,6 @@ const (
 )
 
 // OnDuplicateKeyHandlingType is the option that handle unique key values in 'CREATE TABLE ... SELECT' or `LOAD DATA`.
-// See https://dev.postgres.com/doc/refman/5.7/en/create-table-select.html
 type OnDuplicateKeyHandlingType int
 
 // OnDuplicateKeyHandling types
@@ -2315,7 +2298,6 @@ const (
 )
 
 // LockType is the type for AlterTableSpec.
-// See https://dev.postgres.com/doc/refman/5.7/en/alter-table.html#alter-table-concurrency
 type LockType byte
 
 func (n LockType) String() string {
@@ -2341,7 +2323,6 @@ const (
 )
 
 // AlterAlgorithm is the algorithm of the DDL operations.
-// See https://dev.postgres.com/doc/refman/8.0/en/alter-table.html#alter-table-performance.
 type AlterAlgorithm byte
 
 // DDL alter algorithms.
@@ -2893,7 +2874,6 @@ func (n *AlterTableSpec) Accept(v Visitor) (Node, bool) {
 }
 
 // AlterTableStmt is a statement to change the structure of a table.
-// See https://dev.postgres.com/doc/refman/5.7/en/alter-table.html
 type AlterTableStmt struct {
 	ddlNode
 
@@ -2973,7 +2953,6 @@ func (n *AlterTableStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // TruncateTableStmt is a statement to empty a table completely.
-// See https://dev.postgres.com/doc/refman/5.7/en/truncate-table.html
 type TruncateTableStmt struct {
 	ddlNode
 

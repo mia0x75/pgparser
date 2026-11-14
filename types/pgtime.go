@@ -6,55 +6,55 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 )
 
-// MysqlTime is the internal struct type for Time.
-type MysqlTime struct {
+// PgTime is the internal struct type for Time.
+type PgTime struct {
 	year  uint16 // year <= 9999
 	month uint8  // month <= 12
 	day   uint8  // day <= 31
-	// When it's type is Time, HH:MM:SS may be 839:59:59, so use int to avoid overflow.
-	hour        int   // hour <= 23
+	// Compatibility durations can exceed 23 hours, so clock-hour storage is insufficient.
+	hour        int
 	minute      uint8 // minute <= 59
 	second      uint8 // second <= 59
 	microsecond uint32
 }
 
 // Year returns the year value.
-func (t MysqlTime) Year() int {
+func (t PgTime) Year() int {
 	return int(t.year)
 }
 
 // Month returns the month value.
-func (t MysqlTime) Month() int {
+func (t PgTime) Month() int {
 	return int(t.month)
 }
 
 // Day returns the day value.
-func (t MysqlTime) Day() int {
+func (t PgTime) Day() int {
 	return int(t.day)
 }
 
 // Hour returns the hour value.
-func (t MysqlTime) Hour() int {
+func (t PgTime) Hour() int {
 	return int(t.hour)
 }
 
 // Minute returns the minute value.
-func (t MysqlTime) Minute() int {
+func (t PgTime) Minute() int {
 	return int(t.minute)
 }
 
 // Second returns the second value.
-func (t MysqlTime) Second() int {
+func (t PgTime) Second() int {
 	return int(t.second)
 }
 
 // Microsecond returns the microsecond value.
-func (t MysqlTime) Microsecond() int {
+func (t PgTime) Microsecond() int {
 	return int(t.microsecond)
 }
 
 // Weekday returns the Weekday value.
-func (t MysqlTime) Weekday() gotime.Weekday {
+func (t PgTime) Weekday() gotime.Weekday {
 	// TODO: Consider time_zone variable.
 	t1, err := t.GoTime(gotime.Local)
 	if err != nil {
@@ -64,7 +64,7 @@ func (t MysqlTime) Weekday() gotime.Weekday {
 }
 
 // YearDay returns day in year.
-func (t MysqlTime) YearDay() int {
+func (t PgTime) YearDay() int {
 	if t.month == 0 || t.day == 0 {
 		return 0
 	}
@@ -73,13 +73,13 @@ func (t MysqlTime) YearDay() int {
 }
 
 // YearWeek return year and week.
-func (t MysqlTime) YearWeek(mode int) (int, int) {
+func (t PgTime) YearWeek(mode int) (int, int) {
 	behavior := weekMode(mode) | weekBehaviourYear
 	return calcWeek(&t, behavior)
 }
 
 // Week returns the week value.
-func (t MysqlTime) Week(mode int) int {
+func (t PgTime) Week(mode int) int {
 	if t.month == 0 || t.day == 0 {
 		return 0
 	}
@@ -87,10 +87,9 @@ func (t MysqlTime) Week(mode int) int {
 	return week
 }
 
-// GoTime converts MysqlTime to GoTime.
-func (t MysqlTime) GoTime(loc *gotime.Location) (gotime.Time, error) {
-	// gotime.Time can't represent month 0 or day 0, date contains 0 would be converted to a nearest date,
-	// For example, 2006-12-00 00:00:00 would become 2015-11-30 23:59:59.
+// GoTime converts PgTime to GoTime.
+func (t PgTime) GoTime(loc *gotime.Location) (gotime.Time, error) {
+	// Go normalizes invalid components, so compare the result to avoid silently changing the input.
 	tm := gotime.Date(t.Year(), gotime.Month(t.Month()), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Microsecond()*1000, loc)
 	year, month, day := tm.Date()
 	hour, minute, second := tm.Clock()
@@ -105,7 +104,7 @@ func (t MysqlTime) GoTime(loc *gotime.Location) (gotime.Time, error) {
 }
 
 // IsLeapYear returns if it's leap year.
-func (t MysqlTime) IsLeapYear() bool {
+func (t PgTime) IsLeapYear() bool {
 	return isLeapYear(t.year)
 }
 
@@ -142,12 +141,7 @@ func getFixDays(year, month, day int, ot gotime.Time) int {
 	return 0
 }
 
-// AddDate fix gap between mysql and golang api
-// When we execute select date_add('2018-01-31',interval 1 month) in mysql we got 2018-02-28
-// but this parser returns 2018-03-03.
-// Dig it and we found it's caused by golang api time.Date(year int, month Month, day, hour, min, sec, nsec int, loc *Location) Time ,
-// it says October 32 converts to November 1 ,it conflits with postgres.
-// See https://dev.postgres.com/doc/refman/5.7/en/date-and-time-functions.html#function_date-add
+// AddDate clamps pure year/month offsets to the target month's last day instead of Go's overflow normalization.
 func AddDate(year, month, day int64, ot gotime.Time) (nt gotime.Time) {
 	df := getFixDays(int(year), int(month), int(day), ot)
 	if df != 0 {
@@ -158,7 +152,7 @@ func AddDate(year, month, day int64, ot gotime.Time) (nt gotime.Time) {
 	return nt
 }
 
-func calcTimeFromSec(to *MysqlTime, seconds, microseconds int) {
+func calcTimeFromSec(to *PgTime, seconds, microseconds int) {
 	to.hour = seconds / 3600
 	seconds = seconds % 3600
 	to.minute = uint8(seconds / 60)
@@ -171,7 +165,7 @@ const secondsIn24Hour = 86400
 // calcTimeDiff calculates difference between two datetime values as seconds + microseconds.
 // t1 and t2 should be TIME/DATE/DATETIME value.
 // sign can be +1 or -1, and t2 is preprocessed with sign first.
-func calcTimeDiff(t1, t2 MysqlTime, sign int) (seconds, microseconds int, neg bool) {
+func calcTimeDiff(t1, t2 PgTime, sign int) (seconds, microseconds int, neg bool) {
 	days := calcDaynr(t1.Year(), t1.Month(), t1.Day())
 	days2 := calcDaynr(t2.Year(), t2.Month(), t2.Day())
 	days -= sign * days2
@@ -194,19 +188,19 @@ func calcTimeDiff(t1, t2 MysqlTime, sign int) (seconds, microseconds int, neg bo
 }
 
 // datetimeToUint64 converts time value to integer in YYYYMMDDHHMMSS format.
-func datetimeToUint64(t MysqlTime) uint64 {
+func datetimeToUint64(t PgTime) uint64 {
 	return dateToUint64(t)*1e6 + timeToUint64(t)
 }
 
 // dateToUint64 converts time value to integer in YYYYMMDD format.
-func dateToUint64(t MysqlTime) uint64 {
+func dateToUint64(t PgTime) uint64 {
 	return uint64(t.Year())*10000 +
 		uint64(t.Month())*100 +
 		uint64(t.Day())
 }
 
 // timeToUint64 converts time value to integer in HHMMSS format.
-func timeToUint64(t MysqlTime) uint64 {
+func timeToUint64(t PgTime) uint64 {
 	return uint64(t.Hour())*10000 +
 		uint64(t.Minute())*100 +
 		uint64(t.Second())
@@ -229,7 +223,7 @@ func calcDaynr(year, month, day int) int {
 }
 
 // DateDiff calculates number of days between two days.
-func DateDiff(startTime, endTime MysqlTime) int {
+func DateDiff(startTime, endTime PgTime) int {
 	return calcDaynr(startTime.Year(), startTime.Month(), startTime.Day()) - calcDaynr(endTime.Year(), endTime.Month(), endTime.Day())
 }
 
@@ -276,7 +270,7 @@ func weekMode(mode int) weekBehaviour {
 }
 
 // calcWeek calculates week and year for the time.
-func calcWeek(t *MysqlTime, wb weekBehaviour) (year int, week int) {
+func calcWeek(t *PgTime, wb weekBehaviour) (year int, week int) {
 	var days int
 	daynr := calcDaynr(int(t.year), int(t.month), int(t.day))
 	firstDaynr := calcDaynr(int(t.year), 1, 1)
@@ -322,7 +316,7 @@ func calcWeek(t *MysqlTime, wb weekBehaviour) (year int, week int) {
 }
 
 // mixDateAndTime mixes a date value and a time value.
-func mixDateAndTime(date, time *MysqlTime, neg bool) {
+func mixDateAndTime(date, time *PgTime, neg bool) {
 	if !neg && time.hour < 24 {
 		date.hour = time.hour
 		date.minute = time.minute
@@ -405,7 +399,7 @@ const (
 	intervalMICROSECOND = "MICROSECOND"
 )
 
-func timestampDiff(intervalType string, t1 MysqlTime, t2 MysqlTime) int64 {
+func timestampDiff(intervalType string, t1 PgTime, t2 PgTime) int64 {
 	seconds, microseconds, neg := calcTimeDiff(t2, t1, 1)
 	months := uint(0)
 	if intervalType == intervalYEAR || intervalType == intervalQUARTER ||
@@ -486,8 +480,6 @@ func timestampDiff(intervalType string, t1 MysqlTime, t2 MysqlTime) int64 {
 	case intervalSECOND:
 		return int64(seconds) * negV
 	case intervalMICROSECOND:
-		// In MySQL difference between any two valid datetime values
-		// in microseconds fits into longlong.
 		return int64(seconds*1000000+microseconds) * negV
 	}
 

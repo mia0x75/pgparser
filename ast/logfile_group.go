@@ -86,7 +86,6 @@ func restoreLogfileGroupOptions(ctx *format.RestoreCtx, options []*LogfileGroupO
 }
 
 // CreateLogfileGroupStmt is a statement to create a logfile group.
-// See https://dev.postgres.com/doc/refman/8.0/en/create-logfile-group.html
 type CreateLogfileGroupStmt struct {
 	ddlNode
 
@@ -122,7 +121,6 @@ func (n *CreateLogfileGroupStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // AlterLogfileGroupStmt is a statement to alter a logfile group.
-// See https://dev.postgres.com/doc/refman/8.0/en/alter-logfile-group.html
 type AlterLogfileGroupStmt struct {
 	ddlNode
 
@@ -158,7 +156,6 @@ func (n *AlterLogfileGroupStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropLogfileGroupStmt is a statement to drop a logfile group.
-// See https://dev.postgres.com/doc/refman/8.0/en/drop-logfile-group.html
 type DropLogfileGroupStmt struct {
 	ddlNode
 

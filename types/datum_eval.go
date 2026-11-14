@@ -37,12 +37,12 @@ func ComputePlus(a, b Datum) (d Datum, err error) {
 			d.SetFloat64(r)
 			return d, nil
 		}
-	case KindMysqlDecimal:
+	case KindDecimal:
 		switch b.Kind() {
-		case KindMysqlDecimal:
-			r := new(MyDecimal)
-			err = DecimalAdd(a.GetMysqlDecimal(), b.GetMysqlDecimal(), r)
-			d.SetMysqlDecimal(r)
+		case KindDecimal:
+			r := new(PgDecimal)
+			err = DecimalAdd(a.GetPgDecimal(), b.GetPgDecimal(), r)
+			d.SetPgDecimal(r)
 			d.SetFrac(max(a.Frac(), b.Frac()))
 			return d, err
 		}

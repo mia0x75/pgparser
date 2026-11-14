@@ -582,7 +582,7 @@ func DefaultTypeForValue(value any, tp *FieldType) {
 		}
 		tp.Decimal = x.Fsp
 		SetBinChsClnFlag(tp)
-	case *MyDecimal:
+	case *PgDecimal:
 		tp.Tp = postgres.TypeNewDecimal
 		tp.Flen = len(x.ToString())
 		tp.Decimal = int(x.digitsFrac)
@@ -610,7 +610,7 @@ func DefaultTypeForValue(value any, tp *FieldType) {
 	}
 }
 
-// DefaultCharsetForType returns the default charset/collation for mysql type.
+// DefaultCharsetForType retains the charset defaults used by internal type metadata.
 func DefaultCharsetForType(tp byte) (string, string) {
 	switch tp {
 	case postgres.TypeVarString, postgres.TypeString, postgres.TypeVarchar:
@@ -620,11 +620,9 @@ func DefaultCharsetForType(tp byte) (string, string) {
 	return charset.CharsetBin, charset.CollationBin
 }
 
-// MergeFieldType merges two MySQL type to a new type.
 // This is used in hybrid field type expression.
 // For example "select case c when 1 then 2 when 2 then 'x' from t;"
 // The result field type of the case expression is the merged type of the two when clause.
-// See https://github.com/mysql/mysql-server/blob/5.7/sql/field.cc#L1042
 func MergeFieldType(a byte, b byte) byte {
 	ia := getFieldTypeIndex(a)
 	ib := getFieldTypeIndex(b)
@@ -1219,9 +1217,9 @@ var fieldTypeMergeRules = [fieldTypeNum][fieldTypeNum]byte{
 		postgres.TypeJSON, postgres.TypeVarchar,
 		//postgres.TypeLongLONG     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         MYSQL_TYPE_TIME
+		// postgres.TypeDate         postgres.TypeDuration
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     MYSQL_TYPE_YEAR
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
 		//postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
@@ -1229,7 +1227,7 @@ var fieldTypeMergeRules = [fieldTypeNum][fieldTypeNum]byte{
 		postgres.TypeVarchar,
 		//postgres.TypeJSON
 		postgres.TypeJSON,
-		//postgres.TypeNewDecimal   MYSQL_TYPE_ENUM
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
 		//postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeLongBlob,
@@ -1237,7 +1235,7 @@ var fieldTypeMergeRules = [fieldTypeNum][fieldTypeNum]byte{
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
 		//postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeLongBlob, postgres.TypeVarchar,
-		//postgres.TypeString       MYSQL_TYPE_GEOMETRY
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeNewDecimal -> */

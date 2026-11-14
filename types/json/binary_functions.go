@@ -71,8 +71,6 @@ func (bj BinaryJSON) Unquote() (string, error) {
 	}
 }
 
-// unquoteString recognizes the escape sequences shown in:
-// https://dev.postgres.com/doc/refman/5.7/en/json-modification-functions.html#json-unquote-character-escape-sequences
 func unquoteString(s string) (string, error) {
 	ret := new(bytes.Buffer)
 	for i := 0; i < len(s); i++ {
@@ -119,7 +117,6 @@ func unquoteString(s string) (string, error) {
 
 // decodeEscapedUnicode decodes unicode into utf8 bytes specified in RFC 3629.
 // According RFC 3629, the max length of utf8 characters is 4 bytes.
-// And MySQL use 4 bytes to represent the unicode which must be in [0, 65536).
 func decodeEscapedUnicode(s []byte) (char [4]byte, size int, err error) {
 	size, err = hex.Decode(char[0:2], s)
 	if err != nil || size != 2 {
@@ -730,8 +727,6 @@ func ContainsBinary(obj, target BinaryJSON) bool {
 
 // GetElemDepth for JSON_DEPTH
 // Returns the maximum depth of a JSON document
-// rules referenced by MySQL JSON_DEPTH function
-// [https://dev.postgres.com/doc/refman/5.7/en/json-attribute-functions.html#function_json-depth]
 // 1) An empty array, empty object, or scalar value has depth 1.
 // 2) A nonempty array containing only elements of depth 1 or nonempty object containing only member values of depth 1 has depth 2.
 // 3) Otherwise, a JSON document has depth greater than 2.

@@ -11,12 +11,6 @@ func newInvalidModeErr(s string) error {
 	return NewErr(ErrWrongValueForVar, "sql_mode", s)
 }
 
-// Version information.
-var (
-	// ServerVersion is the version information in MySQL's format.
-	ServerVersion = "5.7.25-log"
-)
-
 // Header information.
 const (
 	OKHeader          byte = 0x00
@@ -47,7 +41,6 @@ func HasCursorExistsFlag(serverStatus uint16) bool {
 }
 
 // Identifier length limitations.
-// See https://dev.postgres.com/doc/refman/5.7/en/identifiers.html
 const (
 	// MaxPayloadLen is the max packet payload length.
 	MaxPayloadLen = 1<<24 - 1
@@ -142,15 +135,8 @@ const (
 	TypeNoCache byte = 0xff
 )
 
-// Auth name information.
+// These table names are retained for internal compatibility, not PostgreSQL catalogs.
 const (
-	AuthName = "mysql_native_password"
-)
-
-// MySQL database and tables.
-const (
-	// SystemDB is the name of system database.
-	SystemDB = "mysql"
 	// UserTable is the table in system db contains user info.
 	UserTable = "User"
 	// DBTable is the table in system db contains db scope privilege info.
@@ -230,7 +216,7 @@ const (
 // If it's passed to RequestVerification, it means any privilege would be OK.
 const AllPrivMask = AllPriv - 1
 
-// MySQL type maximum length.
+// These widths are compatibility metadata, not PostgreSQL type limits.
 const (
 	// For arguments that have no fixed number of decimals, the decimals value is set to 31,
 	// which is 1 more than the maximum number of decimals permitted for the DECIMAL, FLOAT, and DOUBLE data types.
@@ -251,7 +237,6 @@ const (
 	MaxBlobWidth            = 16777216
 )
 
-// MySQL max type field length.
 const (
 	MaxFieldCharLength    = 255
 	MaxFieldVarCharLength = 65535
@@ -263,7 +248,7 @@ const MaxTypeSetMembers = 64
 // PWDHashLen is the length of password's hash.
 const PWDHashLen = 40
 
-// Priv2UserCol is the privilege to postgres.user table column name.
+// Priv2UserCol retains the column names used by the compatibility privilege table.
 var Priv2UserCol = map[PrivilegeType]string{
 	CreatePriv:     "Create_priv",
 	SelectPriv:     "Select_priv",
@@ -435,9 +420,8 @@ const AllPrivilegeLiteral = "ALL PRIVILEGES"
 // DefaultSQLMode for GLOBAL_VARIABLES
 const DefaultSQLMode = "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
 
-// DefaultLengthOfMysqlTypes is the map for default physical length of MySQL data types.
-// See http://dev.postgres.com/doc/refman/5.7/en/storage-requirements.html
-var DefaultLengthOfMysqlTypes = map[byte]int{
+// These sizing hints are retained for compatibility, not PostgreSQL storage calculations.
+var DefaultLengthOfTypes = map[byte]int{
 	TypeYear:      1,
 	TypeDate:      3,
 	TypeDuration:  3,
@@ -471,8 +455,7 @@ var DefaultLengthOfTimeFraction = map[int]int{
 	6: 3,
 }
 
-// SQLMode is the type for MySQL sql_mode.
-// See https://dev.postgres.com/doc/refman/5.7/en/sql-mode.html
+// SQLMode retains compatibility flags for internal helpers; it does not configure PostgreSQL.
 type SQLMode int
 
 // HasNoZeroDateMode detects if 'NO_ZERO_DATE' mode is set in SQLMode
@@ -569,8 +552,9 @@ const (
 	ModeNoKeyOptions
 	ModeNoTableOptions
 	ModeNoFieldOptions
-	ModeMySQL323
-	ModeMySQL40
+	// Keep reserved bits so later mode values do not change.
+	_
+	_
 	ModeANSI
 	ModeNoAutoValueOnZero
 	ModeNoBackslashEscapes
@@ -647,8 +631,6 @@ var Str2SQLMode = map[string]SQLMode{
 	"NO_KEY_OPTIONS":             ModeNoKeyOptions,
 	"NO_TABLE_OPTIONS":           ModeNoTableOptions,
 	"NO_FIELD_OPTIONS":           ModeNoFieldOptions,
-	"MYSQL323":                   ModeMySQL323,
-	"MYSQL40":                    ModeMySQL40,
 	"ANSI":                       ModeANSI,
 	"NO_AUTO_VALUE_ON_ZERO":      ModeNoAutoValueOnZero,
 	"NO_BACKSLASH_ESCAPES":       ModeNoBackslashEscapes,
@@ -667,14 +649,11 @@ var Str2SQLMode = map[string]SQLMode{
 }
 
 // CombinationSQLMode is the special modes that provided as shorthand for combinations of mode values.
-// See https://dev.postgres.com/doc/refman/5.7/en/sql-mode.html#sql-mode-combo.
 var CombinationSQLMode = map[string][]string{
 	"ANSI":        {"REAL_AS_FLOAT", "PIPES_AS_CONCAT", "ANSI_QUOTES", "IGNORE_SPACE", "ONLY_FULL_GROUP_BY"},
 	"DB2":         {"PIPES_AS_CONCAT", "ANSI_QUOTES", "IGNORE_SPACE", "NO_KEY_OPTIONS", "NO_TABLE_OPTIONS", "NO_FIELD_OPTIONS"},
 	"MAXDB":       {"PIPES_AS_CONCAT", "ANSI_QUOTES", "IGNORE_SPACE", "NO_KEY_OPTIONS", "NO_TABLE_OPTIONS", "NO_FIELD_OPTIONS", "NO_AUTO_CREATE_USER"},
 	"MSSQL":       {"PIPES_AS_CONCAT", "ANSI_QUOTES", "IGNORE_SPACE", "NO_KEY_OPTIONS", "NO_TABLE_OPTIONS", "NO_FIELD_OPTIONS"},
-	"MYSQL323":    {"MYSQL323", "HIGH_NOT_PRECEDENCE"},
-	"MYSQL40":     {"MYSQL40", "HIGH_NOT_PRECEDENCE"},
 	"ORACLE":      {"PIPES_AS_CONCAT", "ANSI_QUOTES", "IGNORE_SPACE", "NO_KEY_OPTIONS", "NO_TABLE_OPTIONS", "NO_FIELD_OPTIONS", "NO_AUTO_CREATE_USER"},
 	"POSTGRESQL":  {"PIPES_AS_CONCAT", "ANSI_QUOTES", "IGNORE_SPACE", "NO_KEY_OPTIONS", "NO_TABLE_OPTIONS", "NO_FIELD_OPTIONS"},
 	"TRADITIONAL": {"STRICT_TRANS_TABLES", "STRICT_ALL_TABLES", "NO_ZERO_IN_DATE", "NO_ZERO_DATE", "ERROR_FOR_DIVISION_BY_ZERO", "NO_AUTO_CREATE_USER", "NO_ENGINE_SUBSTITUTION"},
@@ -702,7 +681,6 @@ var locale2FormatFunction = map[string]FormatFunc{
 type PriorityEnum int
 
 // Priority const values.
-// See https://dev.postgres.com/doc/refman/5.7/en/insert.html
 const (
 	NoPriority PriorityEnum = iota
 	LowPriority

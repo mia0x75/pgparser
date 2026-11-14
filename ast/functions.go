@@ -18,7 +18,7 @@ var (
 	_ FuncNode = &WindowFuncExpr{}
 )
 
-// List scalar function names.
+// Scalar function names include compatibility entries, not a PostgreSQL support list.
 const (
 	LogicAnd   = "and"
 	Cast       = "cast"
@@ -254,8 +254,7 @@ const (
 	Sleep           = "sleep"
 	UUID            = "uuid"
 	UUIDShort       = "uuid_short"
-	// get_lock() and release_lock() is parsed but do nothing.
-	// It is used for preventing error in Ruby's activerecord migrations.
+	// Compatibility names do not imply lock execution by this syntax-only AST.
 	GetLock     = "get_lock"
 	ReleaseLock = "release_lock"
 
@@ -481,8 +480,7 @@ const (
 	CastBinaryOperator
 )
 
-// FuncCastExpr is the cast function converting value to another type, e.g, cast(expr AS signed).
-// See https://dev.postgres.com/doc/refman/5.7/en/cast-functions.html
+// FuncCastExpr retains CAST, CONVERT and BINARY forms for compatibility.
 type FuncCastExpr struct {
 	funcNode
 	// Expr is the expression to be converted.
@@ -580,12 +578,8 @@ type DateArithType byte
 
 const (
 	// DateArithAdd is to run adddate or date_add function option.
-	// See https://dev.postgres.com/doc/refman/5.7/en/date-and-time-functions.html#function_adddate
-	// See https://dev.postgres.com/doc/refman/5.7/en/date-and-time-functions.html#function_date-add
 	DateArithAdd DateArithType = iota + 1
 	// DateArithSub is to run subdate or date_sub function option.
-	// See https://dev.postgres.com/doc/refman/5.7/en/date-and-time-functions.html#function_subdate
-	// See https://dev.postgres.com/doc/refman/5.7/en/date-and-time-functions.html#function_date-sub
 	DateArithSub
 )
 
@@ -785,14 +779,11 @@ type WindowFuncExpr struct {
 	F string
 	// Args is the function args.
 	Args []ExprNode
-	// Distinct cannot be true for most window functions, except `max` and `min`.
-	// We need to raise error if it is not allowed to be true.
+	// Distinct is retained for compatibility; PostgreSQL does not support DISTINCT in window calls.
 	Distinct bool
-	// IgnoreNull indicates how to handle null value.
-	// MySQL only supports `RESPECT NULLS`, so we need to raise error if it is true.
+	// IgnoreNull is retained for compatibility; PostgreSQL uses RESPECT NULLS behavior only.
 	IgnoreNull bool
-	// FromLast indicates the calculation direction of this window function.
-	// MySQL only supports calculation from first, so we need to raise error if it is true.
+	// FromLast is retained for compatibility; PostgreSQL implements nth_value FROM FIRST behavior only.
 	FromLast bool
 	// Spec is the specification of this window.
 	Spec WindowSpec

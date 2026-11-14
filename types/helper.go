@@ -8,10 +8,7 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 )
 
-// RoundFloat rounds float val to the nearest integer value with float64 format, like MySQL Round function.
-// RoundFloat uses default rounding mode, see https://dev.postgres.com/doc/refman/5.7/en/precision-math-rounding.html
-// so rounding use "round half away from zero".
-// e.g, 1.5 -> 2, -1.5 -> -2.
+// RoundFloat uses half-away-from-zero rounding so positive and negative ties are treated symmetrically.
 func RoundFloat(f float64) float64 {
 	if math.Abs(f) < 0.5 {
 		return 0

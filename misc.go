@@ -8,8 +8,7 @@ import (
 	"github.com/mia0x75/pgparser/types"
 )
 
-// pgTypeTp maps a PostgreSQL type name to the closest FieldType byte used by
-// the shared ast/types packages (which originate from a MySQL-compatible AST).
+// pgTypeTp maps names to internal FieldType IDs rather than PostgreSQL OIDs.
 func pgTypeTp(name string) byte {
 	switch strings.ToLower(strings.Join(strings.Fields(name), " ")) {
 	case "smallint", "int2", "smallserial", "serial2":

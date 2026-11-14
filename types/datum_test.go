@@ -8,6 +8,33 @@ import (
 	"github.com/mia0x75/pgparser/postgres"
 )
 
+func TestDatumKindValues(t *testing.T) {
+	tests := []struct {
+		name string
+		kind byte
+		want byte
+		text string
+	}{
+		{name: "decimal", kind: KindDecimal, want: 8, text: "decimal"},
+		{name: "duration", kind: KindDuration, want: 9, text: "time"},
+		{name: "enum", kind: KindEnum, want: 10, text: "enum"},
+		{name: "bit", kind: KindBit, want: 11, text: "bit"},
+		{name: "set", kind: KindSet, want: 12, text: "set"},
+		{name: "time", kind: KindTime, want: 13, text: "datetime"},
+		{name: "json", kind: KindJSON, want: 18, text: "json"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.kind != tt.want {
+				t.Fatalf("got kind %d, want %d", tt.kind, tt.want)
+			}
+			if got := KindStr(tt.kind); got != tt.text {
+				t.Fatalf("got kind name %q, want %q", got, tt.text)
+			}
+		})
+	}
+}
+
 func TestDatum(t *testing.T) {
 	values := []any{
 		int64(1),
@@ -24,6 +51,28 @@ func TestDatum(t *testing.T) {
 		if !reflect.DeepEqual(x, val) {
 			t.Fatalf("got %#v, want %#v", x, val)
 		}
+	}
+}
+
+func TestDatumDecimalCopy(t *testing.T) {
+	dec := NewDecFromStringForTest("1.25")
+	d := NewDecimalDatum(dec)
+	if d.Kind() != KindDecimal || d.GetPgDecimal() != dec {
+		t.Fatal("decimal datum did not retain its kind and value")
+	}
+	copied := d.Copy()
+	if err := copied.GetPgDecimal().FromString([]byte("9")); err != nil {
+		t.Fatal(err)
+	}
+	if got := d.GetPgDecimal().String(); got != "1.25" {
+		t.Fatalf("copy changed the original decimal to %q", got)
+	}
+	sum, err := ComputePlus(d, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := sum.GetPgDecimal().String(); got != "2.50" {
+		t.Fatalf("got decimal sum %q, want 2.50", got)
 	}
 }
 

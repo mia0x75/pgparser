@@ -26,8 +26,7 @@ func NewBinaryOperationExpr(op opcode.Op, l, r ExprNode) *BinaryOperationExpr {
 	return &BinaryOperationExpr{Op: op, L: l, R: r}
 }
 
-// NewBinaryOperationExprByName returns a BinaryOperationExpr for operators
-// that have no opcode equivalent, such as `->>` or `@@`.
+// NewBinaryOperationExprByName preserves an operator's text without requiring an opcode.
 func NewBinaryOperationExprByName(name string, l, r ExprNode) *BinaryOperationExpr {
 	return &BinaryOperationExpr{OpName: name, L: l, R: r}
 }
@@ -37,8 +36,7 @@ func NewUnaryOperationExpr(op opcode.Op, v ExprNode) *UnaryOperationExpr {
 	return &UnaryOperationExpr{Op: op, V: v}
 }
 
-// NewUnaryOperationExprByName returns a UnaryOperationExpr for operators that
-// have no opcode equivalent.
+// NewUnaryOperationExprByName preserves an operator's text without requiring an opcode.
 func NewUnaryOperationExprByName(name string, v ExprNode) *UnaryOperationExpr {
 	return &UnaryOperationExpr{OpName: name, V: v}
 }

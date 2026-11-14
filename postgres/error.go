@@ -23,17 +23,17 @@ func (e *SQLError) Error() string {
 	return fmt.Sprintf("ERROR %d (%s): %s", e.Code, e.State, e.Message)
 }
 
-// NewErr generates a SQL error, with an error code and default format specifier defined in MySQLErrName.
+// NewErr generates a SQL error, with an error code and default format specifier defined in PgErrName.
 func NewErr(errCode uint16, args ...any) *SQLError {
 	e := &SQLError{Code: errCode}
 
-	if s, ok := MySQLState[errCode]; ok {
+	if s, ok := PgState[errCode]; ok {
 		e.State = s
 	} else {
-		e.State = DefaultMySQLState
+		e.State = DefaultPgState
 	}
 
-	if format, ok := MySQLErrName[errCode]; ok {
+	if format, ok := PgErrName[errCode]; ok {
 		e.Message = fmt.Sprintf(format, args...)
 	} else {
 		e.Message = fmt.Sprint(args...)
@@ -46,10 +46,10 @@ func NewErr(errCode uint16, args ...any) *SQLError {
 func NewErrf(errCode uint16, format string, args ...any) *SQLError {
 	e := &SQLError{Code: errCode}
 
-	if s, ok := MySQLState[errCode]; ok {
+	if s, ok := PgState[errCode]; ok {
 		e.State = s
 	} else {
-		e.State = DefaultMySQLState
+		e.State = DefaultPgState
 	}
 
 	e.Message = fmt.Sprintf(format, args...)

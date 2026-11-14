@@ -7,7 +7,7 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 )
 
-// Enum is for MySQL enum type.
+// Enum retains numeric compatibility ordinals, not PostgreSQL enum OIDs.
 type Enum struct {
 	Name  string
 	Value uint64

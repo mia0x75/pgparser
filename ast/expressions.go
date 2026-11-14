@@ -135,8 +135,7 @@ type BinaryOperationExpr struct {
 	exprNode
 	// Op is the operator code for BinaryOperation.
 	Op opcode.Op
-	// OpName is the textual operator for PostgreSQL operators that have no
-	// MySQL opcode equivalent, such as <<, &< or @?.
+	// OpName overrides Op during formatting and restoration to preserve textual operators.
 	OpName string
 	// L is the left expression in BinaryOperation.
 	L ExprNode
@@ -394,9 +393,6 @@ func (n *SubqueryExpr) Accept(v Visitor) (Node, bool) {
 }
 
 // CompareSubqueryExpr is the expression for "expr cmp (select ...)".
-// See https://dev.postgres.com/doc/refman/5.7/en/comparisons-using-subqueries.html
-// See https://dev.postgres.com/doc/refman/5.7/en/any-in-some-subqueries.html
-// See https://dev.postgres.com/doc/refman/5.7/en/all-subqueries.html
 type CompareSubqueryExpr struct {
 	exprNode
 	// L is the left expression
@@ -626,7 +622,6 @@ func (n *DefaultExpr) Accept(v Visitor) (Node, bool) {
 }
 
 // ExistsSubqueryExpr is the expression for "exists (select ...)".
-// See https://dev.postgres.com/doc/refman/5.7/en/exists-and-not-exists-subqueries.html
 type ExistsSubqueryExpr struct {
 	exprNode
 	// Sel is the subquery, may be rewritten to other type of expression.
@@ -1017,12 +1012,9 @@ func (n *ParenthesesExpr) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// PositionExpr is the expression for order by and group by position.
-// MySQL use position expression started from 1, it looks a little confused inner.
-// maybe later we will use 0 at first.
+// PositionExpr preserves one-based output-column references in ORDER BY and GROUP BY.
 type PositionExpr struct {
 	exprNode
-	// N is the position, started from 1 now.
 	N int
 	// P is the parameterized position.
 	P ExprNode
@@ -1145,7 +1137,6 @@ func (n *PatternRegexpExpr) Accept(v Visitor) (Node, bool) {
 }
 
 // RowExpr is the expression for row constructor.
-// See https://dev.postgres.com/doc/refman/5.7/en/row-subqueries.html
 type RowExpr struct {
 	exprNode
 
@@ -1202,8 +1193,7 @@ type UnaryOperationExpr struct {
 	exprNode
 	// Op is the operator opcode.
 	Op opcode.Op
-	// OpName is the textual operator for PostgreSQL operators that have no
-	// MySQL opcode equivalent.
+	// OpName overrides Op during formatting and restoration to preserve textual operators.
 	OpName string
 	// V is the unary expression.
 	V ExprNode

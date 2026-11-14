@@ -13,7 +13,7 @@ var (
 )
 
 // CreateTablespaceStmt is a PostgreSQL `CREATE TABLESPACE` statement.
-// See https://www.postgresql.org/docs/current/sql-createsc.html
+// See https://www.postgresql.org/docs/current/sql-createtablespace.html
 type CreateTablespaceStmt struct {
 	ddlNode
 
@@ -72,7 +72,6 @@ func (n *CreateTablespaceStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // AlterTablespaceStmt is a statement to alter a tablespace.
-// See https://dev.postgres.com/doc/refman/8.0/en/alter-tablespace.html
 type AlterTablespaceStmt struct {
 	ddlNode
 
@@ -122,7 +121,6 @@ func (n *AlterTablespaceStmt) Accept(v Visitor) (Node, bool) {
 }
 
 // DropTablespaceStmt is a statement to drop a tablespace.
-// See https://dev.postgres.com/doc/refman/8.0/en/drop-tablespace.html
 type DropTablespaceStmt struct {
 	ddlNode
 

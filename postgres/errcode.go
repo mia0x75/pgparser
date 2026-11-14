@@ -1,6 +1,6 @@
 package postgres
 
-// MySQL error code.
+// These numeric error codes are retained for internal compatibility, not PostgreSQL server codes.
 // This value is numeric. It is not portable to other database systems.
 const (
 	ErrErrorFirst                                            uint16 = 1000

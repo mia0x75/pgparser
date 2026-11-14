@@ -184,8 +184,8 @@ func TestParseDateFormat(t *testing.T) {
 func TestTamestampDiff(t *testing.T) {
 	tests := []struct {
 		unit   string
-		t1     types.MysqlTime
-		t2     types.MysqlTime
+		t1     types.PgTime
+		t2     types.PgTime
 		expect int64
 	}{
 		{"MONTH", types.FromDate(2002, 5, 30, 0, 0, 0, 0), types.FromDate(2001, 1, 1, 0, 0, 0, 0), -16},
@@ -235,10 +235,10 @@ func TestDateFSP(t *testing.T) {
 func TestConvertTimeZone(t *testing.T) {
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	tests := []struct {
-		input  types.MysqlTime
+		input  types.PgTime
 		from   *time.Location
 		to     *time.Location
-		expect types.MysqlTime
+		expect types.PgTime
 	}{
 		{types.FromDate(2017, 1, 1, 0, 0, 0, 0), time.UTC, loc, types.FromDate(2017, 1, 1, 8, 0, 0, 0)},
 		{types.FromDate(2017, 1, 1, 8, 0, 0, 0), loc, time.UTC, types.FromDate(2017, 1, 1, 0, 0, 0, 0)},
@@ -255,9 +255,9 @@ func TestConvertTimeZone(t *testing.T) {
 	}
 }
 
-func TestTruncateOverflowMySQLTime(t *testing.T) {
+func TestTruncateOverflowPostgreSQLTime(t *testing.T) {
 	v := types.MaxTime + 1
-	res, err := types.TruncateOverflowMySQLTime(v)
+	res, err := types.TruncateOverflowPostgreSQLTime(v)
 	if !types.ErrTruncatedWrongVal.Equal(err) {
 		t.Fatalf("got %#v, want %#v", err, types.ErrTruncatedWrongVal)
 	}
@@ -266,7 +266,7 @@ func TestTruncateOverflowMySQLTime(t *testing.T) {
 	}
 
 	v = types.MinTime - 1
-	res, err = types.TruncateOverflowMySQLTime(v)
+	res, err = types.TruncateOverflowPostgreSQLTime(v)
 	if !types.ErrTruncatedWrongVal.Equal(err) {
 		t.Fatalf("got %#v, want %#v", err, types.ErrTruncatedWrongVal)
 	}
@@ -275,7 +275,7 @@ func TestTruncateOverflowMySQLTime(t *testing.T) {
 	}
 
 	v = types.MaxTime
-	res, err = types.TruncateOverflowMySQLTime(v)
+	res, err = types.TruncateOverflowPostgreSQLTime(v)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -284,7 +284,7 @@ func TestTruncateOverflowMySQLTime(t *testing.T) {
 	}
 
 	v = types.MinTime
-	res, err = types.TruncateOverflowMySQLTime(v)
+	res, err = types.TruncateOverflowPostgreSQLTime(v)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -293,7 +293,7 @@ func TestTruncateOverflowMySQLTime(t *testing.T) {
 	}
 
 	v = types.MaxTime - 1
-	res, err = types.TruncateOverflowMySQLTime(v)
+	res, err = types.TruncateOverflowPostgreSQLTime(v)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
@@ -302,7 +302,7 @@ func TestTruncateOverflowMySQLTime(t *testing.T) {
 	}
 
 	v = types.MinTime + 1
-	res, err = types.TruncateOverflowMySQLTime(v)
+	res, err = types.TruncateOverflowPostgreSQLTime(v)
 	if err != nil {
 		t.Fatalf("unexpected error %v", err)
 	}
