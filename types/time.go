@@ -1553,7 +1553,10 @@ func parseDigits(input string, count int) (int, bool) {
 
 	v, err := strconv.ParseUint(input[:count], 10, 64)
 	if err != nil {
-		return int(v), false
+		return 0, false
+	}
+	if v > math.MaxInt64 {
+		return 0, false
 	}
 	return int(v), true
 }
@@ -1689,6 +1692,9 @@ func parseTwoNumeric(input string) (int, string) {
 	if err != nil {
 		return 0, input
 	}
+	if v > math.MaxInt64 {
+		return 0, input
+	}
 	return int(v), input[len(str):]
 }
 
@@ -1737,6 +1743,9 @@ func microSeconds(t *MysqlTime, input string, ctx map[string]int) (string, bool)
 	}
 	v, err := strconv.ParseUint(input[:6], 10, 64)
 	if err != nil {
+		return input, false
+	}
+	if v > math.MaxUint32 {
 		return input, false
 	}
 	t.microsecond = uint32(v)
@@ -1840,6 +1849,9 @@ func parseOrdinalNumbers(input string) (value int, remain string) {
 		if !unicode.IsDigit(c) {
 			v, err := strconv.ParseUint(input[:i], 10, 64)
 			if err != nil {
+				return -1, input
+			}
+			if v > math.MaxInt64 {
 				return -1, input
 			}
 			value = int(v)

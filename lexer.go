@@ -347,6 +347,10 @@ func (l *Lexer) lexInitial() Token {
 	}
 
 	// Any other character
+	if ch == 0 {
+		l.Err = fmt.Errorf("NUL byte in input")
+		return Token{Type: lex_EOF, Loc: l.start}
+	}
 	l.pos++
 	return Token{Type: int(ch), Str: string(ch), Loc: l.start}
 }

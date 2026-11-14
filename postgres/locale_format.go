@@ -2,12 +2,22 @@ package postgres
 
 import (
 	"bytes"
+	"math"
 	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/mia0x75/pgparser/errors"
 )
+
+// precisionToInt converts a parsed uint64 precision to int, rejecting values
+// that would overflow int on the target platform.
+func precisionToInt(position uint64) (int, error) {
+	if position > uint64(math.MaxInt64) {
+		return 0, errors.Errorf("precision %d out of range", position)
+	}
+	return int(position), nil
+}
 
 func formatENUS(number string, precision string) (string, error) {
 	var buffer bytes.Buffer
@@ -33,8 +43,12 @@ func formatENUS(number string, precision string) (string, error) {
 		buffer.Write([]byte{'0'})
 		position, err := strconv.ParseUint(precision, 10, 64)
 		if err == nil && position > 0 {
+			n, perr := precisionToInt(position)
+			if perr != nil {
+				return "", errors.Trace(perr)
+			}
 			buffer.Write([]byte{'.'})
-			buffer.WriteString(strings.Repeat("0", int(position)))
+			buffer.WriteString(strings.Repeat("0", n))
 		}
 		return buffer.String(), nil
 	} else if number[:1] == "-" {
@@ -72,16 +86,20 @@ func formatENUS(number string, precision string) (string, error) {
 	position, err := strconv.ParseUint(precision, 10, 64)
 	if err == nil {
 		if position > 0 {
+			n, perr := precisionToInt(position)
+			if perr != nil {
+				return "", errors.Trace(perr)
+			}
 			buffer.Write([]byte{'.'})
 			if len(parts) == 2 {
 				if uint64(len(parts[1])) >= position {
-					buffer.WriteString(parts[1][:position])
+					buffer.WriteString(parts[1][:n])
 				} else {
 					buffer.WriteString(parts[1])
-					buffer.WriteString(strings.Repeat("0", int(position)-len(parts[1])))
+					buffer.WriteString(strings.Repeat("0", n-len(parts[1])))
 				}
 			} else {
-				buffer.WriteString(strings.Repeat("0", int(position)))
+				buffer.WriteString(strings.Repeat("0", n))
 			}
 		}
 	}
