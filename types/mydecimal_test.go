@@ -298,6 +298,7 @@ func TestPgDecimal_Shift(t *testing.T) {
 		}
 	}
 	wordBufLen = maxWordBufLen
+	t.Cleanup(func() { wordBufLen = maxWordBufLen })
 	tests := []tcase{
 		{"123.123", 1, "1231.23", nil},
 		{"123457189.123123456789000", 1, "1234571891.23123456789", nil},
@@ -337,6 +338,7 @@ func TestPgDecimal_Shift(t *testing.T) {
 	}
 	dotest(t, tests)
 	wordBufLen = 2
+	t.Cleanup(func() { wordBufLen = maxWordBufLen })
 	tests = []tcase{
 		{"123.123", -2, "1.23123", nil},
 		{"123.123", -3, "0.123123", nil},
@@ -389,7 +391,6 @@ func TestPgDecimal_Shift(t *testing.T) {
 		{"123456789.987654321", 0, "123456789.987654321", nil},
 	}
 	dotest(t, tests)
-	wordBufLen = maxWordBufLen
 }
 
 func TestPgDecimal_RoundWithHalfEven(t *testing.T) {
@@ -548,6 +549,7 @@ func TestPgDecimal_FromString(t *testing.T) {
 		}
 	}
 	wordBufLen = 1
+	t.Cleanup(func() { wordBufLen = maxWordBufLen })
 	tests = []tcase{
 		{"123450000098765", "98765", ErrOverflow},
 		{"123450.000098765", "123450", ErrTruncated},
@@ -563,7 +565,6 @@ func TestPgDecimal_FromString(t *testing.T) {
 			t.Errorf("dec:%s, got %#v, want %#v", dec.String(), string(result), ca.output)
 		}
 	}
-	wordBufLen = maxWordBufLen
 }
 
 func TestPgDecimal_ToString(t *testing.T) {
