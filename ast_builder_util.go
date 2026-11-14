@@ -6,6 +6,7 @@ import (
 
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/auth"
+	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/postgres"
 	"github.com/mia0x75/pgparser/types"
@@ -136,14 +137,6 @@ func reindexObjectName(code int64) string {
 	return ""
 }
 
-// roleSpecName returns the name of a role specification.
-func roleSpecName(n ast.Node) string {
-	if spec, ok := n.(*ast.RoleSpec); ok {
-		return spec.Rolename
-	}
-	return ""
-}
-
 // roleIdentity returns the role identity of a role specification.
 func roleIdentity(n ast.Node) *auth.RoleIdentity {
 	if spec, ok := n.(*ast.RoleSpec); ok {
@@ -186,6 +179,8 @@ func mergeWhenClauses(l *ast.List) []*ast.MergeWhenClause {
 // relationName returns the table name of a relation expression.
 func relationName(n ast.Node) *ast.TableName {
 	switch v := n.(type) {
+	case *ast.TableName:
+		return v
 	case *ast.TableSource:
 		if name, ok := v.Source.(*ast.TableName); ok {
 			return name
@@ -198,6 +193,41 @@ func relationName(n ast.Node) *ast.TableName {
 		}
 	}
 	return nil
+}
+
+func makeReferenceDef(names, columns *ast.List, match int64, actions *KeyActions) *ast.ReferenceDef {
+	ref := &ast.ReferenceDef{
+		Table:         tableNameFromList(names),
+		IndexColNames: makeIndexColNameList(columns),
+		Match:         byte(match),
+	}
+	if actions != nil {
+		if action := actions.DeleteAction; action != nil {
+			ref.OnDelete = &ast.OnDeleteOpt{
+				ReferOpt: referenceAction(action.Action),
+				Columns:  columnNamesFromList(action.Cols),
+			}
+		}
+		if action := actions.UpdateAction; action != nil {
+			ref.OnUpdate = &ast.OnUpdateOpt{ReferOpt: referenceAction(action.Action)}
+		}
+	}
+	return ref
+}
+
+func referenceAction(action byte) ast.ReferOptionType {
+	switch action {
+	case 'r':
+		return ast.ReferOptionRestrict
+	case 'c':
+		return ast.ReferOptionCascade
+	case 'n':
+		return ast.ReferOptionSetNull
+	case 'd':
+		return ast.ReferOptionSetDefault
+	default:
+		return ast.ReferOptionNoAction
+	}
 }
 
 // alterTableSpecs returns the alter table specs of a command list.
@@ -448,6 +478,14 @@ func commentObjectName(n ast.Node) string {
 			return v.Schema.String() + "." + v.Name.String()
 		}
 		return v.Name.String()
+	case *ast.ObjectWithArgs:
+		// COMMENT ON FUNCTION/AGGREGATE keeps the qualified signature so
+		// the restored SQL re-parses against func_name func_args.
+		var buf strings.Builder
+		if err := v.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &buf)); err == nil {
+			return buf.String()
+		}
+		return nameListString(v.Objname)
 	}
 	return ""
 }
@@ -462,6 +500,8 @@ func tableNamesFromNameList(l *ast.List) []*ast.TableName {
 		switch v := item.(type) {
 		case *ast.String:
 			result = append(result, &ast.TableName{Name: model.NewCIStr(v.Str)})
+		case *ast.DataType:
+			result = append(result, &ast.TableName{Name: model.NewCIStr(v.Type.String())})
 		case *ast.List:
 			result = append(result, tableNameFromList(v))
 		}
@@ -503,6 +543,20 @@ func columnNameStrings(l *ast.List) []model.CIStr {
 	return result
 }
 
+// defElems returns the definition elements of a list.
+func defElems(l *ast.List) []*ast.DefElem {
+	if l == nil {
+		return nil
+	}
+	var result []*ast.DefElem
+	for _, item := range l.Items {
+		if def, ok := item.(*ast.DefElem); ok {
+			result = append(result, def)
+		}
+	}
+	return result
+}
+
 // defElemsToDatabaseOptions returns the database options of a definition list.
 func defElemsToDatabaseOptions(l *ast.List) []*ast.DatabaseOption {
 	if l == nil {
@@ -515,19 +569,22 @@ func defElemsToDatabaseOptions(l *ast.List) []*ast.DatabaseOption {
 			continue
 		}
 		tp := ast.DatabaseOptionNone
+		name := def.Defname
 		switch strings.ToLower(def.Defname) {
+		case "lc_collate":
+			tp, name = ast.DatabaseOptionLCCollate, ""
+		case "lc_ctype":
+			tp, name = ast.DatabaseOptionLCType, ""
 		case "tablespace":
-			tp = ast.DatabaseOptionTablespace
+			tp, name = ast.DatabaseOptionTablespace, ""
 		case "encoding":
-			tp = ast.DatabaseOptionEncoding
+			tp, name = ast.DatabaseOptionEncoding, ""
 		case "owner":
-			tp = ast.DatabaseOptionOwner
+			tp, name = ast.DatabaseOptionOwner, ""
 		case "template":
-			tp = ast.DatabaseOptionTemplate
+			tp, name = ast.DatabaseOptionTemplate, ""
 		case "connection_limit":
-			tp = ast.DatabaseOptionConnectionLimit
-		case "collate", "lc_collate":
-			tp = ast.DatabaseOptionCollate
+			tp, name = ast.DatabaseOptionConnectionLimit, ""
 		}
 		value := ""
 		switch arg := def.Arg.(type) {
@@ -535,58 +592,17 @@ func defElemsToDatabaseOptions(l *ast.List) []*ast.DatabaseOption {
 			value = arg.Str
 		case *ast.Integer:
 			value = strconv.FormatInt(arg.Ival, 10)
+		case *ast.Float:
+			value = arg.Fval
 		}
-		result = append(result, &ast.DatabaseOption{Tp: tp, Value: value})
-	}
-	return result
-}
-
-// funcParams returns the function parameters of a parameter list.
-func funcParams(l *ast.List) []*ast.FuncParam {
-	if l == nil {
-		return nil
-	}
-	var result []*ast.FuncParam
-	for _, item := range l.Items {
-		v, ok := item.(*ast.FunctionParameter)
-		if ok {
-			param := &ast.FuncParam{
-				Name: v.Name,
-				Type: v.ArgType,
-				Dir:  ast.FuncParamDirIn,
-			}
-			switch v.Mode {
-			case ast.FUNC_PARAM_OUT:
-				param.Dir = ast.FuncParamDirOut
-			case ast.FUNC_PARAM_INOUT:
-				param.Dir = ast.FuncParamDirInOut
-			}
-			result = append(result, param)
-		}
+		result = append(result, &ast.DatabaseOption{Tp: tp, Name: name, Value: value, Default: def.Arg == nil})
 	}
 	return result
 }
 
 // typeNameNode returns the node of a field type.
 func typeNameNode(tp *types.FieldType) ast.Node {
-	return &ast.String{Str: tp.String()}
-}
-
-// objectName returns the name of an object with arguments.
-func objectName(n interface{}) string {
-	switch v := n.(type) {
-	case *ast.String:
-		return v.Str
-	case *ast.List:
-		return funcNameString(v)
-	case string:
-		return v
-	case ast.Node:
-		if s, ok := v.(*ast.String); ok {
-			return s.Str
-		}
-	}
-	return ""
+	return &ast.DataType{Type: tp}
 }
 
 // columnOptions returns the column options of a list.
@@ -637,26 +653,20 @@ func typeNameFromList(l *ast.List) *types.FieldType {
 	return tp
 }
 
-// aliasName returns the name of an alias.
+// aliasName returns the alias name of an alias clause.
 func aliasName(n ast.Node) string {
-	if alias, ok := n.(*ast.Alias); ok {
-		return alias.Aliasname
-	}
-	return ""
-}
-
-// relOptionsString returns the relation options of a list.
-func relOptionsString(l *ast.List) string {
-	if l == nil {
-		return ""
-	}
-	var parts []string
-	for _, item := range l.Items {
-		if def, ok := item.(*ast.DefElem); ok {
-			parts = append(parts, def.Defname)
+	switch v := n.(type) {
+	case *ast.Alias:
+		return v.Aliasname
+	case *ast.List:
+		// func_alias_clause keeps the alias in the first list item.
+		if len(v.Items) > 0 {
+			if alias, ok := v.Items[0].(*ast.Alias); ok {
+				return alias.Aliasname
+			}
 		}
 	}
-	return strings.Join(parts, ", ")
+	return ""
 }
 
 // accessMethodName returns the name of an access method.
@@ -680,26 +690,6 @@ func constraintOptions(bits int64) string {
 	return strings.Join(parts, " ")
 }
 
-// relOptionString returns the relation options of a list with their values.
-func relOptionString(l *ast.List) string {
-	if l == nil {
-		return ""
-	}
-	var parts []string
-	for _, item := range l.Items {
-		def, ok := item.(*ast.DefElem)
-		if !ok {
-			continue
-		}
-		if def.Arg == nil {
-			parts = append(parts, def.Defname)
-			continue
-		}
-		parts = append(parts, def.Defname+" = ?")
-	}
-	return strings.Join(parts, ", ")
-}
-
 // exprOrNil returns the expression of a node, or nil when there is none.
 func exprOrNil(n ast.Node) ast.ExprNode {
 	if n == nil {
@@ -712,38 +702,24 @@ func exprOrNil(n ast.Node) ast.ExprNode {
 }
 
 // tableElements returns the columns and the constraints of a table element list.
-func tableElements(l *ast.List) ([]*ast.ColumnDef, []*ast.Constraint) {
+func tableElements(l *ast.List) ([]*ast.ColumnDef, []*ast.Constraint, []*ast.TableLikeClause) {
 	if l == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	var cols []*ast.ColumnDef
 	var constraints []*ast.Constraint
+	var likes []*ast.TableLikeClause
 	for _, item := range l.Items {
 		switch v := item.(type) {
 		case *ast.ColumnDef:
 			cols = append(cols, v)
 		case *ast.Constraint:
 			constraints = append(constraints, v)
+		case *ast.TableLikeClause:
+			likes = append(likes, v)
 		}
 	}
-	return cols, constraints
-}
-
-// partitionStrategy returns the partition strategy of a partition specification.
-func partitionStrategy(n ast.Node) string {
-	spec, ok := n.(*ast.PartitionSpec)
-	if !ok || spec == nil {
-		return ""
-	}
-	switch spec.Strategy {
-	case "r":
-		return "range"
-	case "h":
-		return "hash"
-	case "l":
-		return "list"
-	}
-	return spec.Strategy
+	return cols, constraints, likes
 }
 
 // inheritTableNames returns the table names of an inherit list.
@@ -772,45 +748,6 @@ func viewCheckOption(code int64) model.ViewCheckOption {
 		return model.CheckOptionCascaded
 	}
 	return model.CheckOptionLocal
-}
-
-// sequenceOptions returns the sequence options of a definition list.
-func sequenceOptions(l *ast.List) []*ast.SequenceOption {
-	if l == nil {
-		return nil
-	}
-	var result []*ast.SequenceOption
-	for _, item := range l.Items {
-		def, ok := item.(*ast.DefElem)
-		if !ok {
-			continue
-		}
-		opt := &ast.SequenceOption{Val: defElemInt(def)}
-		switch def.Defname {
-		case "increment":
-			opt.Tp = ast.SequenceOptionIncrement
-		case "minvalue":
-			opt.Tp = ast.SequenceOptionMinValue
-		case "nomaxvalue":
-			opt.Tp = ast.SequenceOptionNoMaxValue
-		case "maxvalue":
-			opt.Tp = ast.SequenceOptionMaxValue
-		case "start":
-			opt.Tp = ast.SequenceOptionStart
-		case "cache":
-			opt.Tp = ast.SequenceOptionCache
-		case "cycle":
-			if defElemInt(def) != 0 {
-				opt.Tp = ast.SequenceOptionCycle
-			} else {
-				opt.Tp = ast.SequenceOptionNoCycle
-			}
-		default:
-			continue
-		}
-		result = append(result, opt)
-	}
-	return result
 }
 
 // defElemInt returns the integer value of a definition element.
@@ -877,60 +814,6 @@ func explainOptionList(l *ast.List) []string {
 		result = append(result, option)
 	}
 	return result
-}
-
-// nameFromList returns the dotted name of a name list.
-
-// setRoleStmt returns the set role statement of a role list.
-func setRoleStmt(l *ast.List) ast.Node {
-	stmt := &ast.SetRoleStmt{}
-	if l == nil {
-		return stmt
-	}
-	var roles []*auth.RoleIdentity
-	for _, item := range l.Items {
-		switch v := item.(type) {
-		case *ast.String:
-			switch strings.ToLower(v.Str) {
-			case "none":
-				stmt.SetRoleOpt = ast.SetRoleNone
-				continue
-			case "default":
-				stmt.SetRoleOpt = ast.SetRoleDefault
-				continue
-			}
-			roles = append(roles, &auth.RoleIdentity{Username: v.Str})
-		case ast.ValueExpr:
-			if s, ok := v.GetValue().(string); ok {
-				switch strings.ToLower(s) {
-				case "none":
-					stmt.SetRoleOpt = ast.SetRoleNone
-					continue
-				case "default":
-					stmt.SetRoleOpt = ast.SetRoleDefault
-					continue
-				}
-				roles = append(roles, &auth.RoleIdentity{Username: s})
-			}
-		}
-	}
-	stmt.RoleList = roles
-	return stmt
-}
-
-// setRoleStmtFromName returns the set role statement of a role name.
-func setRoleStmtFromName(name string) ast.Node {
-	stmt := &ast.SetRoleStmt{}
-	switch strings.ToLower(name) {
-	case "none":
-		stmt.SetRoleOpt = ast.SetRoleNone
-		return stmt
-	case "default":
-		stmt.SetRoleOpt = ast.SetRoleDefault
-		return stmt
-	}
-	stmt.RoleList = []*auth.RoleIdentity{{Username: name}}
-	return stmt
 }
 
 // createUserStmt returns the create user statement of a role.
@@ -1037,29 +920,7 @@ func inBraces(n ast.Node) ast.Node {
 
 // databaseOptions returns the options of a database option list.
 func databaseOptions(l *ast.List) []*ast.DatabaseOption {
-	if l == nil {
-		return nil
-	}
-	var result []*ast.DatabaseOption
-	for _, item := range l.Items {
-		def, ok := item.(*ast.DefElem)
-		if !ok {
-			continue
-		}
-		tp := ast.DatabaseOptionNone
-		switch strings.ToLower(def.Defname) {
-		case "owner":
-			tp = ast.DatabaseOptionOwner
-		case "template":
-			tp = ast.DatabaseOptionTemplate
-		case "connection_limit":
-			tp = ast.DatabaseOptionConnectionLimit
-		case "encoding":
-			tp = ast.DatabaseOptionEncoding
-		}
-		result = append(result, &ast.DatabaseOption{Tp: tp, Value: defElemString(def)})
-	}
-	return result
+	return defElemsToDatabaseOptions(l)
 }
 
 // dropObjectStmt returns the drop statement of an object type.
@@ -1094,20 +955,6 @@ func dropObjectStmt(removeType int, objects []*ast.TableName, ifExists bool, beh
 		Behavior:   behavior,
 		Missing_ok: ifExists,
 	}
-}
-
-// variableAssignments returns the variable assignments of a set clause.
-func variableAssignments(name string, values *ast.List) []*ast.VariableAssignment {
-	assignment := &ast.VariableAssignment{Name: name}
-	if values != nil {
-		for _, item := range values.Items {
-			if e, ok := item.(ast.ExprNode); ok {
-				assignment.Value = e
-				break
-			}
-		}
-	}
-	return []*ast.VariableAssignment{assignment}
 }
 
 // functionObjectName returns the name of a function with arguments.
@@ -1345,34 +1192,6 @@ func serverOptions(l *ast.List) []*ast.ServerOption {
 	return result
 }
 
-// tablespaceOptions returns the tablespace options of a location and reloptions.
-func tablespaceOptions(location string, l *ast.List) []*ast.TablespaceOption {
-	options := []*ast.TablespaceOption{
-		{Tp: ast.TablespaceOptionLocation, Str: location},
-	}
-	return append(options, tablespaceOptionList(l)...)
-}
-
-// tablespaceOptionList returns the tablespace options of a reloption list.
-func tablespaceOptionList(l *ast.List) []*ast.TablespaceOption {
-	if l == nil {
-		return nil
-	}
-	var result []*ast.TablespaceOption
-	for _, item := range l.Items {
-		def, ok := item.(*ast.DefElem)
-		if !ok {
-			continue
-		}
-		opt := &ast.TablespaceOption{Str: def.Defname}
-		if s, ok := def.Arg.(*ast.String); ok {
-			opt.Str = s.Str
-		}
-		result = append(result, opt)
-	}
-	return result
-}
-
 // resourceGroupVCPU returns the vcpu ranges of a resource group option list.
 func resourceGroupVCPU(l *ast.List) []*ast.ResourceGroupVCPU {
 	if l == nil {
@@ -1490,11 +1309,14 @@ func dropTriggerStmt(ifExists bool, name string, table ast.Node) ast.Node {
 	stmt := &ast.DropTriggerStmt{
 		IfExists: ifExists,
 	}
-	if n, ok := table.(*ast.RangeVar); ok {
+	switch v := table.(type) {
+	case *ast.RangeVar:
 		stmt.Table = &ast.TableName{
-			Schema: model.NewCIStr(n.Schemaname),
-			Name:   model.NewCIStr(n.Relname),
+			Schema: model.NewCIStr(v.Schemaname),
+			Name:   model.NewCIStr(v.Relname),
 		}
+	case *ast.List:
+		stmt.Table = tableNameFromList(v)
 	}
 	stmt.Name = &ast.TableName{Name: model.NewCIStr(name)}
 	return stmt
@@ -1537,40 +1359,6 @@ func columnNameListFromStrings(l *ast.List) []*ast.ColumnName {
 	return cols
 }
 
-// routineBodyStmt returns the body statement of a routine body.
-func routineBodyStmt(n ast.Node) ast.StmtNode {
-	if n == nil {
-		return nil
-	}
-	if stmt, ok := n.(ast.StmtNode); ok {
-		return stmt
-	}
-	return nil
-}
-
-// routineDefinition returns the definition string of a routine option list.
-func routineDefinition(l *ast.List) string {
-	if l == nil {
-		return ""
-	}
-	for _, item := range l.Items {
-		def, ok := item.(*ast.DefElem)
-		if !ok || def.Defname != "as" {
-			continue
-		}
-		list, ok := def.Arg.(*ast.List)
-		if !ok {
-			continue
-		}
-		for _, name := range list.Items {
-			if s, ok := name.(*ast.String); ok {
-				return s.Str
-			}
-		}
-	}
-	return ""
-}
-
 // resultSetNodeOf returns the result set node of a table reference.
 func resultSetNodeOf(n ast.Node) ast.ResultSetNode {
 	switch v := n.(type) {
@@ -1580,53 +1368,6 @@ func resultSetNodeOf(n ast.Node) ast.ResultSetNode {
 		return v
 	}
 	return nil
-}
-
-// indexColNamesFromElems returns the index column names of an index element list.
-func indexColNamesFromElems(l *ast.List) []*ast.IndexColName {
-	if l == nil {
-		return nil
-	}
-	var result []*ast.IndexColName
-	for _, item := range l.Items {
-		elem, ok := item.(*ast.IndexElem)
-		if !ok {
-			continue
-		}
-		col := &ast.IndexColName{
-			Opclass: listFirstString(elem.Opclass),
-		}
-		if elem.Name != "" {
-			col.Column = &ast.ColumnName{Name: model.NewCIStr(elem.Name)}
-		}
-		if expr, ok := elem.Expr.(ast.ExprNode); ok {
-			col.Expr = expr
-		}
-		if elem.Ordering == ast.SORTBY_DESC {
-			col.Desc = true
-		}
-		switch elem.NullsOrdering {
-		case ast.SORTBY_NULLS_FIRST:
-			col.NullsOrder = 1
-		case ast.SORTBY_NULLS_LAST:
-			col.NullsOrder = 2
-		}
-		result = append(result, col)
-	}
-	return result
-}
-
-// listFirstString returns the first string of a list.
-func listFirstString(l *ast.List) string {
-	if l == nil {
-		return ""
-	}
-	for _, item := range l.Items {
-		if s, ok := item.(*ast.String); ok {
-			return s.Str
-		}
-	}
-	return ""
 }
 
 // collationName returns the name of a collation clause.

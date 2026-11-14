@@ -68,7 +68,7 @@ type ArrayExpr struct {
 
 // Restore implements Node interface.
 func (n *ArrayExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WritePlain("[")
+	ctx.WriteKeyWord("ARRAY[")
 	for i, e := range n.Elements {
 		if i != 0 {
 			ctx.WritePlain(",")
@@ -83,7 +83,7 @@ func (n *ArrayExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format implements ExprNode interface.
 func (n *ArrayExpr) Format(w io.Writer) {
-	_, _ = io.WriteString(w, "[")
+	_, _ = io.WriteString(w, "ARRAY[")
 	for i, e := range n.Elements {
 		if i != 0 {
 			_, _ = io.WriteString(w, ",")

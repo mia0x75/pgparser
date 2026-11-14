@@ -84,37 +84,46 @@ type Join struct {
 
 // Restore implements Node interface.
 func (n *Join) Restore(ctx *format.RestoreCtx) error {
+	if n.Left == nil {
+		return errors.New("join has no left relation")
+	}
+	if n.Right == nil {
+		return n.Left.Restore(ctx)
+	}
 	if ctx.JoinLevel != 0 {
 		ctx.WritePlain("(")
 		defer ctx.WritePlain(")")
 	}
 	ctx.JoinLevel++
+	defer func() { ctx.JoinLevel-- }()
 	if err := n.Left.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore Join.Left")
-	}
-	ctx.JoinLevel--
-	if n.Right == nil {
-		return nil
 	}
 	if n.NaturalJoin {
 		ctx.WriteKeyWord(" NATURAL")
 	}
 	switch n.Tp {
+	case CrossJoin:
+		ctx.WriteKeyWord(" CROSS")
 	case LeftJoin:
 		ctx.WriteKeyWord(" LEFT")
 	case RightJoin:
 		ctx.WriteKeyWord(" RIGHT")
+	case FullJoin:
+		ctx.WriteKeyWord(" FULL")
+	case InnerJoin:
+		ctx.WriteKeyWord(" INNER")
+	default:
+		return errors.New("invalid join type")
 	}
 	if n.StraightJoin {
 		ctx.WriteKeyWord(" STRAIGHT_JOIN ")
 	} else {
 		ctx.WriteKeyWord(" JOIN ")
 	}
-	ctx.JoinLevel++
 	if err := n.Right.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore Join.Right")
 	}
-	ctx.JoinLevel--
 
 	if n.On != nil {
 		ctx.WritePlain(" ")
@@ -122,7 +131,7 @@ func (n *Join) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore Join.On")
 		}
 	}
-	if len(n.Using) != 0 {
+	if n.On == nil && len(n.Using) != 0 {
 		ctx.WriteKeyWord(" USING ")
 		ctx.WritePlain("(")
 		for i, v := range n.Using {
@@ -164,6 +173,15 @@ func (n *Join) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		n.On = node.(*OnCondition)
+		n.Using = n.On.Using
+	} else {
+		for i, column := range n.Using {
+			child, ok := column.Accept(v)
+			if !ok {
+				return n, false
+			}
+			n.Using[i] = child.(*ColumnName)
+		}
 	}
 	return v.Leave(n)
 }
@@ -344,9 +362,15 @@ type OnCondition struct {
 
 // Restore implements Node interface.
 func (n *OnCondition) Restore(ctx *format.RestoreCtx) error {
+	if n.Expr != nil && len(n.Using) > 0 {
+		return errors.New("join has both ON and USING")
+	}
 	if len(n.Using) > 0 {
 		ctx.WriteKeyWord("USING (")
 		for i, col := range n.Using {
+			if col == nil {
+				return errors.New("USING has a nil column")
+			}
 			if i != 0 {
 				ctx.WritePlain(", ")
 			}
@@ -356,12 +380,16 @@ func (n *OnCondition) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 		if n.JoinUsingAlias != nil {
-			ctx.WritePlain(" ")
-			if err := n.JoinUsingAlias.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore OnCondition.JoinUsingAlias")
+			if n.JoinUsingAlias.Aliasname == "" || n.JoinUsingAlias.Colnames != nil {
+				return errors.New("invalid USING alias")
 			}
+			ctx.WriteKeyWord(" AS ")
+			ctx.WriteName(n.JoinUsingAlias.Aliasname)
 		}
 		return nil
+	}
+	if n.Expr == nil {
+		return errors.New("join condition has no expression")
 	}
 	ctx.WriteKeyWord("ON ")
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -377,14 +405,27 @@ func (n *OnCondition) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*OnCondition)
-	if n.Expr == nil {
-		return v.Leave(n)
+	if n.Expr != nil {
+		node, ok := n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = node.(ExprNode)
 	}
-	node, ok := n.Expr.Accept(v)
-	if !ok {
-		return n, false
+	for i, column := range n.Using {
+		child, ok := column.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Using[i] = child.(*ColumnName)
 	}
-	n.Expr = node.(ExprNode)
+	if n.JoinUsingAlias != nil {
+		child, ok := n.JoinUsingAlias.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.JoinUsingAlias = child.(*Alias)
+	}
 	return v.Leave(n)
 }
 
@@ -1075,6 +1116,7 @@ type SelectStmt struct {
 	LockedTables []*TableName
 	// LockWaitPolicy is the wait policy of a locking read (NOWAIT / SKIP LOCKED).
 	LockWaitPolicy SelectLockWaitPolicy
+	Locking        *List
 	// TableHints represents the table level Optimizer Hint for join type
 	TableHints []*TableOptimizerHint
 	// IntoVars is the variable list of a SELECT ... INTO var_list statement,
@@ -1233,39 +1275,45 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	switch n.LockTp {
-	case SelectLockInShareMode:
-		ctx.WriteKeyWord(" LOCK ")
-		ctx.WriteKeyWord(n.LockTp.String())
-	case SelectLockForUpdate:
-		ctx.WritePlain(" ")
-		ctx.WriteKeyWord("FOR UPDATE")
-	case SelectLockForShare:
-		ctx.WritePlain(" ")
-		ctx.WriteKeyWord("FOR SHARE")
-	case SelectLockNoKeyUpdate:
-		ctx.WritePlain(" ")
-		ctx.WriteKeyWord("FOR NO KEY UPDATE")
-	case SelectLockKeyShare:
-		ctx.WritePlain(" ")
-		ctx.WriteKeyWord("FOR KEY SHARE")
-	}
-	if len(n.LockedTables) > 0 {
-		ctx.WriteKeyWord(" OF ")
-		for i, tbl := range n.LockedTables {
-			if i != 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := tbl.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore SelectStmt.LockedTables")
+	if n.Locking != nil {
+		if err := restoreLocking(ctx, n.Locking); err != nil {
+			return err
+		}
+	} else {
+		switch n.LockTp {
+		case SelectLockInShareMode:
+			ctx.WriteKeyWord(" LOCK ")
+			ctx.WriteKeyWord(n.LockTp.String())
+		case SelectLockForUpdate:
+			ctx.WritePlain(" ")
+			ctx.WriteKeyWord("FOR UPDATE")
+		case SelectLockForShare:
+			ctx.WritePlain(" ")
+			ctx.WriteKeyWord("FOR SHARE")
+		case SelectLockNoKeyUpdate:
+			ctx.WritePlain(" ")
+			ctx.WriteKeyWord("FOR NO KEY UPDATE")
+		case SelectLockKeyShare:
+			ctx.WritePlain(" ")
+			ctx.WriteKeyWord("FOR KEY SHARE")
+		}
+		if len(n.LockedTables) > 0 {
+			ctx.WriteKeyWord(" OF ")
+			for i, tbl := range n.LockedTables {
+				if i != 0 {
+					ctx.WritePlain(", ")
+				}
+				if err := tbl.Restore(ctx); err != nil {
+					return errors.Annotate(err, "An error occurred while restore SelectStmt.LockedTables")
+				}
 			}
 		}
-	}
-	switch n.LockWaitPolicy {
-	case SelectLockWaitNoWait:
-		ctx.WriteKeyWord(" NOWAIT")
-	case SelectLockWaitSkipLocked:
-		ctx.WriteKeyWord(" SKIP LOCKED")
+		switch n.LockWaitPolicy {
+		case SelectLockWaitNoWait:
+			ctx.WriteKeyWord(" NOWAIT")
+		case SelectLockWaitSkipLocked:
+			ctx.WriteKeyWord(" SKIP LOCKED")
+		}
 	}
 	if n.Into != nil {
 		ctx.WritePlain(" ")
@@ -1284,6 +1332,13 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 	}
 
 	n = newNode.(*SelectStmt)
+	if n.Locking != nil {
+		child, ok := n.Locking.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Locking = child.(*List)
+	}
 	if n.IntoTable != nil {
 		node, ok := n.IntoTable.Accept(v)
 		if !ok {
@@ -1711,6 +1766,7 @@ type SetOprStmt struct {
 	SelectList *SetOprSelectList
 	OrderBy    *OrderByClause
 	Limit      *Limit
+	Locking    *List
 	// With is the optional common table expression clause.
 	With             *WithClause
 	AfterSetOperator *SetOprType
@@ -1718,6 +1774,9 @@ type SetOprStmt struct {
 
 // Restore implements Node interface.
 func (n *SetOprStmt) Restore(ctx *format.RestoreCtx) error {
+	if n.SelectList == nil {
+		return errors.New("set operation has no operands")
+	}
 	if n.IsInBraces {
 		ctx.WritePlain("(")
 	}
@@ -1742,6 +1801,11 @@ func (n *SetOprStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore SetOprStmt.Limit")
 		}
 	}
+	if n.Locking != nil {
+		if err := restoreLocking(ctx, n.Locking); err != nil {
+			return err
+		}
+	}
 	if n.IsInBraces {
 		ctx.WritePlain(")")
 	}
@@ -1755,6 +1819,13 @@ func (n *SetOprStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*SetOprStmt)
+	if n.Locking != nil {
+		child, ok := n.Locking.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Locking = child.(*List)
+	}
 	if n.With != nil {
 		node, ok := n.With.Accept(v)
 		if !ok {
@@ -1799,8 +1870,33 @@ type Assignment struct {
 
 // Restore implements Node interface.
 func (n *Assignment) Restore(ctx *format.RestoreCtx) error {
-	if err := n.Column.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore Assignment.Column")
+	if n.Expr == nil {
+		return errors.New("assignment has no expression")
+	}
+	if n.Column != nil && len(n.MultiColumns) > 0 {
+		return errors.New("assignment has both single and tuple targets")
+	}
+	switch {
+	case n.Column != nil:
+		if err := n.Column.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred while restore Assignment.Column")
+		}
+	case len(n.MultiColumns) > 0:
+		ctx.WritePlain("(")
+		for i, col := range n.MultiColumns {
+			if col == nil {
+				return errors.New("assignment has a nil target column")
+			}
+			if i > 0 {
+				ctx.WritePlain(", ")
+			}
+			if err := col.Restore(ctx); err != nil {
+				return errors.Annotate(err, "An error occurred while restore Assignment.MultiColumns")
+			}
+		}
+		ctx.WritePlain(")")
+	default:
+		return errors.New("Assignment has no target column")
 	}
 	ctx.WritePlain("=")
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -1816,16 +1912,32 @@ func (n *Assignment) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*Assignment)
-	node, ok := n.Column.Accept(v)
-	if !ok {
-		return n, false
+	var node Node
+	var ok bool
+	if n.Column != nil {
+		node, ok = n.Column.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Column = node.(*ColumnName)
 	}
-	n.Column = node.(*ColumnName)
-	node, ok = n.Expr.Accept(v)
-	if !ok {
-		return n, false
+	for i, col := range n.MultiColumns {
+		if col == nil {
+			continue
+		}
+		node, ok = col.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.MultiColumns[i] = node.(*ColumnName)
 	}
-	n.Expr = node.(ExprNode)
+	if n.Expr != nil {
+		node, ok = n.Expr.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Expr = node.(ExprNode)
+	}
 	return v.Leave(n)
 }
 
@@ -2262,6 +2374,9 @@ func (n *InsertStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 			ctx.WritePlain(")")
 		}
+	}
+	if n.Lists == nil && n.Select == nil && n.Setlist == nil {
+		ctx.WriteKeyWord(" DEFAULT VALUES")
 	}
 	if n.Select != nil {
 		ctx.WritePlain(" ")
@@ -2843,15 +2958,8 @@ func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
 		if i != 0 {
 			ctx.WritePlain(", ")
 		}
-
-		if err := assignment.Column.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occur while restore UpdateStmt.List[%d].Column", i)
-		}
-
-		ctx.WritePlain("=")
-
-		if err := assignment.Expr.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occur while restore UpdateStmt.List[%d].Expr", i)
+		if err := assignment.Restore(ctx); err != nil {
+			return errors.Annotatef(err, "An error occur while restore UpdateStmt.List[%d]", i)
 		}
 	}
 
@@ -3099,20 +3207,6 @@ func (n *ShowStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord("FULL ")
 		}
 	}
-	restoreShowDatabaseNameOpt := func() {
-		if n.DBName != "" {
-			// FROM OR IN
-			ctx.WriteKeyWord(" IN ")
-			ctx.WriteName(n.DBName)
-		}
-	}
-	restoreGlobalScope := func() {
-		if n.GlobalScope {
-			ctx.WriteKeyWord("GLOBAL ")
-		} else {
-			ctx.WriteKeyWord("SESSION ")
-		}
-	}
 	restoreShowLikeOrWhereOpt := func() error {
 		if n.Pattern != nil && n.Pattern.Pattern != nil {
 			ctx.WriteKeyWord(" LIKE ")
@@ -3241,67 +3335,15 @@ func (n *ShowStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("PRIVILEGES")
 	// ShowTargetFilterable
 	default:
-		switch n.Tp {
-		case ShowEngines:
-			ctx.WriteKeyWord("ENGINES")
-		case ShowDatabases:
-			ctx.WriteKeyWord("DATABASES")
-		case ShowCharset:
-			ctx.WriteKeyWord("CHARSET")
-		case ShowTables:
-			restoreOptFull()
-			ctx.WriteKeyWord("TABLES")
-			restoreShowDatabaseNameOpt()
-		case ShowOpenTables:
-			ctx.WriteKeyWord("OPEN TABLES")
-			restoreShowDatabaseNameOpt()
-		case ShowTableStatus:
-			ctx.WriteKeyWord("TABLE STATUS")
-			restoreShowDatabaseNameOpt()
-		case ShowIndex:
-			// here can be INDEX INDEXES KEYS
-			// FROM or IN
-			ctx.WriteKeyWord("INDEX IN ")
-			if err := n.Table.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while resotre ShowStmt.Table")
-			} // TODO: remember to check this case
-		case ShowColumns: // equivalent to SHOW FIELDS
-			restoreOptFull()
-			ctx.WriteKeyWord("COLUMNS")
-			if n.Table != nil {
-				// FROM or IN
-				ctx.WriteKeyWord(" IN ")
-				if err := n.Table.Restore(ctx); err != nil {
-					return errors.Annotate(err, "An error occurred while resotre ShowStmt.Table")
-				}
-			}
-			restoreShowDatabaseNameOpt()
-		case ShowWarnings:
-			ctx.WriteKeyWord("WARNINGS")
-		case ShowErrors:
-			ctx.WriteKeyWord("ERRORS")
-		case ShowVariables:
-			restoreGlobalScope()
-			ctx.WriteKeyWord("VARIABLES")
-		case ShowStatus:
-			restoreGlobalScope()
-			ctx.WriteKeyWord("STATUS")
-		case ShowCollation:
-			ctx.WriteKeyWord("COLLATION")
-		case ShowTriggers:
-			ctx.WriteKeyWord("TRIGGERS")
-			restoreShowDatabaseNameOpt()
-		case ShowProcedureStatus:
-			ctx.WriteKeyWord("PROCEDURE STATUS")
-		case ShowEvents:
-			ctx.WriteKeyWord("EVENTS")
-			restoreShowDatabaseNameOpt()
-		case ShowPlugins:
-			ctx.WriteKeyWord("PLUGINS")
-		default:
-			return errors.New("Unknown ShowStmt type")
+		if n.DBName == "" {
+			return errors.New("SHOW statement has no variable name")
 		}
-		restoreShowLikeOrWhereOpt()
+		// PostgreSQL SHOW always names a GUC, so restoring the variable
+		// keeps the statement re-parseable and semantically identical.
+		ctx.WriteName(n.DBName)
+		if err := restoreShowLikeOrWhereOpt(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -3494,8 +3536,9 @@ const (
 type FrameClause struct {
 	node
 
-	Type   FrameType
-	Extent FrameExtent
+	Type      FrameType
+	Extent    FrameExtent
+	Exclusion int64
 }
 
 // Restore implements Node interface.
@@ -3505,8 +3548,10 @@ func (n *FrameClause) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("ROWS")
 	case Ranges:
 		ctx.WriteKeyWord("RANGE")
+	case Groups:
+		ctx.WriteKeyWord("GROUPS")
 	default:
-		return errors.New("Unsupported window function frame type")
+		return errors.New("invalid window frame type")
 	}
 	ctx.WriteKeyWord(" BETWEEN ")
 	if err := n.Extent.Start.Restore(ctx); err != nil {
@@ -3515,6 +3560,17 @@ func (n *FrameClause) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord(" AND ")
 	if err := n.Extent.End.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore FrameClause.Extent.End")
+	}
+	switch n.Exclusion {
+	case 0:
+	case int64(FRAMEOPTION_EXCLUDE_CURRENT_ROW):
+		ctx.WriteKeyWord(" EXCLUDE CURRENT ROW")
+	case int64(FRAMEOPTION_EXCLUDE_GROUP):
+		ctx.WriteKeyWord(" EXCLUDE GROUP")
+	case int64(FRAMEOPTION_EXCLUDE_TIES):
+		ctx.WriteKeyWord(" EXCLUDE TIES")
+	default:
+		return errors.New("invalid window frame exclusion")
 	}
 
 	return nil

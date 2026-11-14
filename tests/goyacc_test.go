@@ -488,12 +488,12 @@ func TestParseSQLSetOperationsChain(t *testing.T) {
 }
 
 func TestParseSQLUtilityAndTransactions(t *testing.T) {
-	set, ok := mustParseOne(t, "SET search_path TO public;").(*ast.SetStmt)
-	if !ok || len(set.Variables) != 1 || set.Variables[0].Name != "search_path" {
+	set, ok := mustParseOne(t, "SET search_path TO public;").(*ast.VariableSetStmt)
+	if !ok || set.Name != "search_path" || set.Args == nil || len(set.Args.Items) != 1 {
 		t.Fatalf("unexpected set: %#v", set)
 	}
-	if _, ok := mustParseOne(t, "SET a.b = 'c';").(*ast.SetStmt); !ok {
-		t.Fatal("expected *ast.SetStmt")
+	if _, ok := mustParseOne(t, "SET a.b = 'c';").(*ast.VariableSetStmt); !ok {
+		t.Fatal("expected *ast.VariableSetStmt")
 	}
 	if _, ok := mustParseOne(t, "SHOW all;").(*ast.ShowStmt); !ok {
 		t.Fatal("expected *ast.ShowStmt")
@@ -793,8 +793,8 @@ func TestParseSQLCommentFunctionAndSetScope(t *testing.T) {
 		"SET SESSION client_min_messages TO notice;",
 		"SET SESSION AUTHORIZATION postgres;",
 	} {
-		if _, ok := mustParseOne(t, sql).(*ast.SetStmt); !ok {
-			t.Fatalf("expected *ast.SetStmt for %q", sql)
+		if _, ok := mustParseOne(t, sql).(*ast.VariableSetStmt); !ok {
+			t.Fatalf("expected *ast.VariableSetStmt for %q", sql)
 		}
 	}
 }
@@ -863,11 +863,11 @@ func TestParseSQLJSONExistsAndWildcardArgs(t *testing.T) {
 }
 
 func TestParseSQLSetSearchPathAndTruncateOptions(t *testing.T) {
-	if _, ok := mustParseOne(t, "SET search_path = public, pg_catalog;").(*ast.SetStmt); !ok {
-		t.Fatal("expected *ast.SetStmt")
+	if _, ok := mustParseOne(t, "SET search_path = public, pg_catalog;").(*ast.VariableSetStmt); !ok {
+		t.Fatal("expected *ast.VariableSetStmt")
 	}
-	if _, ok := mustParseOne(t, "SET search_path FROM CURRENT;").(*ast.SetStmt); !ok {
-		t.Fatal("expected *ast.SetStmt")
+	if _, ok := mustParseOne(t, "SET search_path FROM CURRENT;").(*ast.VariableSetStmt); !ok {
+		t.Fatal("expected *ast.VariableSetStmt")
 	}
 	tr, ok := mustParseOne(t, "TRUNCATE ONLY public.users, orders CASCADE;").(*ast.TruncateTableStmt)
 	if !ok {
@@ -1586,16 +1586,16 @@ func TestParseSQLReferenceUtilityStatementFamilies(t *testing.T) {
 }
 
 func TestParseSQLSetRoleAndPrepare(t *testing.T) {
-	if st, ok := mustParseOne(t, `SET ROLE app;`).(*ast.SetRoleStmt); !ok || len(st.RoleList) != 1 {
+	if st, ok := mustParseOne(t, `SET ROLE app;`).(*ast.VariableSetStmt); !ok || st.Name != "role" || st.Args == nil || len(st.Args.Items) != 1 {
 		t.Fatalf("set role = %#v", mustParseOne(t, `SET ROLE app;`))
 	}
-	if st, ok := mustParseOne(t, `SET ROLE NONE;`).(*ast.SetRoleStmt); !ok || st.SetRoleOpt != ast.SetRoleNone {
+	if st, ok := mustParseOne(t, `SET ROLE NONE;`).(*ast.VariableSetStmt); !ok || st.Name != "role" || st.Kind != ast.VAR_SET_VALUE {
 		t.Fatalf("set role none = %#v", mustParseOne(t, `SET ROLE NONE;`))
 	}
-	if st, ok := mustParseOne(t, `SET ROLE DEFAULT;`).(*ast.SetRoleStmt); !ok || st.SetRoleOpt != ast.SetRoleDefault {
+	if st, ok := mustParseOne(t, `SET ROLE DEFAULT;`).(*ast.VariableSetStmt); !ok || st.Name != "role" || st.Kind != ast.VAR_SET_DEFAULT {
 		t.Fatalf("set role default = %#v", mustParseOne(t, `SET ROLE DEFAULT;`))
 	}
-	if st, ok := mustParseOne(t, `SET SESSION AUTHORIZATION app;`).(*ast.SetStmt); !ok || len(st.Variables) != 1 || st.Variables[0].Name != "session_authorization" {
+	if st, ok := mustParseOne(t, `SET SESSION AUTHORIZATION app;`).(*ast.VariableSetStmt); !ok || st.Name != "session_authorization" {
 		t.Fatalf("set session authorization = %#v", mustParseOne(t, `SET SESSION AUTHORIZATION app;`))
 	}
 	if st, ok := mustParseOne(t, `PREPARE p AS SELECT 1;`).(*ast.PrepareStmt); !ok || st.Name != "p" || st.Stmt == nil {

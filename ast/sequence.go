@@ -8,97 +8,22 @@ import (
 var (
 	_ DDLNode = &CreateSequenceStmt{}
 	_ DDLNode = &DropSequenceStmt{}
-	_ Node    = &SequenceOption{}
 )
 
-// SequenceOptionType is the type for sequence options.
-type SequenceOptionType int
-
-// Sequence option types.
-const (
-	SequenceOptionNone SequenceOptionType = iota
-	SequenceOptionIncrement
-	SequenceOptionMinValue
-	SequenceOptionNoMinValue
-	SequenceOptionMaxValue
-	SequenceOptionNoMaxValue
-	SequenceOptionStart
-	SequenceOptionCache
-	SequenceOptionNoCache
-	SequenceOptionCycle
-	SequenceOptionNoCycle
-)
-
-// SequenceOption represents a single option of a sequence definition.
-type SequenceOption struct {
-	node
-
-	Tp  SequenceOptionType
-	Val int64
-}
-
-// Restore implements Node interface.
-func (n *SequenceOption) Restore(ctx *format.RestoreCtx) error {
-	switch n.Tp {
-	case SequenceOptionIncrement:
-		ctx.WriteKeyWord("INCREMENT BY ")
-		ctx.WritePlainf("%d", n.Val)
-	case SequenceOptionMinValue:
-		ctx.WriteKeyWord("MINVALUE ")
-		ctx.WritePlainf("%d", n.Val)
-	case SequenceOptionNoMinValue:
-		ctx.WriteKeyWord("NO MINVALUE")
-	case SequenceOptionMaxValue:
-		ctx.WriteKeyWord("MAXVALUE ")
-		ctx.WritePlainf("%d", n.Val)
-	case SequenceOptionNoMaxValue:
-		ctx.WriteKeyWord("NO MAXVALUE")
-	case SequenceOptionStart:
-		ctx.WriteKeyWord("START WITH ")
-		ctx.WritePlainf("%d", n.Val)
-	case SequenceOptionCache:
-		ctx.WriteKeyWord("CACHE ")
-		ctx.WritePlainf("%d", n.Val)
-	case SequenceOptionNoCache:
-		ctx.WriteKeyWord("NOCACHE")
-	case SequenceOptionCycle:
-		ctx.WriteKeyWord("CYCLE")
-	case SequenceOptionNoCycle:
-		ctx.WriteKeyWord("NO CYCLE")
-	default:
-		return errors.New("An error occurred while splicing SequenceOption")
-	}
-	return nil
-}
-
-// Accept implements Node Accept interface.
-func (n *SequenceOption) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*SequenceOption)
-	return v.Leave(n)
-}
-
-// CreateSequenceStmt is a statement to create a sequence (MariaDB).
-// See https://mariadb.com/kb/en/create-sequence/
+// CreateSequenceStmt is a statement to create a sequence.
 type CreateSequenceStmt struct {
 	ddlNode
 
 	IfNotExists bool
-	OrReplace   bool
 	Temporary   bool
 	Name        *TableName
-	Options     []*SequenceOption
+	// Options is the parsed sequence option list (DefElem entries).
+	Options *List
 }
 
 // Restore implements Node interface.
 func (n *CreateSequenceStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("CREATE ")
-	if n.OrReplace {
-		ctx.WriteKeyWord("OR REPLACE ")
-	}
 	if n.Temporary {
 		ctx.WriteKeyWord("TEMPORARY ")
 	}
@@ -109,13 +34,7 @@ func (n *CreateSequenceStmt) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Name.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while splicing CreateSequenceStmt Name")
 	}
-	for _, option := range n.Options {
-		ctx.WritePlain(" ")
-		if err := option.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while splicing CreateSequenceStmt Option")
-		}
-	}
-	return nil
+	return restoreSeqOptions(ctx, n.Options)
 }
 
 // Accept implements Node Accept interface.
@@ -130,18 +49,17 @@ func (n *CreateSequenceStmt) Accept(v Visitor) (Node, bool) {
 		return n, false
 	}
 	n.Name = node.(*TableName)
-	for i, opt := range n.Options {
-		node, ok := opt.Accept(v)
+	if n.Options != nil {
+		node, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options[i] = node.(*SequenceOption)
+		n.Options = node.(*List)
 	}
 	return v.Leave(n)
 }
 
-// DropSequenceStmt is a statement to drop one or more sequences (MariaDB).
-// See https://mariadb.com/kb/en/drop-sequence/
+// DropSequenceStmt is a statement to drop one or more sequences.
 type DropSequenceStmt struct {
 	ddlNode
 

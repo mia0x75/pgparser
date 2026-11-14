@@ -1,7 +1,8 @@
 package ast
 
 import (
-	"github.com/mia0x75/pgparser/errors"
+	"fmt"
+
 	"github.com/mia0x75/pgparser/format"
 )
 
@@ -9,113 +10,38 @@ var (
 	_ DDLNode = &CreateTablespaceStmt{}
 	_ DDLNode = &AlterTablespaceStmt{}
 	_ DDLNode = &DropTablespaceStmt{}
-	_ Node    = &TablespaceOption{}
 )
 
-// TablespaceOptionType is the type for tablespace options.
-type TablespaceOptionType int
-
-// Tablespace option types.
-const (
-	TablespaceOptionNone TablespaceOptionType = iota
-	TablespaceOptionDataFile
-	TablespaceOptionFileBlockSize
-	TablespaceOptionExtentSize
-	TablespaceOptionInitialSize
-	TablespaceOptionAutoextendSize
-	TablespaceOptionMaxSize
-	TablespaceOptionNodegroup
-	TablespaceOptionWait
-	TablespaceOptionNoWait
-	TablespaceOptionComment
-	TablespaceOptionEngine
-	TablespaceOptionLocation
-)
-
-// TablespaceOption represents a single option of a tablespace definition.
-type TablespaceOption struct {
-	node
-
-	Tp  TablespaceOptionType
-	Str string
-	Val uint64
-}
-
-// Restore implements Node interface.
-func (n *TablespaceOption) Restore(ctx *format.RestoreCtx) error {
-	switch n.Tp {
-	case TablespaceOptionDataFile:
-		ctx.WriteKeyWord("ADD DATAFILE ")
-		ctx.WriteString(n.Str)
-	case TablespaceOptionFileBlockSize:
-		ctx.WriteKeyWord("FILE_BLOCK_SIZE = ")
-		ctx.WritePlainf("%d", n.Val)
-	case TablespaceOptionExtentSize:
-		ctx.WriteKeyWord("EXTENT_SIZE = ")
-		ctx.WritePlainf("%d", n.Val)
-	case TablespaceOptionInitialSize:
-		ctx.WriteKeyWord("INITIAL_SIZE = ")
-		ctx.WritePlainf("%d", n.Val)
-	case TablespaceOptionAutoextendSize:
-		ctx.WriteKeyWord("AUTOEXTEND_SIZE = ")
-		ctx.WritePlainf("%d", n.Val)
-	case TablespaceOptionMaxSize:
-		ctx.WriteKeyWord("MAX_SIZE = ")
-		ctx.WritePlainf("%d", n.Val)
-	case TablespaceOptionNodegroup:
-		ctx.WriteKeyWord("NODEGROUP = ")
-		ctx.WritePlainf("%d", n.Val)
-	case TablespaceOptionWait:
-		ctx.WriteKeyWord("WAIT")
-	case TablespaceOptionNoWait:
-		ctx.WriteKeyWord("NO WAIT")
-	case TablespaceOptionComment:
-		ctx.WriteKeyWord("COMMENT = ")
-		ctx.WriteString(n.Str)
-	case TablespaceOptionEngine:
-		ctx.WriteKeyWord("ENGINE = ")
-		ctx.WritePlain(n.Str)
-	case TablespaceOptionLocation:
-		ctx.WriteKeyWord("LOCATION ")
-		ctx.WriteString(n.Str)
-	default:
-		return errors.New("An error occurred while splicing TablespaceOption")
-	}
-	return nil
-}
-
-// Accept implements Node Accept interface.
-func (n *TablespaceOption) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*TablespaceOption)
-	return v.Leave(n)
-}
-
-// CreateTablespaceStmt is a statement to create a tablespace.
-// See https://dev.postgres.com/doc/refman/8.0/en/create-tablespace.html
+// CreateTablespaceStmt is a PostgreSQL `CREATE TABLESPACE` statement.
+// See https://www.postgresql.org/docs/current/sql-createsc.html
 type CreateTablespaceStmt struct {
 	ddlNode
 
-	Undo    bool
-	Name    string
-	Options []*TablespaceOption
+	Name     string
+	Owner    *RoleSpec
+	Location string
+	// Options is the `WITH (...)` storage parameter list.
+	Options *List
 }
 
 // Restore implements Node interface.
 func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CREATE ")
-	if n.Undo {
-		ctx.WriteKeyWord("UNDO ")
-	}
-	ctx.WriteKeyWord("TABLESPACE ")
+	ctx.WriteKeyWord("CREATE TABLESPACE ")
 	ctx.WriteName(n.Name)
-	for _, opt := range n.Options {
-		ctx.WritePlain(" ")
-		if err := opt.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while splicing CreateTablespaceStmt")
+	if n.Owner != nil {
+		ctx.WriteKeyWord(" OWNER ")
+		if err := n.Owner.Restore(ctx); err != nil {
+			return err
+		}
+	}
+	if n.Location != "" {
+		ctx.WriteKeyWord(" LOCATION ")
+		ctx.WriteString(n.Location)
+	}
+	if n.Options != nil {
+		ctx.WriteKeyWord(" WITH ")
+		if err := restoreRelOptions(ctx, n.Options); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -128,12 +54,19 @@ func (n *CreateTablespaceStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*CreateTablespaceStmt)
-	for i, opt := range n.Options {
-		node, ok := opt.Accept(v)
+	if n.Owner != nil {
+		child, ok := n.Owner.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options[i] = node.(*TablespaceOption)
+		n.Owner = child.(*RoleSpec)
+	}
+	if n.Options != nil {
+		child, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = child.(*List)
 	}
 	return v.Leave(n)
 }
@@ -143,24 +76,25 @@ func (n *CreateTablespaceStmt) Accept(v Visitor) (Node, bool) {
 type AlterTablespaceStmt struct {
 	ddlNode
 
-	Undo     bool
-	Name     string
-	Options  []*TablespaceOption
+	Name string
+	// Action is `SET` or `RESET` when Options are present.
+	Action  string
+	Options *List
+	// RenameTo is set by `ALTER TABLESPACE ... RENAME TO`.
 	RenameTo string
 }
 
 // Restore implements Node interface.
 func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ALTER ")
-	if n.Undo {
-		ctx.WriteKeyWord("UNDO ")
-	}
-	ctx.WriteKeyWord("TABLESPACE ")
+	ctx.WriteKeyWord("ALTER TABLESPACE ")
 	ctx.WriteName(n.Name)
-	for _, opt := range n.Options {
-		ctx.WritePlain(" ")
-		if err := opt.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while splicing AlterTablespaceStmt")
+	if n.Action != "" {
+		if n.Options == nil {
+			return fmt.Errorf("ALTER TABLESPACE %s has no options", n.Action)
+		}
+		ctx.WriteKeyWord(" " + n.Action + " ")
+		if err := restoreRelOptions(ctx, n.Options); err != nil {
+			return err
 		}
 	}
 	if n.RenameTo != "" {
@@ -177,12 +111,12 @@ func (n *AlterTablespaceStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*AlterTablespaceStmt)
-	for i, opt := range n.Options {
-		node, ok := opt.Accept(v)
+	if n.Options != nil {
+		child, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options[i] = node.(*TablespaceOption)
+		n.Options = child.(*List)
 	}
 	return v.Leave(n)
 }
@@ -192,29 +126,17 @@ func (n *AlterTablespaceStmt) Accept(v Visitor) (Node, bool) {
 type DropTablespaceStmt struct {
 	ddlNode
 
-	Undo     bool
 	IfExists bool
 	Name     string
-	Option   *TablespaceOption
 }
 
 // Restore implements Node interface.
 func (n *DropTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DROP ")
-	if n.Undo {
-		ctx.WriteKeyWord("UNDO ")
-	}
-	ctx.WriteKeyWord("TABLESPACE ")
+	ctx.WriteKeyWord("DROP TABLESPACE ")
 	if n.IfExists {
 		ctx.WriteKeyWord("IF EXISTS ")
 	}
 	ctx.WriteName(n.Name)
-	if n.Option != nil {
-		ctx.WritePlain(" ")
-		if err := n.Option.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while splicing DropTablespaceStmt")
-		}
-	}
 	return nil
 }
 
@@ -224,6 +146,5 @@ func (n *DropTablespaceStmt) Accept(v Visitor) (Node, bool) {
 	if skipChildren {
 		return v.Leave(newNode)
 	}
-	n = newNode.(*DropTablespaceStmt)
-	return v.Leave(n)
+	return v.Leave(newNode.(*DropTablespaceStmt))
 }

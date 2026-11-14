@@ -381,7 +381,7 @@ func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
 		return err
 	}
 	if len(n.Passing) > 0 {
-		return fmt.Errorf("JSON_TABLE PASSING restoration is unsupported")
+		return fmt.Errorf("%w: JSON_TABLE PASSING", ErrUnsupportedRestore)
 	}
 	ctx.WriteKeyWord(" COLUMNS(")
 	for i, col := range n.Columns {
@@ -547,7 +547,7 @@ func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
 		return nil
 	}
 	if n.ColType == "formatted" || n.Format != nil {
-		return fmt.Errorf("JSON_TABLE FORMAT restoration is unsupported")
+		return fmt.Errorf("%w: JSON_TABLE FORMAT", ErrUnsupportedRestore)
 	}
 	if n.TypeName != nil {
 		ctx.WritePlain(" ")

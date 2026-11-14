@@ -160,7 +160,15 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 	if ctx.Flags.HasSpacesAroundBinaryOperationFlag() {
 		ctx.WritePlain(" ")
 	}
-	if err := n.R.Restore(ctx); err != nil {
+	// Subquery-style ANY/ALL/SOME comparisons require the right side in
+	// parentheses, so keep the wrapping when the operator carries it.
+	if strings.HasSuffix(n.OpName, "ANY") || strings.HasSuffix(n.OpName, "ALL") {
+		ctx.WritePlain("(")
+		if err := n.R.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.R")
+		}
+		ctx.WritePlain(")")
+	} else if err := n.R.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.R")
 	}
 
@@ -177,7 +185,13 @@ func (n *BinaryOperationExpr) Format(w io.Writer) {
 		n.Op.Format(w)
 	}
 	fmt.Fprint(w, " ")
-	n.R.Format(w)
+	if strings.HasSuffix(n.OpName, "ANY") || strings.HasSuffix(n.OpName, "ALL") {
+		fmt.Fprint(w, "(")
+		n.R.Format(w)
+		fmt.Fprint(w, ")")
+	} else {
+		n.R.Format(w)
+	}
 }
 
 // Accept implements Node interface.
@@ -831,7 +845,7 @@ type PatternLikeExpr struct {
 	// Not is true, the expression is "not like".
 	Not bool
 
-	Escape byte
+	Escape ExprNode
 
 	PatChars []byte
 	PatTypes []byte
@@ -861,11 +875,11 @@ func (n *PatternLikeExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore PatternLikeExpr.Pattern")
 	}
 
-	escape := string(n.Escape)
-	if escape != "\\" {
+	if n.Escape != nil {
 		ctx.WriteKeyWord(" ESCAPE ")
-		ctx.WriteString(escape)
-
+		if err := n.Escape.Restore(ctx); err != nil {
+			return errors.Annotate(err, "LIKE escape")
+		}
 	}
 	return nil
 }
@@ -884,9 +898,9 @@ func (n *PatternLikeExpr) Format(w io.Writer) {
 		fmt.Fprint(w, " LIKE ")
 	}
 	n.Pattern.Format(w)
-	if n.Escape != '\\' {
+	if n.Escape != nil {
 		fmt.Fprint(w, " ESCAPE ")
-		fmt.Fprintf(w, "'%c'", n.Escape)
+		n.Escape.Format(w)
 	}
 }
 
@@ -910,6 +924,13 @@ func (n *PatternLikeExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		n.Pattern = node.(ExprNode)
+	}
+	if n.Escape != nil {
+		child, ok := n.Escape.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Escape = child.(ExprNode)
 	}
 	return v.Leave(n)
 }
@@ -1008,7 +1029,7 @@ type PatternRegexpExpr struct {
 	exprNode
 
 	// Escape is the escape character of the pattern.
-	Escape byte
+	Escape ExprNode
 	// Expr is the expression to be checked.
 	Expr ExprNode
 	// Pattern is the expression for pattern.
@@ -1029,13 +1050,19 @@ func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 
 	if n.Not {
-		ctx.WriteKeyWord(" NOT REGEXP ")
+		ctx.WriteKeyWord(" NOT SIMILAR TO ")
 	} else {
-		ctx.WriteKeyWord(" REGEXP ")
+		ctx.WriteKeyWord(" SIMILAR TO ")
 	}
 
 	if err := n.Pattern.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore PatternRegexpExpr.Pattern")
+	}
+	if n.Escape != nil {
+		ctx.WriteKeyWord(" ESCAPE ")
+		if err := n.Escape.Restore(ctx); err != nil {
+			return errors.Annotate(err, "SIMILAR TO escape")
+		}
 	}
 
 	return nil
@@ -1045,11 +1072,15 @@ func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *PatternRegexpExpr) Format(w io.Writer) {
 	n.Expr.Format(w)
 	if n.Not {
-		fmt.Fprint(w, " NOT REGEXP ")
+		fmt.Fprint(w, " NOT SIMILAR TO ")
 	} else {
-		fmt.Fprint(w, " REGEXP ")
+		fmt.Fprint(w, " SIMILAR TO ")
 	}
 	n.Pattern.Format(w)
+	if n.Escape != nil {
+		fmt.Fprint(w, " ESCAPE ")
+		n.Escape.Format(w)
+	}
 }
 
 // Accept implements Node Accept interface.
@@ -1069,6 +1100,13 @@ func (n *PatternRegexpExpr) Accept(v Visitor) (Node, bool) {
 		return n, false
 	}
 	n.Pattern = node.(ExprNode)
+	if n.Escape != nil {
+		child, ok := n.Escape.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Escape = child.(ExprNode)
+	}
 	return v.Leave(n)
 }
 

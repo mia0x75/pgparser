@@ -32,6 +32,7 @@ type FieldType struct {
 	PGModifiers   []string
 	PGArrayBounds []int64
 	PGSetOf       bool
+	PGPercentType bool
 	PGInterval    string
 }
 
@@ -57,7 +58,7 @@ func (ft *FieldType) Clone() *FieldType {
 
 // Equal checks whether two FieldType objects are equal.
 func (ft *FieldType) Equal(other *FieldType) bool {
-	if ft.PGSetOf != other.PGSetOf || ft.PGInterval != other.PGInterval ||
+	if ft.PGSetOf != other.PGSetOf || ft.PGPercentType != other.PGPercentType || ft.PGInterval != other.PGInterval ||
 		!slices.Equal(ft.PGName, other.PGName) || !slices.Equal(ft.PGModifiers, other.PGModifiers) ||
 		!slices.Equal(ft.PGArrayBounds, other.PGArrayBounds) {
 		return false
@@ -221,6 +222,9 @@ func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
 			} else {
 				ctx.WriteName(name)
 			}
+		}
+		if ft.PGPercentType {
+			ctx.WriteKeyWord("%TYPE")
 		}
 		if len(ft.PGModifiers) > 0 {
 			ctx.WritePlain("(" + strings.Join(ft.PGModifiers, ", ") + ")")

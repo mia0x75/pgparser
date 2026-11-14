@@ -1,7 +1,10 @@
 package ast
 
 import (
+	"strings"
+
 	"github.com/mia0x75/pgparser/auth"
+	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/format"
 )
 
@@ -30,24 +33,20 @@ var (
 type VacuumStmt struct {
 	stmtNode
 
-	Options []string
-	Tables  []*TableName
+	Options   *List
+	Relations *List
 }
 
 // Restore implements Node interface.
 func (n *VacuumStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("VACUUM")
-	if len(n.Options) > 0 {
-		ctx.WritePlain(" (")
-		for i, opt := range n.Options {
-			if i > 0 {
-				ctx.WritePlain(", ")
-			}
-			ctx.WriteKeyWord(opt)
-		}
-		ctx.WritePlain(")")
+	if err := restoreUtilityOptions(ctx, n.Options); err != nil {
+		return err
 	}
-	restoreTableList(ctx, n.Tables)
+	if n.Relations != nil {
+		ctx.WritePlain(" ")
+		return n.Relations.Restore(ctx)
+	}
 	return nil
 }
 
@@ -58,12 +57,14 @@ func (n *VacuumStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*VacuumStmt)
-	for i, table := range n.Tables {
-		node, ok := table.Accept(v)
-		if !ok {
-			return n, false
+	for _, list := range []**List{&n.Options, &n.Relations} {
+		if *list != nil {
+			child, ok := (*list).Accept(v)
+			if !ok {
+				return n, false
+			}
+			*list = child.(*List)
 		}
-		n.Tables[i] = node.(*TableName)
 	}
 	return v.Leave(n)
 }
@@ -84,12 +85,13 @@ func (n *ReindexStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Verbose {
 		ctx.WritePlain(" (VERBOSE)")
 	}
-	if n.Concurrently {
-		ctx.WriteKeyWord(" CONCURRENTLY")
-	}
 	if n.ObjectType != "" {
 		ctx.WritePlain(" ")
 		ctx.WriteKeyWord(n.ObjectType)
+	}
+	// The grammar places CONCURRENTLY between the object type and the name.
+	if n.Concurrently {
+		ctx.WriteKeyWord(" CONCURRENTLY")
 	}
 	if n.Name != "" {
 		ctx.WritePlain(" ")
@@ -440,12 +442,28 @@ func (n *FetchCursorStmt) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WriteKeyWord("FETCH ")
 	}
-	if n.Direction != "" {
-		ctx.WriteKeyWord(n.Direction)
-		if n.Count != 0 {
-			ctx.WritePlainf(" %d", n.Count)
+	switch n.Direction {
+	case "NEXT", "PRIOR", "FIRST", "LAST":
+		// Count is always 1 for these directions; writing it would produce
+		// SQL the grammar does not accept, which breaks restore stability.
+		ctx.WriteKeyWord(n.Direction + " ")
+	case "ALL":
+		ctx.WriteKeyWord("ALL ")
+	default:
+		if n.Direction != "" {
+			ctx.WriteKeyWord(n.Direction)
+			ctx.WritePlain(" ")
 		}
-		ctx.WritePlain(" ")
+		switch {
+		// The ALL sentinel maps back to the ALL keyword, not an integer.
+		case n.Count == FETCH_ALL:
+			ctx.WriteKeyWord("ALL ")
+		case n.Count > 0 || n.Direction == "ABSOLUTE" || n.Direction == "RELATIVE":
+			// ABSOLUTE and RELATIVE accept 0 as a meaningful quantity, so
+			// the count is written unconditionally for them.
+			ctx.WritePlainf("%d", n.Count)
+			ctx.WritePlain(" ")
+		}
 	}
 	ctx.WriteKeyWord("FROM ")
 	ctx.WriteName(n.Name)
@@ -583,20 +601,43 @@ type CopyStmt struct {
 	// WhereClause is the filter of a `COPY` statement.
 	WhereClause ExprNode
 	// Options holds the copy options of the statement.
-	Options []string
-	// Attlist holds the attributes of the copy options.
-	Attlist []string
+	Options []*DefElem
 }
 
 // Restore implements Node interface.
 func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
+	if (n.Table == nil) == (n.Query == nil) {
+		return errors.New("COPY requires exactly one table or query")
+	}
+	if n.Program && n.Std {
+		return errors.New("COPY PROGRAM requires a file name")
+	}
+	if n.Query != nil && (n.IsFrom || len(n.Columns) > 0 || n.WhereClause != nil) {
+		return errors.New("query COPY cannot have FROM, columns or WHERE")
+	}
+	if n.Std && n.FileName != "" {
+		return errors.New("COPY has both a file and a standard stream")
+	}
 	ctx.WriteKeyWord("COPY ")
-	if err := n.Table.Restore(ctx); err != nil {
-		return err
+	if n.Query != nil {
+		ctx.WritePlain("(")
+		if err := n.Query.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred while restore CopyStmt.Query")
+		}
+		ctx.WritePlain(")")
+	} else if n.Table != nil {
+		if err := n.Table.Restore(ctx); err != nil {
+			return err
+		}
+	} else {
+		return errors.New("CopyStmt has neither Table nor Query")
 	}
 	if len(n.Columns) > 0 {
 		ctx.WritePlain(" (")
 		for i, col := range n.Columns {
+			if col == nil {
+				return errors.New("COPY has a nil column")
+			}
 			if i > 0 {
 				ctx.WritePlain(", ")
 			}
@@ -614,12 +655,94 @@ func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Program {
 		ctx.WriteKeyWord("PROGRAM ")
 	}
-	if n.Std {
+	switch {
+	case n.Std && n.IsFrom:
 		ctx.WriteKeyWord("STDIN")
-	} else {
+	case n.Std:
+		ctx.WriteKeyWord("STDOUT")
+	default:
 		ctx.WriteString(n.FileName)
 	}
+	if len(n.Options) > 0 {
+		ctx.WriteKeyWord(" WITH (")
+		for i, option := range n.Options {
+			if i > 0 {
+				ctx.WritePlain(", ")
+			}
+			if err := restoreUtilityOption(ctx, option); err != nil {
+				return errors.Annotatef(err, "COPY option %d", i)
+			}
+		}
+		ctx.WritePlain(")")
+	}
+	if n.WhereClause != nil {
+		ctx.WriteKeyWord(" WHERE ")
+		if err := n.WhereClause.Restore(ctx); err != nil {
+			return errors.Annotate(err, "COPY filter")
+		}
+	}
 	return nil
+}
+
+func restoreUtilityOptions(ctx *format.RestoreCtx, options *List) error {
+	if options == nil {
+		return nil
+	}
+	ctx.WritePlain(" (")
+	for i, item := range options.Items {
+		option, ok := item.(*DefElem)
+		if !ok {
+			return errors.New("invalid utility option")
+		}
+		if i > 0 {
+			ctx.WritePlain(", ")
+		}
+		if err := restoreUtilityOption(ctx, option); err != nil {
+			return err
+		}
+	}
+	ctx.WritePlain(")")
+	return nil
+}
+
+func restoreUtilityOption(ctx *format.RestoreCtx, option *DefElem) error {
+	if option == nil || option.Defname == "" {
+		return errors.New("utility option has no name")
+	}
+	if option.Defnamespace != "" || option.Defaction != int(DEFELEM_UNSPEC) {
+		return errors.New("invalid utility option metadata")
+	}
+	switch option.Defname {
+	case "format", "freeze", "delimiter", "null", "default", "header", "quote", "escape",
+		"force_quote", "force_not_null", "force_null", "encoding", "on_error", "reject_limit", "log_verbosity",
+		"full", "verbose", "analyze", "parallel", "buffer_usage_limit":
+		ctx.WriteKeyWord(option.Defname)
+	default:
+		ctx.WriteName(option.Defname)
+	}
+	if option.Arg == nil {
+		return nil
+	}
+	ctx.WritePlain(" ")
+	if list, ok := option.Arg.(*List); ok {
+		ctx.WritePlain("(")
+		for i, item := range list.Items {
+			if i > 0 {
+				ctx.WritePlain(", ")
+			}
+			if item == nil {
+				return errors.New("COPY option has a nil value")
+			}
+			if name, ok := item.(*String); ok && strings.HasPrefix(option.Defname, "force_") {
+				ctx.WriteName(name.Str)
+			} else if err := item.Restore(ctx); err != nil {
+				return err
+			}
+		}
+		ctx.WritePlain(")")
+		return nil
+	}
+	return option.Arg.Restore(ctx)
 }
 
 // Accept implements Node Accept interface.
@@ -629,30 +752,48 @@ func (n *CopyStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*CopyStmt)
-	node, ok := n.Table.Accept(v)
-	if !ok {
-		return n, false
+	if n.Table != nil {
+		node, ok := n.Table.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Table = node.(*TableName)
 	}
-	n.Table = node.(*TableName)
+	if n.Query != nil {
+		node, ok := n.Query.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Query = node
+	}
 	for i, col := range n.Columns {
+		if col == nil {
+			continue
+		}
 		node, ok := col.Accept(v)
 		if !ok {
 			return n, false
 		}
 		n.Columns[i] = node.(*ColumnName)
 	}
-	return v.Leave(n)
-}
-
-func restoreTableList(ctx *format.RestoreCtx, tables []*TableName) {
-	for i, table := range tables {
-		if i == 0 {
-			ctx.WritePlain(" ")
-		} else {
-			ctx.WritePlain(", ")
+	for i, option := range n.Options {
+		if option == nil {
+			continue
 		}
-		_ = table.Restore(ctx)
+		node, ok := option.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options[i] = node.(*DefElem)
 	}
+	if n.WhereClause != nil {
+		node, ok := n.WhereClause.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.WhereClause = node.(ExprNode)
+	}
+	return v.Leave(n)
 }
 
 func restoreRoleList(ctx *format.RestoreCtx, roles []*auth.RoleIdentity) {

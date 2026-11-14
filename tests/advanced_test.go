@@ -133,14 +133,20 @@ func TestParseSQLGenericUtilityStatementsAST(t *testing.T) {
 
 func TestParseSQLCreateSchemaAST(t *testing.T) {
 	schema := mustParseOne(t, `CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION alice;`).(*ast.CreateSchemaStmt)
-	if !schema.IfNotExists || schema.Name != "app" || schema.Authorization != "alice" {
+	if !schema.IfNotExists || schema.Name != "app" {
+		t.Fatalf("CreateSchemaStmt = %#v", schema)
+	}
+	if schema.Authorization == nil || schema.Authorization.Rolename != "alice" {
 		t.Fatalf("CreateSchemaStmt = %#v", schema)
 	}
 	if got := compactSQL(restoreNode(t, schema)); got != `CREATE SCHEMA IF NOT EXISTS "app" AUTHORIZATION "alice"` {
 		t.Fatalf("CreateSchemaStmt restore = %q", got)
 	}
 	authOnly := mustParseOne(t, `CREATE SCHEMA AUTHORIZATION alice;`).(*ast.CreateSchemaStmt)
-	if authOnly.Name != "" || authOnly.Authorization != "alice" {
+	if authOnly.Name != "" {
+		t.Fatalf("CreateSchemaStmt = %#v", authOnly)
+	}
+	if authOnly.Authorization == nil || authOnly.Authorization.Rolename != "alice" {
 		t.Fatalf("CreateSchemaStmt = %#v", authOnly)
 	}
 }
@@ -243,25 +249,25 @@ func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 		t.Fatalf("GroupBy = %#v", grouped.GroupBy)
 	}
 
-	ct := mustParseOne(t, `CREATE TABLE t (id int) WITH (fillfactor=70) TABLESPACE ts INHERITS (parent) PARTITION BY RANGE (id);`).(*ast.CreateTableStmt)
-	if ct.WithOptions != "fillfactor = ?" || ct.Tablespace != "ts" || len(ct.Inherits) != 1 || ct.PartitionBy != "range" {
+	ct := mustParseOne(t, `CREATE TABLE t (id int) INHERITS (parent) PARTITION BY RANGE (id) WITH (fillfactor=70) TABLESPACE ts;`).(*ast.CreateTableStmt)
+	if ct.WithOptions == nil || len(ct.WithOptions.Items) != 1 || ct.WithOptions.Items[0].(*ast.DefElem).Arg.(*ast.Integer).Ival != 70 || ct.Tablespace != "ts" || len(ct.Inherits) != 1 || ct.PartitionBy == nil || ct.PartitionBy.Strategy != "r" {
 		t.Fatalf("CreateTableStmt = %#v", ct)
 	}
 
 	idx := mustParseOne(t, `CREATE INDEX CONCURRENTLY IF NOT EXISTS ix ON t USING btree (a text_pattern_ops DESC NULLS LAST) WITH (fillfactor=70) TABLESPACE ts;`).(*ast.CreateIndexStmt)
 	col := idx.IndexColNames[0]
-	if !idx.Concurrently || !idx.IfNotExists || idx.Using != "btree" || idx.WithOptions != "fillfactor = ?" || idx.Tablespace != "ts" || !col.Desc || col.NullsOrder != 2 || col.Opclass != "text_pattern_ops" {
+	if !idx.Concurrently || !idx.IfNotExists || idx.Using != "btree" || idx.WithOptions == nil || len(idx.WithOptions.Items) != 1 || idx.WithOptions.Items[0].(*ast.DefElem).Arg.(*ast.Integer).Ival != 70 || idx.Tablespace != "ts" || !col.Desc || col.NullsOrder != 2 || col.Opclass == nil || col.Opclass.Items[0].(*ast.String).Str != "text_pattern_ops" {
 		t.Fatalf("CreateIndexStmt = %#v col=%#v", idx, col)
 	}
-	if got := compactSQL(restoreNode(t, idx)); got != `CREATE INDEX CONCURRENTLY IF NOT EXISTS "ix" ON "t" USING BTREE ("a" DESC NULLS LAST "text_pattern_ops") WITH (fillfactor = ?) TABLESPACE "ts"` {
+	if got := compactSQL(restoreNode(t, idx)); got != `CREATE INDEX CONCURRENTLY IF NOT EXISTS "ix" ON "t" USING BTREE ("a" "text_pattern_ops" DESC NULLS LAST) WITH ("fillfactor" = 70) TABLESPACE "ts"` {
 		t.Fatalf("CreateIndexStmt restore = %q", got)
 	}
 
 	view := mustParseOne(t, `CREATE TEMP VIEW v WITH (security_barrier) AS SELECT 1 WITH LOCAL CHECK OPTION;`).(*ast.CreateViewStmt)
-	if !view.Temporary || !view.HasCheckOption || view.CheckOption != 0 || view.WithOptions != "security_barrier" {
+	if !view.Temporary || !view.HasCheckOption || view.CheckOption != 0 || view.WithOptions == nil || len(view.WithOptions.Items) != 1 || view.WithOptions.Items[0].(*ast.DefElem).Defname != "security_barrier" {
 		t.Fatalf("CreateViewStmt = %#v", view)
 	}
-	if got := compactSQL(restoreNode(t, view)); !strings.Contains(got, `CREATE TEMPORARY VIEW "v" WITH (security_barrier) AS `) || !strings.HasSuffix(got, "WITH LOCAL CHECK OPTION") {
+	if got := compactSQL(restoreNode(t, view)); !strings.Contains(got, `CREATE TEMPORARY VIEW "v" WITH ("security_barrier") AS `) || !strings.HasSuffix(got, "WITH LOCAL CHECK OPTION") {
 		t.Fatalf("CreateViewStmt restore = %q", got)
 	}
 
@@ -274,7 +280,7 @@ func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	}
 
 	seq := mustParseOne(t, `CREATE SEQUENCE s INCREMENT BY 2 MINVALUE 1 NO MAXVALUE START WITH 10 CACHE 5 CYCLE;`).(*ast.CreateSequenceStmt)
-	if len(seq.Options) != 6 || seq.Options[0].Tp != ast.SequenceOptionIncrement || seq.Options[0].Val != 2 {
+	if seq.Options == nil || len(seq.Options.Items) != 6 || seq.Options.Items[0].(*ast.DefElem).Defname != "increment" {
 		t.Fatalf("Sequence options = %#v", seq.Options)
 	}
 
@@ -355,12 +361,18 @@ func TestParseSQLAlterTableStructuredSpecsAST(t *testing.T) {
 		{`ALTER TABLE t ALTER COLUMN a DROP NOT NULL;`, ast.AlterTableDropNotNull, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name.L == "a" }},
 		{`ALTER TABLE t ALTER COLUMN a SET STATISTICS 100;`, ast.AlterTableSetStatistics, func(s *ast.AlterTableSpec) bool { return s.Num == 100 }},
 		{`ALTER TABLE t ALTER COLUMN a SET STORAGE external;`, ast.AlterTableSetStorage, func(s *ast.AlterTableSpec) bool { return s.Storage == "external" }},
-		{`ALTER TABLE t OWNER TO u;`, ast.AlterTableOwner, func(s *ast.AlterTableSpec) bool { return s.Owner == "u" }},
+		{`ALTER TABLE t OWNER TO u;`, ast.AlterTableOwner, func(s *ast.AlterTableSpec) bool {
+			return s.Owner != nil && s.Owner.Roletype == int(ast.ROLESPEC_CSTRING) && s.Owner.Rolename == "u"
+		}},
 		{`ALTER TABLE t SET TABLESPACE ts;`, ast.AlterTableSetTablespace, func(s *ast.AlterTableSpec) bool { return s.Name == "ts" }},
 		{`ALTER TABLE t ENABLE ALWAYS TRIGGER tr;`, ast.AlterTableEnableTrigger, func(s *ast.AlterTableSpec) bool { return s.TriggerMode == "ALWAYS" && s.Name == "tr" }},
 		{`ALTER TABLE t DISABLE TRIGGER ALL;`, ast.AlterTableDisableTrigger, func(s *ast.AlterTableSpec) bool { return s.TriggerMode == "ALL" }},
-		{`ALTER TABLE t SET (fillfactor = 70);`, ast.AlterTableSetRelOptions, func(s *ast.AlterTableSpec) bool { return s.RelOptions == "fillfactor = ?" }},
-		{`ALTER TABLE t ALTER COLUMN a RESET (n_distinct);`, ast.AlterTableResetRelOptions, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name.L == "a" && s.RelOptions == "n_distinct" }},
+		{`ALTER TABLE t SET (fillfactor = 70);`, ast.AlterTableSetRelOptions, func(s *ast.AlterTableSpec) bool {
+			return s.RelOptions != nil && len(s.RelOptions.Items) == 1 && s.RelOptions.Items[0].(*ast.DefElem).Defname == "fillfactor"
+		}},
+		{`ALTER TABLE t ALTER COLUMN a RESET (n_distinct);`, ast.AlterTableResetRelOptions, func(s *ast.AlterTableSpec) bool {
+			return s.OldColumnName.Name.L == "a" && s.RelOptions != nil && s.RelOptions.Items[0].(*ast.DefElem).Defname == "n_distinct"
+		}},
 		{`ALTER TABLE t CLUSTER ON ix;`, ast.AlterTableSetCluster, func(s *ast.AlterTableSpec) bool { return s.Name == "ix" }},
 		{`ALTER TABLE t SET WITHOUT CLUSTER;`, ast.AlterTableSetWithoutCluster, func(s *ast.AlterTableSpec) bool { return true }},
 		{`ALTER TABLE t INHERIT p;`, ast.AlterTableInherit, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.L == "p" }},

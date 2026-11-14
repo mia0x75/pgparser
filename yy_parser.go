@@ -18,6 +18,9 @@ func TrimComment(txt string) string {
 
 // Parser represents a parser instance. Some temporary objects are stored in it
 // to reduce object allocations during Parse.
+//
+// A Parser is not safe for concurrent use: Parse stores its result and lexer
+// state on the receiver. Create one Parser per goroutine.
 type Parser struct {
 	result []ast.StmtNode
 	lexer  Scanner

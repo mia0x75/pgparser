@@ -53,7 +53,7 @@ func (n *CreateServerStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("CREATE SERVER ")
 	ctx.WriteName(n.Name)
 	ctx.WriteKeyWord(" FOREIGN DATA WRAPPER ")
-	ctx.WriteString(n.Wrapper)
+	ctx.WriteName(n.Wrapper)
 	if len(n.Options) > 0 {
 		ctx.WriteKeyWord(" OPTIONS(")
 		for i, opt := range n.Options {

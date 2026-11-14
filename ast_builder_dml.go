@@ -8,7 +8,7 @@ import (
 // makeSetOp returns the set operation statement of two select statements.
 func makeSetOp(op ast.SetOprType, all bool, larg, rarg ast.Node) ast.Node {
 	selects := make([]ast.Node, 0, 2)
-	if set, ok := larg.(*ast.SetOprStmt); ok && set.SelectList != nil && !set.IsInBraces && set.With == nil && set.OrderBy == nil && set.Limit == nil {
+	if set, ok := larg.(*ast.SetOprStmt); ok && set.SelectList != nil && !set.IsInBraces && set.With == nil && set.OrderBy == nil && set.Limit == nil && set.Locking == nil {
 		// A chain of set operations is a flat list of selects.
 		selects = append(selects, set.SelectList.Selects...)
 	} else if larg != nil {
@@ -81,6 +81,9 @@ func setSelectOptions(n ast.Node, orderBy ast.Node, locking ast.Node, limit *Sel
 		}
 		if limit != nil {
 			v.Limit = limitClause(limit, v.Limit)
+		}
+		if list, ok := locking.(*ast.List); ok {
+			v.Locking = concatLists(v.Locking, list)
 		}
 	}
 	return n
@@ -156,6 +159,7 @@ func applyLocking(n *ast.SelectStmt, locking ast.Node) {
 	if !ok || list == nil {
 		return
 	}
+	n.Locking = concatLists(n.Locking, list)
 	for _, item := range list.Items {
 		lock, ok := item.(*ast.LockingClause)
 		if !ok || lock == nil {
@@ -309,9 +313,11 @@ func indexElemColNames(l *ast.List) []*ast.IndexColName {
 	for _, item := range l.Items {
 		switch v := item.(type) {
 		case *ast.IndexElem:
-			col := &ast.IndexColName{
-				Column: &ast.ColumnName{Name: model.NewCIStr(v.Name)},
-				Length: -1,
+			col := &ast.IndexColName{Length: -1}
+			if v.Name != "" {
+				col.Column = &ast.ColumnName{Name: model.NewCIStr(v.Name)}
+			} else if expr, ok := v.Expr.(ast.ExprNode); ok {
+				col.Expr = expr
 			}
 			if v.Ordering == ast.SORTBY_DESC {
 				col.Desc = true
@@ -322,14 +328,9 @@ func indexElemColNames(l *ast.List) []*ast.IndexColName {
 			case ast.SORTBY_NULLS_LAST:
 				col.NullsOrder = 2
 			}
-			if v.Opclass != nil {
-				for _, item := range v.Opclass.Items {
-					if s, ok := item.(*ast.String); ok {
-						col.Opclass = s.Str
-						break
-					}
-				}
-			}
+			col.Collation = v.Collation
+			col.Opclass = v.Opclass
+			col.OpclassOptions = v.Opclassopts
 			result = append(result, col)
 		case *ast.String:
 			result = append(result, &ast.IndexColName{

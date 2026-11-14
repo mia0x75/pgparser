@@ -93,20 +93,10 @@ type AuthOption struct {
 
 // Restore implements Node interface.
 func (n *AuthOption) Restore(ctx *format.RestoreCtx) error {
-	if n.Password {
-		ctx.WriteKeyWord("PASSWORD ")
-		if n.ByAuthString {
-			ctx.WriteString(n.AuthString)
-		} else {
-			ctx.WriteString(n.HashString)
-		}
-		return nil
-	}
-	ctx.WriteKeyWord("IDENTIFIED BY ")
+	ctx.WriteKeyWord("PASSWORD ")
 	if n.ByAuthString {
 		ctx.WriteString(n.AuthString)
 	} else {
-		ctx.WriteKeyWord("PASSWORD ")
 		ctx.WriteString(n.HashString)
 	}
 	return nil
@@ -1028,25 +1018,6 @@ func (n *UserSpec) SecurityString() string {
 		return fmt.Sprintf("{%s password = ***}", n.User)
 	}
 	return n.User.String()
-}
-
-// EncodedPassword returns the encoded password (which is the real data postgres.user).
-// The boolean value indicates input's password format is legal or not.
-func (n *UserSpec) EncodedPassword() (string, bool) {
-	if n.AuthOpt == nil {
-		return "", true
-	}
-
-	opt := n.AuthOpt
-	if opt.ByAuthString {
-		return auth.EncodePassword(opt.AuthString), true
-	}
-
-	// Not a legal password string.
-	if len(opt.HashString) != 41 || !strings.HasPrefix(opt.HashString, "*") {
-		return "", false
-	}
-	return opt.HashString, true
 }
 
 // TODO:

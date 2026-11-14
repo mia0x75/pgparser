@@ -291,9 +291,6 @@ func TestAuditUnsupportedRestore(t *testing.T) {
 		{"default_table_error", `SELECT * FROM JSON_TABLE('{}', '$' COLUMNS(a int) DEFAULT $1 ON ERROR) AS j`},
 		{"rollup_child", `SELECT 1 GROUP BY ROLLUP (JSON_ARRAY(1))`},
 		{"cube_child", `SELECT 1 GROUP BY CUBE (JSON_ARRAY(1))`},
-		{"function_privilege", "GRANT EXECUTE ON FUNCTION f(integer) TO reader"},
-		{"procedure_privilege", "REVOKE EXECUTE ON PROCEDURE p(integer) FROM reader"},
-		{"routine_privilege", "GRANT EXECUTE ON ROUTINE f(integer) TO reader"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			n, err := parser.New().ParseOneStmt(tc.sql)

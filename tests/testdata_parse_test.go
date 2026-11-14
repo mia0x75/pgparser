@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,8 @@ import (
 	"testing"
 
 	pgparser "github.com/mia0x75/pgparser"
+	"github.com/mia0x75/pgparser/ast"
+	"github.com/mia0x75/pgparser/format"
 )
 
 type testdataStatement struct {
@@ -15,12 +18,16 @@ type testdataStatement struct {
 	line int
 }
 
-// TestParseTestdataSQL parses every SQL statement in tests/testdata/*.sql and
-// reports the ones that fail. psql meta-commands, COPY data blocks, and
-// statements that depend on psql variables are skipped.
+// TestParseTestdataSQL parses every SQL statement in tests/testdata/*.sql,
+// restores each successful parse back to SQL, and re-parses the result to
+// check stability. Failures already recorded in testdata/known_failures.txt
+// are tolerated; anything else fails the test. Set PGPARSER_TESTDATA=1 for a
+// per-statement log.
 func TestParseTestdataSQL(t *testing.T) {
-	if os.Getenv("PGPARSER_TESTDATA") == "" {
-		t.Skip("diagnostic test; set PGPARSER_TESTDATA=1 to run")
+	verbose := os.Getenv("PGPARSER_TESTDATA") != ""
+	known, err := loadKnownFailures(filepath.Join("testdata", "known_failures.txt"))
+	if err != nil {
+		t.Fatalf("load known failures: %v", err)
 	}
 	files, err := filepath.Glob("testdata/*.sql")
 	if err != nil {
@@ -30,7 +37,7 @@ func TestParseTestdataSQL(t *testing.T) {
 		t.Fatal("no testdata SQL files found")
 	}
 
-	total, skipped, failed := 0, 0, 0
+	total, skipped, failed, unsupported, knownHits := 0, 0, 0, 0, 0
 	for _, file := range files {
 		data, err := os.ReadFile(file)
 		if err != nil {
@@ -44,34 +51,92 @@ func TestParseTestdataSQL(t *testing.T) {
 				continue
 			}
 			total++
-			if err := parseTestdataStatement(stmt.sql); err != nil {
+			key := fmt.Sprintf("%s:%d", file, stmt.line)
+			parseErr, restoreErr := parseTestdataStatement(stmt.sql)
+			if errors.Is(restoreErr, ast.ErrUnsupportedRestore) {
+				unsupported++
+				continue
+			}
+			if err := errors.Join(parseErr, restoreErr); err != nil {
+				if known[key] != "" {
+					knownHits++
+					if verbose {
+						t.Logf("%s:%d: [known: %s] %v", file, stmt.line, known[key], err)
+					}
+					continue
+				}
 				failed++
 				fileFailed++
-				t.Logf("%s:%d: %v\n%s", file, stmt.line, err, stmt.sql)
+				t.Errorf("%s:%d: %v", file, stmt.line, err)
+				if verbose {
+					t.Logf("%s:%d: failing statement:\n%s", file, stmt.line, stmt.sql)
+				}
 			}
 		}
-		if fileFailed > 0 {
+		if verbose && fileFailed > 0 {
 			t.Logf("%s: %d/%d statements failed", file, fileFailed, len(stmts))
 		}
 	}
+	stale := len(known) - knownHits
+	t.Logf("%d statements; %d explicitly unsupported restores; %d psql-dependent skipped; %d known failures matched (%d stale list entries, %d unexpected failures)",
+		total, unsupported, skipped, knownHits, stale, failed)
 
 	if failed > 0 {
-		t.Errorf("%d/%d SQL statements failed to parse (%d skipped)", failed, total, skipped)
+		t.Errorf("%d SQL statements failed without a known_failures.txt entry (%d skipped); add each to the list or fix the parser/restore", failed, skipped)
 	}
 }
 
-// splitTestdataSQL splits PostgreSQL regression-test input into statements. It
-// removes comments and psql meta-commands, and skips COPY FROM STDIN data.
-func parseTestdataStatement(sql string) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("panic: %v", r)
+// loadKnownFailures reads the known-failure list of the corpus gate.
+func loadKnownFailures(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	known := make(map[string]string)
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
 		}
-	}()
-	_, err = pgparser.New().ParseOneStmt(sql + ";")
-	return err
+		parts := strings.SplitN(line, "\t", 2)
+		reason := ""
+		if len(parts) == 2 {
+			reason = parts[1]
+		}
+		known[parts[0]] = reason
+	}
+	return known, nil
 }
 
+func parseTestdataStatement(sql string) (parseErr, restoreErr error) {
+	defer func() {
+		if r := recover(); r != nil {
+			restoreErr = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	stmt, err := pgparser.New().ParseOneStmt(sql + ";")
+	if err != nil {
+		return err, nil
+	}
+	var out strings.Builder
+	if err := stmt.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &out)); err != nil {
+		return nil, err
+	}
+	reparsed, err := pgparser.New().ParseOneStmt(out.String())
+	if err != nil {
+		return nil, fmt.Errorf("restored SQL cannot be parsed (%q): %w", out.String(), err)
+	}
+	var second strings.Builder
+	if err := reparsed.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &second)); err != nil {
+		return nil, fmt.Errorf("second Restore: %w", err)
+	}
+	if second.String() != out.String() {
+		return nil, fmt.Errorf("Restore is not stable: %q then %q", out.String(), second.String())
+	}
+	return nil, nil
+}
+
+// psql commands and inline COPY data are not SQL statements.
 func splitTestdataSQL(src string) []testdataStatement {
 	var (
 		stmts      []testdataStatement

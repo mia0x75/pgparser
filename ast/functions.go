@@ -3,7 +3,6 @@ package ast
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/mia0x75/pgparser/errors"
 
@@ -332,32 +331,9 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("DISTINCT ")
 	}
 	switch n.FnName.L {
-	case "convert":
-		if err := n.Args[0].Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore FuncCastExpr.Expr")
-		}
-		ctx.WriteKeyWord(" USING ")
-		ctx.WriteKeyWord(n.Args[1].GetType().Charset)
-	case "adddate", "subdate", "date_add", "date_sub":
-		if err := n.Args[0].Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-		}
-		ctx.WritePlain(", ")
-		ctx.WriteKeyWord("INTERVAL ")
-		if err := n.Args[1].Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-		}
-		ctx.WritePlain(" ")
-		ctx.WriteKeyWord(n.Args[2].(ValueExpr).GetString())
 	case "extract":
 		ctx.WriteKeyWord(n.Args[0].(ValueExpr).GetString())
 		ctx.WriteKeyWord(" FROM ")
-		if err := n.Args[1].Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-		}
-	case "get_format":
-		ctx.WriteKeyWord(n.Args[0].(ValueExpr).GetString())
-		ctx.WritePlain(", ")
 		if err := n.Args[1].Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
 		}
@@ -403,15 +379,6 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
 			}
 		}
-	case "timestampdiff", "timestampadd":
-		ctx.WriteKeyWord(n.Args[0].(ValueExpr).GetString())
-		for i := 1; i < len(n.Args); {
-			ctx.WritePlain(", ")
-			if err := n.Args[i].Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-			}
-			i++
-		}
 	default:
 		if n.Star {
 			ctx.WritePlain("*")
@@ -455,7 +422,7 @@ func (n *FuncCallExpr) Format(w io.Writer) {
 	fmt.Fprintf(w, "%s(", n.FnName.L)
 	if n.Star {
 		fmt.Fprint(w, "*")
-	} else if !n.specialFormatArgs(w) {
+	} else {
 		for i, arg := range n.Args {
 			arg.Format(w)
 			if i != len(n.Args)-1 {
@@ -464,25 +431,6 @@ func (n *FuncCallExpr) Format(w io.Writer) {
 		}
 	}
 	fmt.Fprint(w, ")")
-}
-
-// specialFormatArgs formats argument list for some special functions.
-func (n *FuncCallExpr) specialFormatArgs(w io.Writer) bool {
-	switch n.FnName.L {
-	case DateAdd, DateSub, AddDate, SubDate:
-		n.Args[0].Format(w)
-		fmt.Fprint(w, ", INTERVAL ")
-		n.Args[1].Format(w)
-		fmt.Fprintf(w, " %s", n.Args[2].(ValueExpr).GetDatumString())
-		return true
-	case TimestampAdd, TimestampDiff:
-		fmt.Fprintf(w, "%s, ", n.Args[0].(ValueExpr).GetDatumString())
-		n.Args[1].Format(w)
-		fmt.Fprint(w, ", ")
-		n.Args[2].Format(w)
-		return true
-	}
-	return false
 }
 
 // Accept implements Node interface.
@@ -701,28 +649,12 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 	if n.Star {
 		ctx.WritePlain("*")
 	}
-	switch strings.ToLower(n.F) {
-	case "group_concat":
-		for i := 0; i < len(n.Args)-1; i++ {
-			if i != 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := n.Args[i].Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore AggregateFuncExpr.Args[%d]", i)
-			}
+	for i, argv := range n.Args {
+		if i != 0 {
+			ctx.WritePlain(", ")
 		}
-		ctx.WriteKeyWord(" SEPARATOR ")
-		if err := n.Args[len(n.Args)-1].Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore AggregateFuncExpr.Args SEPARATOR")
-		}
-	default:
-		for i, argv := range n.Args {
-			if i != 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := argv.Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore AggregateFuncExpr.Args[%d]", i)
-			}
+		if err := argv.Restore(ctx); err != nil {
+			return errors.Annotatef(err, "An error occurred while restore AggregateFuncExpr.Args[%d]", i)
 		}
 	}
 	if n.OrderBy != nil {

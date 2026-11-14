@@ -17,6 +17,8 @@ import (
 // Keywords use 258 + 0..491 (492 keywords), so we start at 800
 const nonKeywordTokenBase = 800
 
+const maxIdentifierBytes = 63
+
 const (
 	// Special tokens
 	lex_EOF = 0
@@ -88,9 +90,6 @@ type Lexer struct {
 	// Unicode surrogate handling
 	utf16FirstPart rune
 
-	// Comment nesting depth
-	xcdepth int
-
 	// Configuration
 	StandardConformingStrings bool // If true, backslash is not escape in standard strings
 	BackslashQuote            int  // 0=off, 1=on, 2=safe_encoding
@@ -113,7 +112,7 @@ const (
 
 // NewLexer creates a new lexer for the given input.
 func NewLexer(input string) *Lexer {
-	return &Lexer{
+	l := &Lexer{
 		input:                     input,
 		pos:                       0,
 		state:                     stateInitial,
@@ -121,10 +120,18 @@ func NewLexer(input string) *Lexer {
 		BackslashQuote:            BackslashQuoteSafeEncoding,
 		EscapeStringWarning:       true,
 	}
+	if pos := strings.IndexByte(input, 0); pos >= 0 {
+		l.pos = pos
+		l.Err = fmt.Errorf("invalid NUL byte in SQL")
+	}
+	return l
 }
 
 // NextToken returns the next token from the input.
 func (l *Lexer) NextToken() Token {
+	if l.Err != nil {
+		return Token{Type: lex_EOF, Loc: l.pos}
+	}
 	for {
 		if l.pos >= len(l.input) {
 			// At EOF - if we're in a string state, that's an error
@@ -178,7 +185,6 @@ func (l *Lexer) lexInitial() Token {
 	// Check for C-style comment start
 	if ch == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '*' {
 		l.pos += 2
-		l.xcdepth = 0
 		l.state = stateXC
 		// Return to main loop to handle comment
 		return l.NextToken()
@@ -372,34 +378,33 @@ func (l *Lexer) skipLineComment() {
 	}
 }
 
+// skipBlockComment scans a /* ... */ comment starting just after its opening
+// delimiter.  PostgreSQL allows nested block comments.
+func (l *Lexer) skipBlockComment() bool {
+	depth := 1
+	for l.pos < len(l.input) {
+		switch {
+		case l.input[l.pos] == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '*':
+			depth++
+			l.pos += 2
+		case l.input[l.pos] == '*' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '/':
+			depth--
+			l.pos += 2
+			if depth == 0 {
+				return true
+			}
+		default:
+			l.pos++
+		}
+	}
+	return false
+}
+
 // lexComment handles C-style comments /* ... */
 func (l *Lexer) lexComment() {
-	for l.pos < len(l.input) {
-		ch := l.input[l.pos]
-
-		// Check for nested comment start
-		if ch == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '*' {
-			l.xcdepth++
-			l.pos += 2
-			continue
-		}
-
-		// Check for comment end
-		if ch == '*' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '/' {
-			l.pos += 2
-			if l.xcdepth <= 0 {
-				l.state = stateInitial
-				return
-			}
-			l.xcdepth--
-			continue
-		}
-
-		l.pos++
+	if !l.skipBlockComment() {
+		l.Err = fmt.Errorf("unterminated /* comment")
 	}
-
-	// Reached EOF inside comment
-	l.Err = fmt.Errorf("unterminated /* comment")
 	l.state = stateInitial
 }
 
@@ -450,6 +455,12 @@ func (l *Lexer) lexQuotedString() Token {
 		if l.state == stateXE && ch == '\\' && l.pos+1 < len(l.input) {
 			l.pos++
 			l.handleEscapeSequence()
+			if l.Err != nil {
+				return Token{Type: lex_EOF, Loc: l.start}
+			}
+			if l.state == stateXEU {
+				return l.lexUnicodeSurrogate()
+			}
 			continue
 		}
 
@@ -503,21 +514,21 @@ func (l *Lexer) handleEscapeSequence() {
 		} else {
 			l.literalbuf.WriteByte('x')
 		}
-	case 'u':
-		// Unicode escape: \uXXXX
-		if l.pos+3 < len(l.input) {
-			val := l.scanHex(4)
-			l.writeUnicodeChar(rune(val))
-		} else {
-			l.literalbuf.WriteByte('u')
+	case 'u', 'U':
+		digits := 4
+		if ch == 'U' {
+			digits = 8
 		}
-	case 'U':
-		// Unicode escape: \UXXXXXXXX
-		if l.pos+7 < len(l.input) {
-			val := l.scanHex(8)
-			l.writeUnicodeChar(rune(val))
+		value, err := l.scanUnicodeEscape(digits)
+		if err != nil {
+			l.Err = err
+			return
+		}
+		if value >= 0xD800 && value <= 0xDBFF {
+			l.utf16FirstPart = value
+			l.state = stateXEU
 		} else {
-			l.literalbuf.WriteByte('U')
+			l.writeUnicodeChar(value)
 		}
 	default:
 		l.literalbuf.WriteByte(ch)
@@ -552,8 +563,21 @@ func (l *Lexer) scanHex(n int) int {
 	return val
 }
 
+func (l *Lexer) scanUnicodeEscape(digits int) (rune, error) {
+	start := l.pos
+	value := l.scanHex(digits)
+	if l.pos-start != digits || value <= 0 || value > utf8.MaxRune {
+		return 0, fmt.Errorf("invalid Unicode escape sequence")
+	}
+	return rune(value), nil
+}
+
 // writeUnicodeChar writes a Unicode code point to the literal buffer.
 func (l *Lexer) writeUnicodeChar(r rune) {
+	if !validCodePoint(int64(r)) {
+		l.Err = fmt.Errorf("invalid Unicode escape sequence")
+		return
+	}
 	var buf [4]byte
 	n := utf8.EncodeRune(buf[:], r)
 	l.literalbuf.Write(buf[:n])
@@ -564,6 +588,9 @@ func (l *Lexer) lexQuoteContinue() Token {
 	// Check if there's whitespace with newline followed by quote
 	// SQL requires at least one newline in the whitespace to continue a string
 	hasNewline := false
+	if l.stateBeforeStrStop == stateXUI {
+		goto done
+	}
 
 	for l.pos < len(l.input) {
 		ch := l.input[l.pos]
@@ -602,6 +629,10 @@ done:
 	case stateXH:
 		return Token{Type: lex_XCONST, Str: str, Loc: l.start}
 	case stateXQ, stateXE:
+		if strings.IndexByte(str, 0) >= 0 || !utf8.ValidString(str) {
+			l.Err = fmt.Errorf("invalid UTF-8 string literal")
+			return Token{Type: lex_EOF, Loc: l.start}
+		}
 		return Token{Type: lex_SCONST, Str: str, Loc: l.start}
 	case stateXUS:
 		// Unicode string: U&'...'
@@ -623,7 +654,6 @@ done:
 	case stateXUI:
 		// Unicode identifier: U&"..."
 		// Check for UESCAPE clause
-		// fmt.Printf("DEBUG: checking UESCAPE for identifier %s\n", str)
 		escapeChar, err := l.scanUESCAPE()
 		if err != nil {
 			l.Err = err
@@ -637,8 +667,11 @@ done:
 			return Token{Type: lex_EOF, Loc: l.start}
 		}
 
-		// It's an identifier
-		return Token{Type: lex_IDENT, Str: decoded, Loc: l.start}
+		if decoded == "" {
+			l.Err = fmt.Errorf("zero-length delimited identifier")
+			return Token{Type: lex_EOF, Loc: l.start}
+		}
+		return Token{Type: lex_IDENT, Str: truncateIdentifier(decoded), Loc: l.start}
 	default:
 		return Token{Type: lex_SCONST, Str: str, Loc: l.start}
 	}
@@ -656,10 +689,9 @@ func (l *Lexer) lexUnicodeSurrogate() Token {
 			if ch == 'U' {
 				n = 8
 			}
-			val := l.scanHex(n)
-			// Combine surrogate pair
-			if isUTF16SurrogateSecond(rune(val)) {
-				combined := surrogateToCodepoint(l.utf16FirstPart, rune(val))
+			val, err := l.scanUnicodeEscape(n)
+			if err == nil && isUTF16SurrogateSecond(val) {
+				combined := surrogateToCodepoint(l.utf16FirstPart, val)
 				l.writeUnicodeChar(combined)
 				l.state = stateXE
 				return l.NextToken()
@@ -701,7 +733,7 @@ func (l *Lexer) lexDelimitedIdent() Token {
 				l.Err = fmt.Errorf("zero-length delimited identifier")
 				return Token{Type: lex_EOF, Loc: l.start}
 			}
-			return Token{Type: lex_IDENT, Str: str, Loc: l.start}
+			return Token{Type: lex_IDENT, Str: truncateIdentifier(str), Loc: l.start}
 		}
 
 		l.literalbuf.WriteByte(ch)
@@ -1062,12 +1094,18 @@ func (l *Lexer) lexIdent() Token {
 	// Convert to lowercase for non-keywords
 	ident = l.downcase(ident)
 
-	// Truncate if too long
-	if len(ident) >= 63 { // NAMEDATALEN
-		ident = ident[:63]
-	}
+	return Token{Type: lex_IDENT, Str: truncateIdentifier(ident), Loc: l.start}
+}
 
-	return Token{Type: lex_IDENT, Str: ident, Loc: l.start}
+func truncateIdentifier(ident string) string {
+	if len(ident) <= maxIdentifierBytes {
+		return ident
+	}
+	cut := maxIdentifierBytes
+	for cut > 0 && !utf8.RuneStart(ident[cut]) {
+		cut--
+	}
+	return ident[:cut]
 }
 
 // downcase converts an identifier to lowercase.
@@ -1149,51 +1187,35 @@ func isSpaceByte(c byte) bool {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v'
 }
 
-// scanUESCAPE attempts to scan a UESCAPE clause.
-// It returns the escape character (default backslash) and any error encountered.
-// If no UESCAPE clause is present, it returns '\\' and nil.
-// If a UESCAPE clause is present but invalid, it rewinds and returns '\\', nil,
-// effectively treating "UESCAPE" as the next token.
 func (l *Lexer) scanUESCAPE() (rune, error) {
 	savedPos := l.pos
-
-	l.skipWhitespaceAndComments()
-
-	if l.pos+7 <= len(l.input) {
-		word := l.input[l.pos : l.pos+7]
-		if strings.EqualFold(word, "UESCAPE") {
-			l.pos += 7
-			l.skipWhitespaceAndComments()
-
-			if l.pos < len(l.input) && l.input[l.pos] == '\'' {
-				l.pos++
-				if l.pos < len(l.input) {
-					ch := l.input[l.pos]
-					l.pos++
-
-					if ch == '\'' && l.pos < len(l.input) && l.input[l.pos] == '\'' {
-						ch = '\''
-						l.pos++
-					}
-
-					if l.pos < len(l.input) && l.input[l.pos] == '\'' {
-						l.pos++
-						return rune(ch), nil
-					}
-				}
-			}
-			// Invalid UESCAPE clause, rollback
-			l.pos = savedPos
-			return '\\', nil
-		}
+	if err := l.skipWhitespaceAndComments(); err != nil {
+		return 0, err
 	}
-
-	l.pos = savedPos
-	return '\\', nil
+	const keyword = "UESCAPE"
+	end := l.pos + len(keyword)
+	if end > len(l.input) || !strings.EqualFold(l.input[l.pos:end], keyword) ||
+		(end < len(l.input) && isIdentCont(l.input[end])) {
+		l.pos = savedPos
+		return '\\', nil
+	}
+	l.pos = end
+	if err := l.skipWhitespaceAndComments(); err != nil {
+		return 0, err
+	}
+	if l.pos+3 > len(l.input) || l.input[l.pos] != '\'' || l.input[l.pos+2] != '\'' {
+		return 0, fmt.Errorf("invalid Unicode escape character")
+	}
+	ch := l.input[l.pos+1]
+	if ch >= utf8.RuneSelf || isHexDigit(ch) || isSpaceByte(ch) || ch == '+' || ch == '\'' || ch == '"' {
+		return 0, fmt.Errorf("invalid Unicode escape character")
+	}
+	l.pos += 3
+	return rune(ch), nil
 }
 
 // skipWhitespaceAndComments skips whitespace and comments (both -- and /* */).
-func (l *Lexer) skipWhitespaceAndComments() {
+func (l *Lexer) skipWhitespaceAndComments() error {
 	for l.pos < len(l.input) {
 		ch := l.input[l.pos]
 
@@ -1209,27 +1231,15 @@ func (l *Lexer) skipWhitespaceAndComments() {
 
 		if ch == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '*' {
 			l.pos += 2
-			depth := 1
-			for l.pos < len(l.input) && depth > 0 {
-				if l.pos >= len(l.input) {
-					break
-				}
-				switch {
-				case l.input[l.pos] == '*' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '/':
-					depth--
-					l.pos += 2
-				case l.input[l.pos] == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '*':
-					depth++
-					l.pos += 2
-				default:
-					l.pos++
-				}
+			if !l.skipBlockComment() {
+				return fmt.Errorf("unterminated /* comment")
 			}
 			continue
 		}
 
 		break
 	}
+	return nil
 }
 
 // decodeUnicodeString decodes a U& string with the given escape character.
@@ -1237,6 +1247,7 @@ func (l *Lexer) decodeUnicodeString(s string, escape rune) (string, error) {
 	var buf strings.Builder
 	runes := []rune(s)
 	n := len(runes)
+	var high rune
 
 	for i := 0; i < n; i++ {
 		r := runes[i]
@@ -1250,44 +1261,60 @@ func (l *Lexer) decodeUnicodeString(s string, escape rune) (string, error) {
 
 			// Escaped escape char
 			if next == escape {
+				if high != 0 {
+					return "", fmt.Errorf("invalid Unicode surrogate pair")
+				}
 				buf.WriteRune(escape)
 				i++
 				continue
 			}
 
-			// + indicates 6-digit hex
+			start, digits := i+1, 4
 			if next == '+' {
-				if i+8 > n {
-					return "", fmt.Errorf("invalid Unicode escape sequence")
-				}
-				hexStr := string(runes[i+2 : i+8])
-				val, err := strconv.ParseInt(hexStr, 16, 32)
-				if err != nil {
-					return "", fmt.Errorf("invalid Unicode escape sequence: %v", err)
-				}
-				buf.WriteRune(rune(val))
-				i += 7
-				continue
+				start, digits = i+2, 6
 			}
-
-			// Otherwise 4-digit hex
-			if i+5 > n {
+			if start+digits > n {
 				return "", fmt.Errorf("invalid Unicode escape sequence")
 			}
-			hexStr := string(runes[i+1 : i+5])
-			val, err := strconv.ParseInt(hexStr, 16, 32)
-			if err != nil {
-				return "", fmt.Errorf("invalid Unicode escape sequence: %v", err)
+			var value rune
+			for _, digit := range runes[start : start+digits] {
+				if digit > 127 || !isHexDigit(byte(digit)) {
+					return "", fmt.Errorf("invalid Unicode escape sequence")
+				}
+				value = value*16 + rune(hexValue(byte(digit)))
 			}
-			buf.WriteRune(rune(val))
-			i += 4
+			i = start + digits - 1
+			if high != 0 {
+				if !isUTF16SurrogateSecond(value) {
+					return "", fmt.Errorf("invalid Unicode surrogate pair")
+				}
+				value = surrogateToCodepoint(high, value)
+				high = 0
+			} else if value >= 0xD800 && value <= 0xDBFF {
+				high = value
+				continue
+			}
+			if !validCodePoint(int64(value)) {
+				return "", fmt.Errorf("invalid Unicode escape sequence")
+			}
+			buf.WriteRune(value)
 			continue
 		}
-
+		if high != 0 {
+			return "", fmt.Errorf("invalid Unicode surrogate pair")
+		}
 		buf.WriteRune(r)
 	}
-
+	if high != 0 {
+		return "", fmt.Errorf("invalid Unicode surrogate pair")
+	}
 	return buf.String(), nil
+}
+
+// validCodePoint reports whether v is a Unicode scalar value.  Surrogates and
+// values above U+10FFFF are rejected rather than silently replaced by U+FFFD.
+func validCodePoint(v int64) bool {
+	return v > 0 && v <= utf8.MaxRune && (v < 0xD800 || v > 0xDFFF)
 }
 
 // lineAt returns the line number of the given position.

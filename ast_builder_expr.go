@@ -48,16 +48,6 @@ func subTypeName(t int64) string {
 	return "ANY"
 }
 
-// escapeChar returns the escape character of a LIKE ... ESCAPE expression.
-func escapeChar(e ast.ExprNode) byte {
-	if v, ok := e.(ast.ValueExpr); ok {
-		if s, ok := v.GetValue().(string); ok && len(s) > 0 {
-			return s[0]
-		}
-	}
-	return '\\'
-}
-
 // negateExpr returns the negation of an expression.
 func negateExpr(e ast.ExprNode) ast.ExprNode {
 	if v, ok := e.(ast.ValueExpr); ok {
@@ -179,8 +169,12 @@ func funcNameString(l *ast.List) string {
 	}
 	parts := make([]string, 0, len(l.Items))
 	for _, item := range l.Items {
-		if s, ok := item.(*ast.String); ok {
-			parts = append(parts, s.Str)
+		switch v := item.(type) {
+		case *ast.String:
+			parts = append(parts, v.Str)
+		case *ast.DataType:
+			// Name-only AST fields retain their legacy flattened representation.
+			parts = append(parts, v.Type.String())
 		}
 	}
 	return strings.Join(parts, ".")
@@ -191,6 +185,9 @@ func nameListString(l interface{}) string {
 	switch v := l.(type) {
 	case *ast.List:
 		return funcNameString(v)
+	case *ast.CollateClause:
+		// opt_collate_clause clauses carry the collation name list.
+		return nameListString(v.Collname)
 	case string:
 		return v
 	case ast.Node:
