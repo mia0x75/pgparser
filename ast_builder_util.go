@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 )
 
 // defElemNames returns the names of the definition elements of a list.
-func defElemNames(l interface{}) []string {
+func defElemNames(l any) []string {
 	switch v := l.(type) {
 	case nil:
 		return nil
@@ -36,12 +37,7 @@ func defElemNames(l interface{}) []string {
 
 // hasDefElem reports whether the list holds a definition element with the name.
 func hasDefElem(l *ast.List, name string) bool {
-	for _, n := range defElemNames(l) {
-		if n == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(defElemNames(l), name)
 }
 
 // tableNameFromList returns the table name of a qualified name list.
@@ -620,7 +616,7 @@ func columnOptions(l *ast.List) []*ast.ColumnOption {
 }
 
 // nodeList returns the list of nodes of an expression list or a node list.
-func nodeList(v interface{}) *ast.List {
+func nodeList(v any) *ast.List {
 	switch x := v.(type) {
 	case []ast.ExprNode:
 		return exprList(x)

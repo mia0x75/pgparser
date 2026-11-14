@@ -9,7 +9,7 @@ import (
 )
 
 func TestDatum(t *testing.T) {
-	values := []interface{}{
+	values := []any{
 		int64(1),
 		uint64(1),
 		1.1,
@@ -29,7 +29,7 @@ func TestDatum(t *testing.T) {
 
 func TestIsNull(t *testing.T) {
 	tests := []struct {
-		data   interface{}
+		data   any
 		isnull bool
 	}{
 		{nil, true},
@@ -44,7 +44,7 @@ func TestIsNull(t *testing.T) {
 	}
 }
 
-func testIsNull(t *testing.T, data interface{}, isnull bool) {
+func testIsNull(t *testing.T, data any, isnull bool) {
 	d := NewDatum(data)
 	if d.IsNull() != isnull {
 		t.Fatalf("data: %v, isnull: %v", data, isnull)

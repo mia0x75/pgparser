@@ -718,7 +718,7 @@ func TestParseSQLCharacterVaryingSynonym(t *testing.T) {
 	}
 
 	st := mustParseSelect(t, "SELECT 'x'::CHARACTER VARYING(20), CAST('x' AS CHARACTER VARYING(20)), a::int b FROM t;")
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		fc, ok := st.Fields.Fields[i].Expr.(*ast.FuncCastExpr)
 		if !ok {
 			t.Fatalf("field %d: expected cast, got %T", i, st.Fields.Fields[i].Expr)
@@ -1557,7 +1557,7 @@ func TestParseSQLUserRoleAndPreparedStatements(t *testing.T) {
 func TestParseSQLReferenceUtilityStatementFamilies(t *testing.T) {
 	cases := []struct {
 		sql  string
-		want interface{}
+		want any
 	}{
 		{`GRANT SELECT, UPDATE ON t TO u WITH GRANT OPTION;`, &ast.GrantStmt{}},
 		{`REVOKE SELECT ON t FROM u;`, &ast.RevokeStmt{}},

@@ -62,8 +62,8 @@ type ColumnInfo struct {
 	ID                  int64               `json:"id"`
 	Name                CIStr               `json:"name"`
 	Offset              int                 `json:"offset"`
-	OriginDefaultValue  interface{}         `json:"origin_default"`
-	DefaultValue        interface{}         `json:"default"`
+	OriginDefaultValue  any                 `json:"origin_default"`
+	DefaultValue        any                 `json:"default"`
 	DefaultValueBit     []byte              `json:"default_bit"`
 	GeneratedExprString string              `json:"generated_expr_string"`
 	GeneratedStored     bool                `json:"generated_stored"`
@@ -85,7 +85,7 @@ func (c *ColumnInfo) IsGenerated() bool {
 }
 
 // SetDefaultValue sets the default value.
-func (c *ColumnInfo) SetDefaultValue(value interface{}) error {
+func (c *ColumnInfo) SetDefaultValue(value any) error {
 	c.DefaultValue = value
 	if c.Tp == postgres.TypeBit {
 		// For postgres.TypeBit type, the default value storage format must be a string.
@@ -106,7 +106,7 @@ func (c *ColumnInfo) SetDefaultValue(value interface{}) error {
 // GetDefaultValue gets the default value of the column.
 // Default value use to stored in DefaultValue field, but now,
 // bit type default value will store in DefaultValueBit for fix bit default value decode/encode bug.
-func (c *ColumnInfo) GetDefaultValue() interface{} {
+func (c *ColumnInfo) GetDefaultValue() any {
 	if c.Tp == postgres.TypeBit && c.DefaultValueBit != nil {
 		return string(c.DefaultValueBit)
 	}

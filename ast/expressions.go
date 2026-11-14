@@ -41,8 +41,8 @@ var (
 // ValueExpr define a interface for ValueExpr.
 type ValueExpr interface {
 	ExprNode
-	SetValue(val interface{})
-	GetValue() interface{}
+	SetValue(val any)
+	GetValue() any
 	GetDatumString() string
 	GetString() string
 	GetProjectionOffset() int
@@ -50,7 +50,7 @@ type ValueExpr interface {
 }
 
 // NewValueExpr creates a ValueExpr with value, and sets default field type.
-var NewValueExpr func(interface{}) ValueExpr
+var NewValueExpr func(any) ValueExpr
 
 // NewParamMarkerExpr creates a ParamMarkerExpr.
 var NewParamMarkerExpr func(offset int) ParamMarkerExpr

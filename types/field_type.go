@@ -469,7 +469,7 @@ func setTypeFlag(flag *uint, flagItem uint, on bool) {
 }
 
 // DefaultParamTypeForValue returns the default FieldType for the parameterized value.
-func DefaultParamTypeForValue(value interface{}, tp *FieldType) {
+func DefaultParamTypeForValue(value any, tp *FieldType) {
 	switch value.(type) {
 	case nil:
 		tp.Tp = postgres.TypeVarString
@@ -496,7 +496,7 @@ func hasVariantFieldLength(tp *FieldType) bool {
 }
 
 // DefaultTypeForValue returns the default FieldType for the value.
-func DefaultTypeForValue(value interface{}, tp *FieldType) {
+func DefaultTypeForValue(value any, tp *FieldType) {
 	switch x := value.(type) {
 	case nil:
 		tp.Tp = postgres.TypeNull

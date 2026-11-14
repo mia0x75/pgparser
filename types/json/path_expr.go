@@ -119,7 +119,7 @@ func ParseJSONPathExpr(pathExpr string) (pe PathExpression, err error) {
 		err = ErrInvalidJSONPath.GenWithStackByArgs(pathExpr)
 		return
 	}
-	for i := 0; i < dollarIndex; i++ {
+	for i := range dollarIndex {
 		if !isBlank(rune(pathExpr[i])) {
 			err = ErrInvalidJSONPath.GenWithStackByArgs(pathExpr)
 			return

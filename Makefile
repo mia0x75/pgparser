@@ -16,7 +16,7 @@ generate-check:
 	git diff --exit-code -- parser.go ast/*_generated.go
 
 test:
-	go test -v -race -count=1 -cover ./...
+	go test -race -count=1 -cover ./...
 
 testdata:
 	PGPARSER_TESTDATA=1 go test -v ./tests -run TestParseTestdataSQL

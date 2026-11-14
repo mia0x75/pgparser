@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -107,8 +108,8 @@ func generate() error {
 			b.WriteString("return v.Leave(n) }")
 			edits = append(edits, edit{fset.Position(d.Body.Pos()).Offset, fset.Position(d.Body.End()).Offset, b.String()})
 		}
-		for i := len(edits) - 1; i >= 0; i-- {
-			e := edits[i]
+		for _, e := range slices.Backward(edits) {
+
 			source = append(append(append([]byte(nil), source[:e.start]...), []byte(e.body)...), source[e.end:]...)
 		}
 		formatted, err := format.Source(source)

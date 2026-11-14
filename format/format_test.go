@@ -2,7 +2,8 @@ package format
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
+
 	"strings"
 	"testing"
 )
@@ -12,7 +13,7 @@ func checkFormat(t *testing.T, f Formatter, buf *bytes.Buffer, str, expect strin
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := ioutil.ReadAll(buf)
+	b, err := io.ReadAll(buf)
 	if err != nil {
 		t.Fatal(err)
 	}

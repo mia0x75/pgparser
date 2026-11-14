@@ -1336,13 +1336,7 @@ func (l *Lexer) contextAt(pos int) string {
 	if pos > len(l.input) {
 		pos = len(l.input)
 	}
-	start := pos - 16
-	if start < 0 {
-		start = 0
-	}
-	end := pos + 16
-	if end > len(l.input) {
-		end = len(l.input)
-	}
+	start := max(pos-16, 0)
+	end := min(pos+16, len(l.input))
 	return strings.TrimSpace(l.input[start:end])
 }

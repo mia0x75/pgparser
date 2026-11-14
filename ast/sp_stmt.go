@@ -179,7 +179,7 @@ func (c *HandlerCondition) Restore(ctx *format.RestoreCtx) error {
 }
 
 // NewErrnoHandlerCondition builds a handler condition from a MySQL error code.
-func NewErrnoHandlerCondition(v interface{}) *HandlerCondition {
+func NewErrnoHandlerCondition(v any) *HandlerCondition {
 	return &HandlerCondition{Type: HandlerConditionErrorCode, Value: fmt.Sprintf("%v", v)}
 }
 

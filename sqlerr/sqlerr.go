@@ -143,7 +143,7 @@ type Error struct {
 	class   ErrClass
 	code    ErrCode
 	message string
-	args    []interface{}
+	args    []any
 	file    string
 	line    int
 }
@@ -208,7 +208,7 @@ func (e *Error) getMsg() string {
 }
 
 // GenWithStack generates a new *Error with the same class and code, and a new formatted message.
-func (e *Error) GenWithStack(format string, args ...interface{}) error {
+func (e *Error) GenWithStack(format string, args ...any) error {
 	err := *e
 	err.message = format
 	err.args = args
@@ -216,7 +216,7 @@ func (e *Error) GenWithStack(format string, args ...interface{}) error {
 }
 
 // GenWithStackByArgs generates a new *Error with the same class and code, and new arguments.
-func (e *Error) GenWithStackByArgs(args ...interface{}) error {
+func (e *Error) GenWithStackByArgs(args ...any) error {
 	err := *e
 	err.args = args
 	return errors.AddStack(&err)
@@ -224,7 +224,7 @@ func (e *Error) GenWithStackByArgs(args ...interface{}) error {
 
 // FastGen generates a new *Error with the same class and code, and a new formatted message.
 // This will not call runtime.Caller to get file and line.
-func (e *Error) FastGen(format string, args ...interface{}) error {
+func (e *Error) FastGen(format string, args ...any) error {
 	err := *e
 	err.message = format
 	err.args = args

@@ -39,13 +39,13 @@ const (
 // Datum is a data box holds different kind of data.
 // It has better performance and is easier to use than `interface{}`.
 type Datum struct {
-	k         byte        // datum kind.
-	collation uint8       // collation can hold uint8 values.
-	decimal   uint16      // decimal can hold uint16 values.
-	length    uint32      // length can hold uint32 values.
-	i         int64       // i can hold int64 uint64 float64 values.
-	b         []byte      // b can hold string or []byte values.
-	x         interface{} // x hold all other types.
+	k         byte   // datum kind.
+	collation uint8  // collation can hold uint8 values.
+	decimal   uint16 // decimal can hold uint16 values.
+	length    uint32 // length can hold uint32 values.
+	i         int64  // i can hold int64 uint64 float64 values.
+	b         []byte // b can hold string or []byte values.
+	x         any    // x hold all other types.
 }
 
 // Copy deep copies a Datum.
@@ -183,12 +183,12 @@ func (d *Datum) SetBytesAsString(b []byte) {
 }
 
 // GetInterface gets interface value.
-func (d *Datum) GetInterface() interface{} {
+func (d *Datum) GetInterface() any {
 	return d.x
 }
 
 // SetInterface sets interface to datum.
-func (d *Datum) SetInterface(x interface{}) {
+func (d *Datum) SetInterface(x any) {
 	d.k = KindInterface
 	d.x = x
 }
@@ -322,7 +322,7 @@ func (d *Datum) SetAutoID(id int64, flag uint) {
 }
 
 // GetValue gets the value of the datum of any kind.
-func (d *Datum) GetValue() interface{} {
+func (d *Datum) GetValue() any {
 	switch d.k {
 	case KindInt64:
 		return d.GetInt64()
@@ -356,7 +356,7 @@ func (d *Datum) GetValue() interface{} {
 }
 
 // SetValue sets any kind of value.
-func (d *Datum) SetValue(val interface{}) {
+func (d *Datum) SetValue(val any) {
 	switch x := val.(type) {
 	case nil:
 		d.SetNull()
@@ -454,7 +454,7 @@ func (d *Datum) ToBytes() ([]byte, error) {
 // ToMysqlJSON is similar to convertToMysqlJSON, except the
 // latter parses from string, but the former uses it as primitive.
 func (d *Datum) ToMysqlJSON() (j json.BinaryJSON, err error) {
-	var in interface{}
+	var in any
 	switch d.Kind() {
 	case KindMysqlJSON:
 		j = d.GetMysqlJSON()
@@ -506,9 +506,9 @@ func (d *Datum) convergeType(hasUint, hasDecimal, hasFloat *bool) (x Datum) {
 }
 
 // NewDatum creates a new Datum from an interface{}.
-func NewDatum(in interface{}) (d Datum) {
+func NewDatum(in any) (d Datum) {
 	switch x := in.(type) {
-	case []interface{}:
+	case []any:
 		d.SetValue(MakeDatums(x...))
 	default:
 		d.SetValue(in)
@@ -589,7 +589,7 @@ func NewMysqlEnumDatum(e Enum) (d Datum) {
 }
 
 // MakeDatums creates datum slice from interfaces.
-func MakeDatums(args ...interface{}) []Datum {
+func MakeDatums(args ...any) []Datum {
 	datums := make([]Datum, len(args))
 	for i, v := range args {
 		datums[i] = NewDatum(v)

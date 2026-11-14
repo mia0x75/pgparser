@@ -161,7 +161,7 @@ func (bj BinaryJSON) GetString() []byte {
 func (bj BinaryJSON) GetKeys() BinaryJSON {
 	count := bj.GetElemCount()
 	ret := make([]BinaryJSON, 0, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		ret = append(ret, CreateBinary(string(bj.objectGetKey(i))))
 	}
 	return buildBinaryArray(ret)
@@ -242,7 +242,7 @@ func (bj BinaryJSON) marshalFloat64To(buf []byte) ([]byte, error) {
 func (bj BinaryJSON) marshalArrayTo(buf []byte) ([]byte, error) {
 	elemCount := int(endian.Uint32(bj.Value))
 	buf = append(buf, '[')
-	for i := 0; i < elemCount; i++ {
+	for i := range elemCount {
 		if i != 0 {
 			buf = append(buf, ", "...)
 		}
@@ -258,7 +258,7 @@ func (bj BinaryJSON) marshalArrayTo(buf []byte) ([]byte, error) {
 func (bj BinaryJSON) marshalObjTo(buf []byte) ([]byte, error) {
 	elemCount := int(endian.Uint32(bj.Value))
 	buf = append(buf, '{')
-	for i := 0; i < elemCount; i++ {
+	for i := range elemCount {
 		if i != 0 {
 			buf = append(buf, ", "...)
 		}
@@ -390,12 +390,12 @@ func ParseBinaryFromString(s string) (bj BinaryJSON, err error) {
 func (bj *BinaryJSON) UnmarshalJSON(data []byte) error {
 	var decoder = json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
-	var in interface{}
+	var in any
 	err := decoder.Decode(&in)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	var trailing interface{}
+	var trailing any
 	if err := decoder.Decode(&trailing); err != io.EOF {
 		return errors.New("invalid trailing JSON input")
 	}
@@ -411,7 +411,7 @@ func (bj *BinaryJSON) UnmarshalJSON(data []byte) error {
 }
 
 // CreateBinary creates a BinaryJSON from interface.
-func CreateBinary(in interface{}) BinaryJSON {
+func CreateBinary(in any) BinaryJSON {
 	typeCode, buf, err := appendBinary(nil, in)
 	if err != nil {
 		panic(err)
@@ -419,7 +419,7 @@ func CreateBinary(in interface{}) BinaryJSON {
 	return BinaryJSON{TypeCode: typeCode, Value: buf}
 }
 
-func appendBinary(buf []byte, in interface{}) (TypeCode, []byte, error) {
+func appendBinary(buf []byte, in any) (TypeCode, []byte, error) {
 	var typeCode byte
 	var err error
 	switch x := in.(type) {
@@ -453,13 +453,13 @@ func appendBinary(buf []byte, in interface{}) (TypeCode, []byte, error) {
 	case BinaryJSON:
 		typeCode = x.TypeCode
 		buf = append(buf, x.Value...)
-	case []interface{}:
+	case []any:
 		typeCode = TypeCodeArray
 		buf, err = appendBinaryArray(buf, x)
 		if err != nil {
 			return typeCode, nil, errors.Trace(err)
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		typeCode = TypeCodeObject
 		buf, err = appendBinaryObject(buf, x)
 		if err != nil {
@@ -476,10 +476,10 @@ func appendZero(buf []byte, length int) []byte {
 	var tmp [8]byte
 	rem := length % 8
 	loop := length / 8
-	for i := 0; i < loop; i++ {
+	for range loop {
 		buf = append(buf, tmp[:]...)
 	}
-	for i := 0; i < rem; i++ {
+	for range rem {
 		buf = append(buf, 0)
 	}
 	return buf
@@ -540,7 +540,7 @@ func appendBinaryUint64(buf []byte, v uint64) []byte {
 	return buf
 }
 
-func appendBinaryArray(buf []byte, array []interface{}) ([]byte, error) {
+func appendBinaryArray(buf []byte, array []any) ([]byte, error) {
 	docOff := len(buf)
 	buf = appendUint32(buf, uint32(len(array)))
 	buf = appendZero(buf, dataSizeOff)
@@ -558,7 +558,7 @@ func appendBinaryArray(buf []byte, array []interface{}) ([]byte, error) {
 	return buf, nil
 }
 
-func appendBinaryValElem(buf []byte, docOff, valEntryOff int, val interface{}) ([]byte, error) {
+func appendBinaryValElem(buf []byte, docOff, valEntryOff int, val any) ([]byte, error) {
 	var typeCode TypeCode
 	var err error
 	elemDocOff := len(buf)
@@ -582,10 +582,10 @@ func appendBinaryValElem(buf []byte, docOff, valEntryOff int, val interface{}) (
 
 type field struct {
 	key string
-	val interface{}
+	val any
 }
 
-func appendBinaryObject(buf []byte, x map[string]interface{}) ([]byte, error) {
+func appendBinaryObject(buf []byte, x map[string]any) ([]byte, error) {
 	docOff := len(buf)
 	buf = appendUint32(buf, uint32(len(x)))
 	buf = appendZero(buf, dataSizeOff)

@@ -144,7 +144,7 @@ func columnRefWithIndirection(name string, ind *ast.List) ast.ExprNode {
 }
 
 // exprsFromList returns the expressions of a list.
-func exprsFromList(v interface{}) []ast.ExprNode {
+func exprsFromList(v any) []ast.ExprNode {
 	switch l := v.(type) {
 	case nil:
 		return nil
@@ -181,7 +181,7 @@ func funcNameString(l *ast.List) string {
 }
 
 // nameListString returns the dotted name of a name list.
-func nameListString(l interface{}) string {
+func nameListString(l any) string {
 	switch v := l.(type) {
 	case *ast.List:
 		return funcNameString(v)
