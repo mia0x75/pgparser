@@ -25,7 +25,7 @@ func TestT(t *testing.T) {
 
 	// Test invalid opcode
 	defer func() {
-		recover()
+		_ = recover()
 	}()
 
 	op = 0

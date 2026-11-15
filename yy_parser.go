@@ -1,6 +1,7 @@
 package parser
 
 import (
+	stderrors "errors"
 	"fmt"
 
 	"github.com/mia0x75/pgparser/ast"
@@ -22,33 +23,32 @@ type Parser struct {
 
 // New returns a Parser object.
 func New() *Parser {
-	if ast.NewValueExpr == nil ||
-		ast.NewParamMarkerExpr == nil ||
-		ast.NewHexLiteral == nil ||
-		ast.NewBitLiteral == nil {
-		panic("no parser driver (forgotten import?)")
-	}
 	return &Parser{}
 }
 
 // Parse parses a query string to raw ast.StmtNode.
-func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, warns []error, err error) {
+func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
+	if ast.NewValueExpr == nil ||
+		ast.NewParamMarkerExpr == nil ||
+		ast.NewHexLiteral == nil ||
+		ast.NewBitLiteral == nil {
+		return nil, errors.New("no parser driver (forgotten import?)")
+	}
 	parser.result = nil
 
 	parser.lexer.reset(sql)
 	ret := yyParse(&parser.lexer)
 
-	warns, errs := parser.lexer.Errors()
-	if len(warns) > 0 {
-		warns = append([]error(nil), warns...)
-	} else {
-		warns = nil
-	}
+	errs := parser.lexer.Errors()
 	if len(errs) != 0 {
-		return nil, warns, errors.Trace(errs[0])
+		// Keep a single error unwrappable so sqlerr class checks still match.
+		if len(errs) == 1 {
+			return nil, errors.Trace(errs[0])
+		}
+		return nil, errors.Trace(stderrors.Join(errs...))
 	}
 	if ret != 0 {
-		return nil, warns, errors.Trace(ErrSyntax)
+		return nil, errors.Trace(ErrSyntax)
 	}
 	if parser.lexer.result != nil {
 		for _, item := range parser.lexer.result.Items {
@@ -66,13 +66,13 @@ func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, warns []error, err
 	for _, stmt := range parser.result {
 		ast.SetFlag(stmt)
 	}
-	return parser.result, warns, nil
+	return parser.result, nil
 }
 
 // ParseOneStmt parses a query and returns an ast.StmtNode.
 // The query must have exactly one statement, otherwise ErrSyntax is returned.
 func (parser *Parser) ParseOneStmt(sql string) (ast.StmtNode, error) {
-	stmts, _, err := parser.Parse(sql)
+	stmts, err := parser.Parse(sql)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

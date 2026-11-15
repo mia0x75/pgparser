@@ -131,13 +131,13 @@ func (n *ValueExpr) GetDatumString() string {
 func (n *ValueExpr) Format(w io.Writer) {
 	s, err := valueExprString(n)
 	if err != nil {
-		fmt.Fprint(w, "<unsupported>")
+		_, _ = fmt.Fprint(w, "<unsupported>")
 		return
 	}
 	if n.Kind() == types.KindString || n.Kind() == types.KindBytes {
 		s = strconv.Quote(s)
 	}
-	fmt.Fprint(w, s)
+	_, _ = fmt.Fprint(w, s)
 }
 
 // newValueExpr creates a ValueExpr with value, and sets default field type.
@@ -198,7 +198,7 @@ func newParamMarkerExpr(offset int) ast.ParamMarkerExpr {
 
 // Format the ExprNode into a Writer.
 func (n *ParamMarkerExpr) Format(w io.Writer) {
-	fmt.Fprintf(w, "$%d", n.Offset+1)
+	_, _ = fmt.Fprintf(w, "$%d", n.Offset+1)
 }
 
 // Accept implements Node Accept interface.

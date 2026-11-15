@@ -535,3 +535,8 @@ var keywordMap = func() map[string]*Keyword {
 func LookupKeyword(name string) *Keyword {
 	return keywordMap[strings.ToLower(name)]
 }
+
+// lookupKeywordLower looks up a name already lowercased by the caller.
+func lookupKeywordLower(name string) *Keyword {
+	return keywordMap[name]
+}

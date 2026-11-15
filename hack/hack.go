@@ -1,9 +1,6 @@
 package hack
 
-import (
-	"reflect"
-	"unsafe"
-)
+import "unsafe"
 
 // MutableString can be used as string via string(MutableString) without performance loss.
 type MutableString string
@@ -15,20 +12,14 @@ func String(b []byte) (s MutableString) {
 	if len(b) == 0 {
 		return ""
 	}
-	pbytes := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	pstring := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	pstring.Data = pbytes.Data
-	pstring.Len = pbytes.Len
-	return
+	return MutableString(unsafe.String(unsafe.SliceData(b), len(b)))
 }
 
 // Slice converts string to slice without copy.
-// Use at your own risk.
+// Use it at your own risk.
 func Slice(s string) (b []byte) {
-	pbytes := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	pstring := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	pbytes.Data = pstring.Data
-	pbytes.Len = pstring.Len
-	pbytes.Cap = pstring.Len
-	return
+	if len(s) == 0 {
+		return nil
+	}
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }

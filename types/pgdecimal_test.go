@@ -63,7 +63,7 @@ func TestPgDecimal_ToInt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var dec PgDecimal
-		dec.FromString([]byte(tt.input))
+		_ = dec.FromString([]byte(tt.input))
 		result, ec := dec.ToInt()
 		if ec != tt.err {
 			t.Errorf("got error %v, want %v", ec, tt.err)
@@ -91,7 +91,7 @@ func TestPgDecimal_ToUint(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var dec PgDecimal
-		dec.FromString([]byte(tt.input))
+		_ = dec.FromString([]byte(tt.input))
 		result, ec := dec.ToUint()
 		if ec != tt.err {
 			t.Errorf("got error %v, want %v", ec, tt.err)
@@ -135,7 +135,7 @@ func TestPgDecimal_ToFloat(t *testing.T) {
 	}
 	for _, ca := range tests {
 		var dec PgDecimal
-		dec.FromString([]byte(ca.s))
+		_ = dec.FromString([]byte(ca.s))
 		f, err := dec.ToFloat64()
 		if err != nil {
 			t.Errorf("got error %v, want nil", err)
@@ -421,7 +421,7 @@ func TestPgDecimal_RoundWithHalfEven(t *testing.T) {
 
 	for _, ca := range tests {
 		var dec PgDecimal
-		dec.FromString([]byte(ca.input))
+		_ = dec.FromString([]byte(ca.input))
 		var rounded PgDecimal
 		err := dec.Round(&rounded, ca.scale, ModeHalfEven)
 		if err != ca.err {
@@ -459,7 +459,7 @@ func TestPgDecimal_RoundWithTruncate(t *testing.T) {
 	}
 	for _, ca := range tests {
 		var dec PgDecimal
-		dec.FromString([]byte(ca.input))
+		_ = dec.FromString([]byte(ca.input))
 		var rounded PgDecimal
 		err := dec.Round(&rounded, ca.scale, ModeTruncate)
 		if err != ca.err {
@@ -495,7 +495,7 @@ func TestPgDecimal_RoundWithCeil(t *testing.T) {
 	}
 	for _, ca := range tests {
 		var dec PgDecimal
-		dec.FromString([]byte(ca.input))
+		_ = dec.FromString([]byte(ca.input))
 		var rounded PgDecimal
 		err := dec.Round(&rounded, ca.scale, modeCeiling)
 		if err == nil {
@@ -513,8 +513,8 @@ func TestPgDecimal_FromString(t *testing.T) {
 	tests := []tcase{
 		{"12345", "12345", nil},
 		{"12345.", "12345", nil},
-		{"123.45.", "123.45", nil},
-		{"-123.45.", "-123.45", nil},
+		{"123.45.", "0", ErrBadNumber},
+		{"-123.45.", "0", ErrBadNumber},
 		{".00012345000098765", "0.00012345000098765", nil},
 		{".12345000098765", "0.12345000098765", nil},
 		{"-.000000012345000098765", "-0.000000012345000098765", nil},
@@ -524,13 +524,13 @@ func TestPgDecimal_FromString(t *testing.T) {
 		{"1e1073741823", "999999999999999999999999999999999999999999999999999999999999999999999999999999999", ErrOverflow},
 		{"-1e1073741823", "-999999999999999999999999999999999999999999999999999999999999999999999999999999999", ErrOverflow},
 		{"1e18446744073709551620", "0", ErrBadNumber},
-		{"1e", "1", ErrTruncated},
+		{"1e", "0", ErrBadNumber},
 		{"1e001", "10", nil},
 		{"1e00", "1", nil},
-		{"1eabc", "1", ErrTruncated},
-		{"1e 1dddd ", "10", ErrTruncated},
-		{"1e - 1", "1", ErrTruncated},
-		{"1e -1", "0.1", nil},
+		{"1eabc", "0", ErrBadNumber},
+		{"1e 1dddd ", "0", ErrBadNumber},
+		{"1e - 1", "0", ErrBadNumber},
+		{"1e -1", "0", ErrBadNumber},
 	}
 	for _, ca := range tests {
 		var dec PgDecimal
@@ -574,7 +574,7 @@ func TestPgDecimal_ToString(t *testing.T) {
 	}
 	for _, ca := range tests {
 		var dec PgDecimal
-		dec.FromString([]byte(ca.input))
+		_ = dec.FromString([]byte(ca.input))
 		result := dec.ToString()
 		if string(result) != ca.output {
 			t.Errorf("got %#v, want %#v", string(result), ca.output)
@@ -667,8 +667,8 @@ func TestPgDecimal_Compare(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var a, b PgDecimal
-		a.FromString([]byte(tt.a))
-		b.FromString([]byte(tt.b))
+		_ = a.FromString([]byte(tt.a))
+		_ = b.FromString([]byte(tt.b))
 		if got := a.Compare(&b); got != tt.cmp {
 			t.Fatalf("got %d, want %d", got, tt.cmp)
 		}
@@ -793,8 +793,8 @@ func TestPgDecimal_Sub(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var a, b, sum PgDecimal
-		a.FromString([]byte(tt.a))
-		b.FromString([]byte(tt.b))
+		_ = a.FromString([]byte(tt.a))
+		_ = b.FromString([]byte(tt.b))
 		err := DecimalSub(&a, &b, &sum)
 		if err != tt.err {
 			t.Fatalf("got error %v, want %v", err, tt.err)
@@ -828,8 +828,8 @@ func TestPgDecimal_Mul(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var a, b, product PgDecimal
-		a.FromString([]byte(tt.a))
-		b.FromString([]byte(tt.b))
+		_ = a.FromString([]byte(tt.a))
+		_ = b.FromString([]byte(tt.b))
 		err := DecimalMul(&a, &b, &product)
 		if err != tt.err {
 			t.Errorf("got error %v, want %v", err, tt.err)
@@ -867,8 +867,8 @@ func TestPgDecimal_DivMod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var a, b, to PgDecimal
-		a.FromString([]byte(tt.a))
-		b.FromString([]byte(tt.b))
+		_ = a.FromString([]byte(tt.a))
+		_ = b.FromString([]byte(tt.b))
 		err := doDivMod(&a, &b, &to, nil, 5)
 		if err != tt.err {
 			t.Errorf("got error %v, want %v", err, tt.err)
@@ -893,8 +893,8 @@ func TestPgDecimal_DivMod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var a, b, to PgDecimal
-		a.FromString([]byte(tt.a))
-		b.FromString([]byte(tt.b))
+		_ = a.FromString([]byte(tt.a))
+		_ = b.FromString([]byte(tt.b))
 		ec := doDivMod(&a, &b, nil, &to, 0)
 		if ec != tt.err {
 			t.Errorf("got error %v, want %v", ec, tt.err)
@@ -917,8 +917,8 @@ func TestPgDecimal_DivMod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var a, b, to PgDecimal
-		a.FromString([]byte(tt.a))
-		b.FromString([]byte(tt.b))
+		_ = a.FromString([]byte(tt.a))
+		_ = b.FromString([]byte(tt.b))
 		ec := DecimalDiv(&a, &b, &to, DivFracIncr)
 		if ec != tt.err {
 			t.Errorf("got error %v, want %v", ec, tt.err)
@@ -939,8 +939,8 @@ func TestPgDecimal_DivMod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		var a, b, to PgDecimal
-		a.FromString([]byte(tt.a))
-		b.FromString([]byte(tt.b))
+		_ = a.FromString([]byte(tt.a))
+		_ = b.FromString([]byte(tt.b))
 		ec := DecimalMod(&a, &b, &to)
 		if ec != tt.err {
 			t.Errorf("got error %v, want %v", ec, tt.err)

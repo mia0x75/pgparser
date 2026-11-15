@@ -431,7 +431,7 @@ func (n *JSONTableExpr) Accept(v Visitor) (Node, bool) {
 			if !ok {
 				return n, false
 			}
-			n.Passing[i0] = updated.(Node)
+			n.Passing[i0] = updated
 		}
 	}
 	for i0 := range n.Columns {

@@ -179,10 +179,8 @@ func TestBinaryJSONModify(t *testing.T) {
 			if obtain.String() != expected.String() {
 				t.Fatalf("got %#v, want %#v", obtain.String(), expected.String())
 			}
-		} else {
-			if err == nil {
-				t.Fatal("got nil, want error")
-			}
+		} else if err == nil {
+			t.Fatal("got nil, want error")
 		}
 	}
 }
@@ -222,10 +220,8 @@ func TestBinaryJSONRemove(t *testing.T) {
 			if obtain.String() != expected.String() {
 				t.Fatalf("got %#v, want %#v", obtain.String(), expected.String())
 			}
-		} else {
-			if err == nil {
-				t.Fatal("got nil, want error")
-			}
+		} else if err == nil {
+			t.Fatal("got nil, want error")
 		}
 	}
 }
@@ -261,7 +257,7 @@ func TestCompareBinary(t *testing.T) {
 	}
 	for _, tt := range tests {
 		cmp := CompareBinary(tt.left, tt.right)
-		if !(cmp < 0) {
+		if cmp >= 0 {
 			t.Fatalf("got %#v, want < 0", cmp)
 		}
 	}
@@ -312,7 +308,7 @@ func BenchmarkBinaryMarshal(b *testing.B) {
 	b.SetBytes(int64(len(benchStr)))
 	bj, _ := ParseBinaryFromString(benchStr)
 	for i := 0; i < b.N; i++ {
-		bj.MarshalJSON()
+		_, _ = bj.MarshalJSON()
 	}
 }
 
@@ -368,5 +364,29 @@ func TestBinaryJSONDepth(t *testing.T) {
 		if obj.GetElemDepth() != tt.expected {
 			t.Fatalf("got %#v, want %#v", obj.GetElemDepth(), tt.expected)
 		}
+	}
+}
+
+// Truncated or hand-built values must not panic the public accessors.
+func TestBinaryJSONTruncatedValues(t *testing.T) {
+	for _, bj := range []BinaryJSON{
+		{},
+		{TypeCode: TypeCodeString},
+		{TypeCode: TypeCodeInt64},
+		{TypeCode: TypeCodeLiteral},
+		{TypeCode: TypeCodeObject, Value: []byte{1}},
+		{TypeCode: TypeCodeArray, Value: []byte{1}},
+		{TypeCode: TypeCodeObject, Value: []byte{0, 0, 0, 1}},
+	} {
+		_ = bj.Type()
+		_ = bj.GetString()
+		_ = bj.GetInt64()
+		_ = bj.GetUint64()
+		_ = bj.GetFloat64()
+		_ = bj.GetElemCount()
+		_ = bj.String()
+	}
+	if got := (BinaryJSON{}).Type(); got != "UNKNOWN" {
+		t.Fatalf("Type() = %q, want UNKNOWN", got)
 	}
 }

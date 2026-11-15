@@ -148,15 +148,16 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		}
 		ctx.WritePlain(")")
 	case *PartitionElem:
-		if n.Name != "" {
+		switch {
+		case n.Name != "":
 			ctx.WriteName(n.Name)
-		} else if n.Expr != nil {
+		case n.Expr != nil:
 			ctx.WritePlain("(")
 			if err := n.Expr.Restore(ctx); err != nil {
 				return err
 			}
 			ctx.WritePlain(")")
-		} else {
+		default:
 			return fmt.Errorf("partition key has no expression")
 		}
 		if n.Collation != nil {

@@ -9,7 +9,6 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/hack"
 	"github.com/mia0x75/pgparser/postgres"
-	"github.com/mia0x75/pgparser/sqlerr"
 	"github.com/mia0x75/pgparser/types/json"
 )
 
@@ -151,14 +150,13 @@ func (d *Datum) SetFloat32(f float32) {
 
 // GetString gets string value.
 func (d *Datum) GetString() string {
-	return string(hack.String(d.b))
+	return string(d.b)
 }
 
 // SetString sets string value.
 func (d *Datum) SetString(s string) {
 	d.k = KindString
-	sink(s)
-	d.b = hack.Slice(s)
+	d.b = []byte(s)
 }
 
 // sink prevents s from being allocated on the stack.
@@ -487,27 +485,6 @@ func (d *Datum) ToPgJSON() (j json.BinaryJSON, err error) {
 	return
 }
 
-func invalidConv(d *Datum, tp byte) (Datum, error) {
-	return Datum{}, errors.Errorf("cannot convert datum from %s to type %s.", KindStr(d.Kind()), TypeStr(tp))
-}
-
-func (d *Datum) convergeType(hasUint, hasDecimal, hasFloat *bool) (x Datum) {
-	x = *d
-	switch d.Kind() {
-	case KindUint64:
-		*hasUint = true
-	case KindFloat32:
-		f := d.GetFloat32()
-		x.SetFloat64(float64(f))
-		*hasFloat = true
-	case KindFloat64:
-		*hasFloat = true
-	case KindDecimal:
-		*hasDecimal = true
-	}
-	return x
-}
-
 // NewDatum creates a new Datum from an interface{}.
 func NewDatum(in any) (d Datum) {
 	switch x := in.(type) {
@@ -636,7 +613,7 @@ func DatumsToString(datums []Datum, handleSpecialValue bool) (string, error) {
 	size := len(datums)
 	if size > 1 {
 		strs[0] = "(" + strs[0]
-		strs[size-1] = strs[size-1] + ")"
+		strs[size-1] += ")"
 	}
 	return strings.Join(strs, ", "), nil
 }
@@ -644,8 +621,7 @@ func DatumsToString(datums []Datum, handleSpecialValue bool) (string, error) {
 // DatumsToStrNoErr converts some datums to a formatted string.
 // If an error occurs, it will print a log instead of returning an error.
 func DatumsToStrNoErr(datums []Datum) string {
-	str, err := DatumsToString(datums, true)
-	sqlerr.Log(errors.Trace(err))
+	str, _ := DatumsToString(datums, true)
 	return str
 }
 

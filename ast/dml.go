@@ -64,7 +64,6 @@ const (
 // Join represents table join.
 type Join struct {
 	node
-	resultSetNode
 
 	// Left table can be TableSource or JoinNode.
 	Left ResultSetNode
@@ -189,7 +188,6 @@ func (n *Join) Accept(v Visitor) (Node, bool) {
 // TableName represents a table name.
 type TableName struct {
 	node
-	resultSetNode
 
 	Schema model.CIStr
 	Name   model.CIStr
@@ -517,7 +515,6 @@ func (n *TableSample) Accept(v Visitor) (Node, bool) {
 // TableFunction represents a set-returning function used as a table source.
 type TableFunction struct {
 	node
-	resultSetNode
 
 	// Expr is the function call expression.
 	Expr ExprNode
@@ -583,7 +580,7 @@ func (n *TableSource) Restore(ctx *format.RestoreCtx) error {
 	}
 	if n.TableSample != nil {
 		ctx.WriteKeyWord(" TABLESAMPLE ")
-		ctx.WriteKeyWord(n.TableSample.Method)
+		ctx.WriteName(n.TableSample.Method)
 		ctx.WritePlain("(")
 		for i, arg := range n.TableSample.Args {
 			if i > 0 {
@@ -731,12 +728,12 @@ func (n *WildCardField) Restore(ctx *format.RestoreCtx) error {
 // Format implements ExprNode interface.
 func (n *WildCardField) Format(w io.Writer) {
 	if schema := n.Schema.String(); schema != "" {
-		fmt.Fprintf(w, "%s.", schema)
+		_, _ = fmt.Fprintf(w, "%s.", schema)
 	}
 	if table := n.Table.String(); table != "" {
-		fmt.Fprintf(w, "%s.", table)
+		_, _ = fmt.Fprintf(w, "%s.", table)
 	}
-	fmt.Fprint(w, "*")
+	_, _ = fmt.Fprint(w, "*")
 }
 
 // Accept implements Node Accept interface.
@@ -892,32 +889,20 @@ func (n *ByItem) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain("()")
 		case GroupingSetRollup:
 			ctx.WriteKeyWord("ROLLUP (")
-			if err := restoreExprSets(ctx, n.GroupingSet.Sets); err != nil {
+			if err := restoreExprList(ctx, n.GroupingSet.Sets[0]); err != nil {
 				return err
 			}
 			ctx.WritePlain(")")
 		case GroupingSetCube:
 			ctx.WriteKeyWord("CUBE (")
-			if err := restoreExprSets(ctx, n.GroupingSet.Sets); err != nil {
+			if err := restoreExprList(ctx, n.GroupingSet.Sets[0]); err != nil {
 				return err
 			}
 			ctx.WritePlain(")")
 		case GroupingSetSets:
 			ctx.WriteKeyWord("GROUPING SETS (")
-			for i, set := range n.GroupingSet.Sets {
-				if i > 0 {
-					ctx.WritePlain(", ")
-				}
-				ctx.WritePlain("(")
-				for j, e := range set {
-					if j > 0 {
-						ctx.WritePlain(", ")
-					}
-					if err := e.Restore(ctx); err != nil {
-						return err
-					}
-				}
-				ctx.WritePlain(")")
+			if err := restoreExprSets(ctx, n.GroupingSet.Sets); err != nil {
+				return err
 			}
 			ctx.WritePlain(")")
 		}
@@ -943,17 +928,17 @@ func (n *ByItem) Format(w io.Writer) {
 	if n.GroupingSet != nil {
 		switch n.GroupingSet.Type {
 		case GroupingSetEmpty:
-			fmt.Fprint(w, "()")
+			_, _ = fmt.Fprint(w, "()")
 		case GroupingSetRollup:
-			fmt.Fprint(w, "ROLLUP (")
+			_, _ = fmt.Fprint(w, "ROLLUP (")
 			// Note: restoreExprSets not available in Format, skipping
-			fmt.Fprint(w, ")")
+			_, _ = fmt.Fprint(w, ")")
 		case GroupingSetCube:
-			fmt.Fprint(w, "CUBE (")
-			fmt.Fprint(w, ")")
+			_, _ = fmt.Fprint(w, "CUBE (")
+			_, _ = fmt.Fprint(w, ")")
 		case GroupingSetSets:
-			fmt.Fprint(w, "GROUPING SETS (")
-			fmt.Fprint(w, ")")
+			_, _ = fmt.Fprint(w, "GROUPING SETS (")
+			_, _ = fmt.Fprint(w, ")")
 		}
 		return
 	}
@@ -961,13 +946,13 @@ func (n *ByItem) Format(w io.Writer) {
 		n.Expr.Format(w)
 	}
 	if n.Desc {
-		fmt.Fprint(w, " DESC")
+		_, _ = fmt.Fprint(w, " DESC")
 	}
 	switch n.NullOrder {
 	case 1:
-		fmt.Fprint(w, " NULLS FIRST")
+		_, _ = fmt.Fprint(w, " NULLS FIRST")
 	case 2:
-		fmt.Fprint(w, " NULLS LAST")
+		_, _ = fmt.Fprint(w, " NULLS LAST")
 	}
 }
 
@@ -1034,24 +1019,24 @@ func (n *GroupByClause) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the GroupByClause into a Writer.
 func (n *GroupByClause) Format(w io.Writer) {
-	fmt.Fprint(w, "GROUP BY ")
+	_, _ = fmt.Fprint(w, "GROUP BY ")
 	for i, v := range n.Items {
 		if i != 0 {
-			fmt.Fprint(w, ", ")
+			_, _ = fmt.Fprint(w, ", ")
 		}
 		v.Format(w)
 	}
 	if n.WithRollup {
-		fmt.Fprint(w, " WITH ROLLUP")
+		_, _ = fmt.Fprint(w, " WITH ROLLUP")
 	}
 	if n.WithCube {
-		fmt.Fprint(w, " WITH CUBE")
+		_, _ = fmt.Fprint(w, " WITH CUBE")
 	}
 	if n.HasCheckOption {
 		if n.CheckOption == model.CheckOptionLocal {
-			fmt.Fprint(w, " WITH LOCAL CHECK OPTION")
+			_, _ = fmt.Fprint(w, " WITH LOCAL CHECK OPTION")
 		} else {
-			fmt.Fprint(w, " WITH CASCADED CHECK OPTION")
+			_, _ = fmt.Fprint(w, " WITH CASCADED CHECK OPTION")
 		}
 	}
 }
@@ -1090,7 +1075,7 @@ func (n *HavingClause) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the HavingClause into a Writer.
 func (n *HavingClause) Format(w io.Writer) {
-	fmt.Fprint(w, "HAVING ")
+	_, _ = fmt.Fprint(w, "HAVING ")
 	if n.Expr != nil {
 		n.Expr.Format(w)
 	}
@@ -1134,10 +1119,10 @@ func (n *OrderByClause) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the OrderByClause into a Writer.
 func (n *OrderByClause) Format(w io.Writer) {
-	fmt.Fprint(w, "ORDER BY ")
+	_, _ = fmt.Fprint(w, "ORDER BY ")
 	for i, item := range n.Items {
 		if i != 0 {
-			fmt.Fprint(w, ", ")
+			_, _ = fmt.Fprint(w, ", ")
 		}
 		item.Format(w)
 	}
@@ -1163,7 +1148,6 @@ func (n *OrderByClause) Accept(v Visitor) (Node, bool) {
 // SelectStmt represents the select query node.
 type SelectStmt struct {
 	dmlNode
-	resultSetNode
 
 	// SelectStmtOpts wraps around select hints and switches.
 	*SelectStmtOpts
@@ -1220,24 +1204,24 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyWord("SELECT ")
 
-	if n.SelectStmtOpts.Priority > 0 {
-		ctx.WriteKeyWord(postgres.Priority2Str[n.SelectStmtOpts.Priority])
+	if n.Priority > 0 {
+		ctx.WriteKeyWord(postgres.Priority2Str[n.Priority])
 		ctx.WritePlain(" ")
 	}
 
-	if n.SelectStmtOpts.SQLSmallResult {
+	if n.SQLSmallResult {
 		ctx.WriteKeyWord("SQL_SMALL_RESULT ")
 	}
 
-	if n.SelectStmtOpts.SQLBigResult {
+	if n.SQLBigResult {
 		ctx.WriteKeyWord("SQL_BIG_RESULT ")
 	}
 
-	if n.SelectStmtOpts.SQLBufferResult {
+	if n.SQLBufferResult {
 		ctx.WriteKeyWord("SQL_BUFFER_RESULT ")
 	}
 
-	if n.TableHints != nil && len(n.TableHints) != 0 {
+	if len(n.TableHints) != 0 {
 		ctx.WritePlain("/*+ ")
 		for i, tableHint := range n.TableHints {
 			if err := tableHint.Restore(ctx); err != nil {
@@ -1249,9 +1233,9 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 
 	if n.Distinct {
 		ctx.WriteKeyWord("DISTINCT ")
-		if n.SelectStmtOpts != nil && len(n.SelectStmtOpts.DistinctOn) > 0 {
+		if n.SelectStmtOpts != nil && len(n.DistinctOn) > 0 {
 			ctx.WriteKeyWord("ON (")
-			for i, item := range n.SelectStmtOpts.DistinctOn {
+			for i, item := range n.DistinctOn {
 				if i > 0 {
 					ctx.WritePlain(", ")
 				}
@@ -1262,7 +1246,7 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain(") ")
 		}
 	}
-	if n.SelectStmtOpts.StraightJoin {
+	if n.StraightJoin {
 		ctx.WriteKeyWord("STRAIGHT_JOIN ")
 	}
 	if n.Fields != nil {
@@ -1435,7 +1419,7 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 		}
 		n.With = node.(*WithClause)
 	}
-	if n.TableHints != nil && len(n.TableHints) != 0 {
+	if len(n.TableHints) != 0 {
 		newHints := make([]*TableOptimizerHint, len(n.TableHints))
 		for i, hint := range n.TableHints {
 			node, ok := hint.Accept(v)
@@ -1828,7 +1812,6 @@ func (n *SetOprSelectList) Accept(v Visitor) (Node, bool) {
 // SetOprStmt represents a "union/except/intersect statement"
 type SetOprStmt struct {
 	dmlNode
-	resultSetNode
 
 	// IsInBraces indicates whether the whole statement is in braces.
 	IsInBraces bool
@@ -2041,17 +2024,22 @@ func (n *LoadDataStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyWord("INFILE ")
 	ctx.WriteString(n.Path)
-	if n.OnDuplicate == OnDuplicateKeyHandlingReplace {
+	switch n.OnDuplicate {
+	case OnDuplicateKeyHandlingReplace:
 		ctx.WriteKeyWord(" REPLACE")
-	} else if n.OnDuplicate == OnDuplicateKeyHandlingIgnore {
+	case OnDuplicateKeyHandlingIgnore:
 		ctx.WriteKeyWord(" IGNORE")
 	}
 	ctx.WriteKeyWord(" INTO TABLE ")
 	if err := n.Table.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore LoadDataStmt.Table")
 	}
-	n.FieldsInfo.Restore(ctx)
-	n.LinesInfo.Restore(ctx)
+	if err := n.FieldsInfo.Restore(ctx); err != nil {
+		return errors.Annotate(err, "An error occurred while restore LoadDataStmt.FieldsInfo")
+	}
+	if err := n.LinesInfo.Restore(ctx); err != nil {
+		return errors.Annotate(err, "An error occurred while restore LoadDataStmt.LinesInfo")
+	}
 	if n.IgnoreLines != 0 {
 		ctx.WriteKeyWord(" IGNORE ")
 		ctx.WritePlainf("%d", n.IgnoreLines)
@@ -2805,7 +2793,7 @@ func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyWord("DELETE ")
 
-	if n.TableHints != nil && len(n.TableHints) != 0 {
+	if len(n.TableHints) != 0 {
 		ctx.WritePlain("/*+ ")
 		for i, tableHint := range n.TableHints {
 			if err := tableHint.Restore(ctx); err != nil {
@@ -2993,7 +2981,7 @@ func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyWord("UPDATE ")
 
-	if n.TableHints != nil && len(n.TableHints) != 0 {
+	if len(n.TableHints) != 0 {
 		ctx.WritePlain("/*+ ")
 		for i, tableHint := range n.TableHints {
 			if err := tableHint.Restore(ctx); err != nil {
@@ -3241,7 +3229,6 @@ const (
 // ShowStmt is a statement to provide information about databases, tables, columns and so on.
 type ShowStmt struct {
 	dmlNode
-	resultSetNode
 
 	Tp          ShowStmtType // Databases/Tables/Columns/....
 	DBName      string
@@ -3518,34 +3505,34 @@ func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
 func (n *WindowSpec) Format(w io.Writer) {
 	name := n.Name.String()
 	if name != "" {
-		fmt.Fprint(w, name)
+		_, _ = fmt.Fprint(w, name)
 		if n.OnlyAlias {
 			return
 		}
-		fmt.Fprint(w, " AS ")
+		_, _ = fmt.Fprint(w, " AS ")
 	}
-	fmt.Fprint(w, "(")
+	_, _ = fmt.Fprint(w, "(")
 	sep := ""
 	refName := n.Ref.String()
 	if refName != "" {
-		fmt.Fprint(w, refName)
+		_, _ = fmt.Fprint(w, refName)
 		sep = " "
 	}
 	if n.PartitionBy != nil {
-		fmt.Fprint(w, sep)
+		_, _ = fmt.Fprint(w, sep)
 		n.PartitionBy.Format(w)
 		sep = " "
 	}
 	if n.OrderBy != nil {
-		fmt.Fprint(w, sep)
+		_, _ = fmt.Fprint(w, sep)
 		n.OrderBy.Format(w)
 		sep = " "
 	}
 	if n.Frame != nil {
-		fmt.Fprint(w, sep)
+		_, _ = fmt.Fprint(w, sep)
 		n.Frame.Format(w)
 	}
-	fmt.Fprint(w, ")")
+	_, _ = fmt.Fprint(w, ")")
 }
 
 // Accept implements Node Accept interface.
@@ -3602,10 +3589,10 @@ func (n *PartitionByClause) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the PartitionByClause into a Writer.
 func (n *PartitionByClause) Format(w io.Writer) {
-	fmt.Fprint(w, "PARTITION BY ")
+	_, _ = fmt.Fprint(w, "PARTITION BY ")
 	for i, v := range n.Items {
 		if i != 0 {
-			fmt.Fprint(w, ", ")
+			_, _ = fmt.Fprint(w, ", ")
 		}
 		v.Format(w)
 	}
@@ -3686,24 +3673,24 @@ func (n *FrameClause) Restore(ctx *format.RestoreCtx) error {
 func (n *FrameClause) Format(w io.Writer) {
 	switch n.Type {
 	case Rows:
-		fmt.Fprint(w, "ROWS")
+		_, _ = fmt.Fprint(w, "ROWS")
 	case Ranges:
-		fmt.Fprint(w, "RANGE")
+		_, _ = fmt.Fprint(w, "RANGE")
 	case Groups:
-		fmt.Fprint(w, "GROUPS")
+		_, _ = fmt.Fprint(w, "GROUPS")
 	}
-	fmt.Fprint(w, " BETWEEN ")
+	_, _ = fmt.Fprint(w, " BETWEEN ")
 	n.Extent.Start.Format(w)
-	fmt.Fprint(w, " AND ")
+	_, _ = fmt.Fprint(w, " AND ")
 	n.Extent.End.Format(w)
 	switch n.Exclusion {
 	case 0:
 	case int64(FRAMEOPTION_EXCLUDE_CURRENT_ROW):
-		fmt.Fprint(w, " EXCLUDE CURRENT ROW")
+		_, _ = fmt.Fprint(w, " EXCLUDE CURRENT ROW")
 	case int64(FRAMEOPTION_EXCLUDE_GROUP):
-		fmt.Fprint(w, " EXCLUDE GROUP")
+		_, _ = fmt.Fprint(w, " EXCLUDE GROUP")
 	case int64(FRAMEOPTION_EXCLUDE_TIES):
-		fmt.Fprint(w, " EXCLUDE TIES")
+		_, _ = fmt.Fprint(w, " EXCLUDE TIES")
 	}
 }
 
@@ -3776,7 +3763,9 @@ func (n *FrameBound) Restore(ctx *format.RestoreCtx) error {
 			// Here the Unit string should not be quoted.
 			// TODO: This is a temporary workaround that should be changed once something like "Keyword Expression" is implemented.
 			var sb strings.Builder
-			n.Unit.Restore(format.NewRestoreCtx(0, &sb))
+			if err := n.Unit.Restore(format.NewRestoreCtx(0, &sb)); err != nil {
+				return errors.Annotate(err, "An error occurred while restore FrameBound.Unit")
+			}
 			ctx.WritePlain(" ")
 			ctx.WriteKeyWord(sb.String())
 		}
@@ -3792,26 +3781,26 @@ func (n *FrameBound) Restore(ctx *format.RestoreCtx) error {
 // Format formats the FrameBound into a Writer.
 func (n *FrameBound) Format(w io.Writer) {
 	if n.UnBounded {
-		fmt.Fprint(w, "UNBOUNDED ")
+		_, _ = fmt.Fprint(w, "UNBOUNDED ")
 	}
 	switch n.Type {
 	case CurrentRow:
-		fmt.Fprint(w, "CURRENT ROW")
+		_, _ = fmt.Fprint(w, "CURRENT ROW")
 	case Preceding, Following:
 		if n.Unit != nil {
-			fmt.Fprint(w, "INTERVAL ")
+			_, _ = fmt.Fprint(w, "INTERVAL ")
 		}
 		if n.Expr != nil {
 			n.Expr.Format(w)
 		}
 		if n.Unit != nil {
-			fmt.Fprint(w, " ")
+			_, _ = fmt.Fprint(w, " ")
 			n.Unit.Format(w)
 		}
 		if n.Type == Preceding {
-			fmt.Fprint(w, " PRECEDING")
+			_, _ = fmt.Fprint(w, " PRECEDING")
 		} else {
-			fmt.Fprint(w, " FOLLOWING")
+			_, _ = fmt.Fprint(w, " FOLLOWING")
 		}
 	}
 }

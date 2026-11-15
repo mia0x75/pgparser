@@ -136,7 +136,7 @@ func TestAuditTimePrecisionRegression(t *testing.T) {
 
 func TestAuditLexerRegression(t *testing.T) {
 	for _, sql := range []string{"SELECT $0", "SELECT $2147483648", "SELECT $999999999999999999999", "SELECT 1; /*", "SELECT 1; '", "SELECT 1; E'", "SELECT 1; $$", `SELECT 1; "`, "SELECT 1; B'", "SELECT 1; U&'"} {
-		if _, _, err := parser.New().Parse(sql); err == nil {
+		if _, err := parser.New().Parse(sql); err == nil {
 			t.Errorf("accepted %q", sql)
 		}
 	}
@@ -423,11 +423,11 @@ func TestAuditPrivilegeRestoreNames(t *testing.T) {
 
 func TestAuditParserReuse(t *testing.T) {
 	p := parser.New()
-	first, _, err := p.Parse("SELECT 1")
+	first, err := p.Parse("SELECT 1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := p.Parse("DELETE FROM t"); err != nil {
+	if _, err := p.Parse("DELETE FROM t"); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok := first[0].(*ast.SelectStmt); !ok {

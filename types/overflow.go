@@ -91,14 +91,15 @@ func MulInt64(a int64, b int64) (int64, error) {
 		negative = false
 	)
 
-	if a > 0 && b > 0 {
+	switch {
+	case a > 0 && b > 0:
 		res, err = MulUint64(uint64(a), uint64(b))
-	} else if a < 0 && b < 0 {
+	case a < 0 && b < 0:
 		res, err = MulUint64(uint64(-a), uint64(-b))
-	} else if a < 0 && b > 0 {
+	case a < 0 && b > 0:
 		negative = true
 		res, err = MulUint64(uint64(-a), uint64(b))
-	} else {
+	default:
 		negative = true
 		res, err = MulUint64(uint64(a), uint64(-b))
 	}

@@ -127,10 +127,11 @@ func strToInt(str string) (int64, error) {
 	}
 	negative := false
 	i := 0
-	if str[i] == '-' {
+	switch str[i] {
+	case '-':
 		negative = true
 		i++
-	} else if str[i] == '+' {
+	case '+':
 		i++
 	}
 
@@ -150,7 +151,7 @@ func strToInt(str string) (int64, error) {
 			err = errors.Trace(ErrBadNumber)
 			break
 		}
-		r = r * uint64(10)
+		r *= uint64(10)
 
 		r1 := r + uint64(str[i]-'0')
 		if r1 < r || r1 > maxUint {

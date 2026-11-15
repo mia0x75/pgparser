@@ -16,7 +16,7 @@ func TestParseSQLSyntaxErrors(t *testing.T) {
 		"SELECT 1; SELECT FROM; SELECT 2;",
 	}
 	for _, sql := range cases {
-		_, _, err := pgparser.New().Parse(sql)
+		_, err := pgparser.New().Parse(sql)
 		if err == nil {
 			t.Fatalf("Parse(%q) expected error", sql)
 		}
@@ -31,7 +31,7 @@ func TestParseSQLSyntaxErrors(t *testing.T) {
 	if _, err := pgparser.New().ParseOneStmt(""); err == nil {
 		t.Fatal("ParseOneStmt with empty input should fail")
 	}
-	stmts, _, err := pgparser.New().Parse("")
+	stmts, err := pgparser.New().Parse("")
 	if err != nil || len(stmts) != 0 {
 		t.Fatalf("Parse(empty) = %d stmts, err %v", len(stmts), err)
 	}
@@ -42,7 +42,7 @@ func TestParseSQLBatchStatements(t *testing.T) {
 	sql := `SELECT u.id, COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id = u.id WHERE u.active = true AND o.created_at > $1 GROUP BY u.id HAVING COUNT(o.id) > 1 ORDER BY order_count DESC LIMIT 10;
 UPDATE users SET status = 'active' WHERE id = $2 RETURNING id;
 DELETE FROM sessions WHERE expires_at < NOW();`
-	stmts, _, err := pgparser.New().Parse(sql)
+	stmts, err := pgparser.New().Parse(sql)
 	if err != nil {
 		t.Fatalf("Parse batch: %v", err)
 	}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/mia0x75/pgparser/errors"
 
-	. "github.com/mia0x75/pgparser/format"
+	"github.com/mia0x75/pgparser/format"
 )
 
 // Op is opcode type.
@@ -152,11 +152,11 @@ var opsLiteral = map[Op]string{
 
 // Format the ExprNode into a Writer.
 func (o Op) Format(w io.Writer) {
-	fmt.Fprintf(w, "%s", opsLiteral[o])
+	_, _ = fmt.Fprintf(w, "%s", opsLiteral[o])
 }
 
 // Restore the Op into a Writer
-func (o Op) Restore(ctx *RestoreCtx) error {
+func (o Op) Restore(ctx *format.RestoreCtx) error {
 	if v, ok := opsLiteral[o]; ok {
 		ctx.WriteKeyWord(v)
 		return nil

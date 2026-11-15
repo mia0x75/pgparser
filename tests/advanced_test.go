@@ -259,7 +259,7 @@ func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	if !idx.Concurrently || !idx.IfNotExists || idx.Using != "btree" || idx.WithOptions == nil || len(idx.WithOptions.Items) != 1 || idx.WithOptions.Items[0].(*ast.DefElem).Arg.(*ast.Integer).Ival != 70 || idx.Tablespace != "ts" || !col.Desc || col.NullsOrder != 2 || col.Opclass == nil || col.Opclass.Items[0].(*ast.String).Str != "text_pattern_ops" {
 		t.Fatalf("CreateIndexStmt = %#v col=%#v", idx, col)
 	}
-	if got := compactSQL(restoreNode(t, idx)); got != `CREATE INDEX CONCURRENTLY IF NOT EXISTS "ix" ON "t" USING BTREE ("a" "text_pattern_ops" DESC NULLS LAST) WITH ("fillfactor" = 70) TABLESPACE "ts"` {
+	if got := compactSQL(restoreNode(t, idx)); got != `CREATE INDEX CONCURRENTLY IF NOT EXISTS "ix" ON "t" USING "btree" ("a" "text_pattern_ops" DESC NULLS LAST) WITH ("fillfactor" = 70) TABLESPACE "ts"` {
 		t.Fatalf("CreateIndexStmt restore = %q", got)
 	}
 

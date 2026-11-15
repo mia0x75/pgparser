@@ -281,10 +281,19 @@ func (n *AlterDatabaseStmt) Accept(v Visitor) (Node, bool) {
 type CommentStmt struct {
 	ddlNode
 
-	// ObjectType is the commented object kind, e.g. table, column, index.
+	// ObjectType is the lowercase object kind, e.g. "table" or "column".
 	ObjectType string
-	// ObjectName is the fully qualified object name.
-	ObjectName string
+	// ObjectName holds the name parts of the commented object.
+	ObjectName []string
+	// ParentName holds the relation name for constraint, policy, rule and
+	// trigger comments.
+	ParentName []string
+	// ExtraName holds the access method or language of operator class,
+	// operator family and transform comments.
+	ExtraName []string
+	// Suffix holds the restored tail of the reference: an argument signature
+	// for routines, a type for transforms and casts.
+	Suffix string
 	// Comment is nil when the comment is removed with `IS NULL`.
 	Comment *string
 }
@@ -292,33 +301,45 @@ type CommentStmt struct {
 // Restore implements Node interface.
 func (n *CommentStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("COMMENT ON ")
-	// Constraint, policy, rule, and trigger comments carry the object and
-	// its parent relation as "parent.child", so split them for the
-	// `name ON ...` grammar forms.
+	// Constraint, policy, rule and trigger comments write the object name
+	// before the parent relation, so they cannot use the plain form.
 	switch n.ObjectType {
 	case "tabconstraint":
-		rest, name := splitDotName(n.ObjectName)
 		ctx.WriteKeyWord("CONSTRAINT ")
-		ctx.WriteName(name)
+		writeNameParts(ctx, n.ObjectName)
 		ctx.WriteKeyWord(" ON ")
-		ctx.WriteName(rest)
+		writeNameParts(ctx, n.ParentName)
 	case "domconstraint":
-		rest, name := splitDotName(n.ObjectName)
 		ctx.WriteKeyWord("CONSTRAINT ")
-		ctx.WriteName(name)
+		writeNameParts(ctx, n.ObjectName)
 		ctx.WriteKeyWord(" ON DOMAIN ")
-		ctx.WriteName(rest)
+		writeNameParts(ctx, n.ParentName)
 	case "policy", "rule", "trigger":
-		rest, name := splitDotName(n.ObjectName)
-		ctx.WriteKeyWord(n.ObjectType)
-		ctx.WritePlain(" ")
-		ctx.WriteName(name)
+		ctx.WriteKeyWord(strings.ToUpper(n.ObjectType) + " ")
+		writeNameParts(ctx, n.ObjectName)
 		ctx.WriteKeyWord(" ON ")
-		ctx.WriteName(rest)
+		writeNameParts(ctx, n.ParentName)
+	case "operator class", "operator family":
+		ctx.WriteKeyWord(strings.ToUpper(n.ObjectType) + " ")
+		writeNameParts(ctx, n.ObjectName)
+		ctx.WriteKeyWord(" USING ")
+		writeNameParts(ctx, n.ExtraName)
+	case "transform":
+		ctx.WriteKeyWord("TRANSFORM FOR ")
+		ctx.WritePlain(n.Suffix)
+		ctx.WriteKeyWord(" LANGUAGE ")
+		writeNameParts(ctx, n.ExtraName)
+	case "cast":
+		ctx.WriteKeyWord("CAST (")
+		ctx.WritePlain(n.Suffix)
+		ctx.WritePlain(")")
+	case "large object":
+		ctx.WriteKeyWord("LARGE OBJECT ")
+		ctx.WritePlain(strings.Join(n.ObjectName, "."))
 	default:
-		ctx.WriteKeyWord(n.ObjectType)
-		ctx.WritePlain(" ")
-		ctx.WriteName(n.ObjectName)
+		ctx.WriteKeyWord(strings.ToUpper(n.ObjectType) + " ")
+		writeNameParts(ctx, n.ObjectName)
+		ctx.WritePlain(n.Suffix)
 	}
 	ctx.WriteKeyWord(" IS ")
 	if n.Comment == nil {
@@ -329,13 +350,14 @@ func (n *CommentStmt) Restore(ctx *format.RestoreCtx) error {
 	return nil
 }
 
-// splitDotName splits a dotted object name into its leading parent and last part.
-func splitDotName(name string) (string, string) {
-	idx := strings.LastIndex(name, ".")
-	if idx < 0 {
-		return "", name
+// writeNameParts writes a dotted name, quoting every part on its own.
+func writeNameParts(ctx *format.RestoreCtx, parts []string) {
+	for i, part := range parts {
+		if i > 0 {
+			ctx.WritePlain(".")
+		}
+		ctx.WriteName(part)
 	}
-	return name[:idx], name[idx+1:]
 }
 
 // Accept implements Node Accept interface.
@@ -703,7 +725,7 @@ const (
 	ColumnOptionNoOption ColumnOptionType = iota
 	ColumnOptionPrimaryKey
 	ColumnOptionNotNull
-	ColumnOptionAutoIncrement
+	ColumnOptionIdentity
 	ColumnOptionDefaultValue
 	ColumnOptionUniqKey
 	ColumnOptionNull
@@ -724,9 +746,9 @@ const (
 
 var (
 	invalidOptionForGeneratedColumn = map[ColumnOptionType]struct{}{
-		ColumnOptionAutoIncrement: {},
-		ColumnOptionOnUpdate:      {},
-		ColumnOptionDefaultValue:  {},
+		ColumnOptionIdentity:     {},
+		ColumnOptionOnUpdate:     {},
+		ColumnOptionDefaultValue: {},
 	}
 )
 
@@ -746,6 +768,10 @@ type ColumnOption struct {
 	StrValue string
 	// NullsNotDistinct is true for `UNIQUE NULLS NOT DISTINCT` columns.
 	NullsNotDistinct bool
+	// GeneratedWhen is 'a' for ALWAYS or 'd' for BY DEFAULT, for ColumnOptionIdentity.
+	GeneratedWhen byte
+	// SequenceOptions holds the parenthesized identity sequence options.
+	SequenceOptions *List
 }
 
 // Restore implements Node interface.
@@ -769,8 +795,23 @@ func (n *ColumnOption) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("PRIMARY KEY")
 	case ColumnOptionNotNull:
 		ctx.WriteKeyWord("NOT NULL")
-	case ColumnOptionAutoIncrement:
-		ctx.WriteKeyWord("AUTO_INCREMENT")
+	case ColumnOptionIdentity:
+		ctx.WriteKeyWord("GENERATED ")
+		if n.GeneratedWhen == byte('d') {
+			ctx.WriteKeyWord("BY DEFAULT ")
+		} else {
+			ctx.WriteKeyWord("ALWAYS ")
+		}
+		ctx.WriteKeyWord("AS IDENTITY")
+		if n.SequenceOptions != nil {
+			var opts strings.Builder
+			if err := restoreSeqOptions(format.NewRestoreCtx(format.DefaultRestoreFlags, &opts), n.SequenceOptions); err != nil {
+				return errors.Annotate(err, "An error occurred while splicing ColumnOption Identity options")
+			}
+			ctx.WritePlain(" (")
+			ctx.WritePlain(strings.TrimSpace(opts.String()))
+			ctx.WritePlain(")")
+		}
 	case ColumnOptionDefaultValue:
 		ctx.WriteKeyWord("DEFAULT ")
 		if err := n.Expr.Restore(ctx); err != nil {
@@ -1177,7 +1218,7 @@ func (n *ColumnDef) Validate() bool {
 		_, found := invalidOptionForGeneratedColumn[opt.Tp]
 		illegalOpt4gc = illegalOpt4gc || found
 	}
-	return !(generatedCol && illegalOpt4gc)
+	return !generatedCol || !illegalOpt4gc
 }
 
 // CreateTableStmt is a statement to create a table.
@@ -1854,7 +1895,7 @@ func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	if n.Using != "" {
 		ctx.WriteKeyWord(" USING ")
-		ctx.WriteKeyWord(n.Using)
+		ctx.WriteName(n.Using)
 	}
 
 	ctx.WritePlain(" (")

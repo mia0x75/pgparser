@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"sort"
 	"strconv"
 	"unicode/utf8"
@@ -22,12 +21,10 @@ func (bj BinaryJSON) Type() string {
 	case TypeCodeArray:
 		return "ARRAY"
 	case TypeCodeLiteral:
-		switch bj.Value[0] {
-		case LiteralNil:
+		if len(bj.Value) > 0 && bj.Value[0] == LiteralNil {
 			return "NULL"
-		default:
-			return "BOOLEAN"
 		}
+		return "BOOLEAN"
 	case TypeCodeInt64:
 		return "INTEGER"
 	case TypeCodeUint64:
@@ -37,8 +34,7 @@ func (bj BinaryJSON) Type() string {
 	case TypeCodeString:
 		return "STRING"
 	default:
-		msg := fmt.Sprintf(unknownTypeCodeErrorMsg, bj.TypeCode)
-		panic(msg)
+		return "UNKNOWN"
 	}
 }
 
@@ -142,14 +138,15 @@ func (bj BinaryJSON) Extract(pathExprList []PathExpression) (ret BinaryJSON, fou
 	for _, pathExpr := range pathExprList {
 		buf = bj.extractTo(buf, pathExpr)
 	}
-	if len(buf) == 0 {
+	switch {
+	case len(buf) == 0:
 		found = false
-	} else if len(pathExprList) == 1 && len(buf) == 1 {
+	case len(pathExprList) == 1 && len(buf) == 1:
 		// If pathExpr contains asterisks, len(elemList) won't be 1
 		// even if len(pathExprList) equals to 1.
 		found = true
 		ret = buf[0]
-	} else {
+	default:
 		found = true
 		ret = buildBinaryArray(buf)
 	}
@@ -161,7 +158,8 @@ func (bj BinaryJSON) extractTo(buf []BinaryJSON, pathExpr PathExpression) []Bina
 		return append(buf, bj)
 	}
 	currentLeg, subPathExpr := pathExpr.popOneLeg()
-	if currentLeg.typ == pathLegIndex {
+	switch {
+	case currentLeg.typ == pathLegIndex:
 		if bj.TypeCode != TypeCodeArray {
 			if currentLeg.arrayIndex <= 0 && currentLeg.arrayIndex != arrayIndexAsterisk {
 				buf = bj.extractTo(buf, subPathExpr)
@@ -176,7 +174,7 @@ func (bj BinaryJSON) extractTo(buf []BinaryJSON, pathExpr PathExpression) []Bina
 		} else if currentLeg.arrayIndex < elemCount {
 			buf = bj.arrayGetElem(currentLeg.arrayIndex).extractTo(buf, subPathExpr)
 		}
-	} else if currentLeg.typ == pathLegKey && bj.TypeCode == TypeCodeObject {
+	case currentLeg.typ == pathLegKey && bj.TypeCode == TypeCodeObject:
 		elemCount := bj.GetElemCount()
 		if currentLeg.dotKey == "*" {
 			for i := range elemCount {
@@ -188,14 +186,15 @@ func (bj BinaryJSON) extractTo(buf []BinaryJSON, pathExpr PathExpression) []Bina
 				buf = child.extractTo(buf, subPathExpr)
 			}
 		}
-	} else if currentLeg.typ == pathLegDoubleAsterisk {
+	case currentLeg.typ == pathLegDoubleAsterisk:
 		buf = bj.extractTo(buf, subPathExpr)
-		if bj.TypeCode == TypeCodeArray {
+		switch bj.TypeCode {
+		case TypeCodeArray:
 			elemCount := bj.GetElemCount()
 			for i := range elemCount {
 				buf = bj.arrayGetElem(i).extractTo(buf, pathExpr)
 			}
-		} else if bj.TypeCode == TypeCodeObject {
+		case TypeCodeObject:
 			elemCount := bj.GetElemCount()
 			for i := range elemCount {
 				buf = bj.objectGetValWithCount(i, elemCount).extractTo(buf, pathExpr)
@@ -575,8 +574,7 @@ func i64AsFloat64(i64 int64, typeCode TypeCode) float64 {
 	case TypeCodeFloat64:
 		return *(*float64)(unsafe.Pointer(&i64))
 	default:
-		msg := fmt.Sprintf(unknownTypeCodeErrorMsg, typeCode)
-		panic(msg)
+		return 0
 	}
 }
 
@@ -658,7 +656,7 @@ func mergeBinaryObject(objects []BinaryJSON) BinaryJSON {
 // PeekBytesAsJSON trys to peek some bytes from b, until
 // we can deserialize a JSON from those bytes.
 func PeekBytesAsJSON(b []byte) (n int, err error) {
-	if len(b) <= 0 {
+	if len(b) == 0 {
 		err = errors.New("Cant peek from empty bytes")
 		return
 	}

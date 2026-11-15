@@ -64,24 +64,24 @@ func (f Frame) format(w io.Writer, s fmt.State, verb rune) {
 			pc := f.pc()
 			fn := runtime.FuncForPC(pc)
 			if fn == nil {
-				io.WriteString(w, "unknown")
+				_, _ = io.WriteString(w, "unknown")
 			} else {
 				file, _ := fn.FileLine(pc)
-				io.WriteString(w, fn.Name())
-				io.WriteString(w, "\n\t")
-				io.WriteString(w, file)
+				_, _ = io.WriteString(w, fn.Name())
+				_, _ = io.WriteString(w, "\n\t")
+				_, _ = io.WriteString(w, file)
 			}
 		default:
-			io.WriteString(w, path.Base(f.file()))
+			_, _ = io.WriteString(w, path.Base(f.file()))
 		}
 	case 'd':
-		io.WriteString(w, strconv.Itoa(f.line()))
+		_, _ = io.WriteString(w, strconv.Itoa(f.line()))
 	case 'n':
 		name := runtime.FuncForPC(f.pc()).Name()
-		io.WriteString(w, funcname(name))
+		_, _ = io.WriteString(w, funcname(name))
 	case 'v':
 		f.format(w, s, 's')
-		io.WriteString(w, ":")
+		_, _ = io.WriteString(w, ":")
 		f.format(w, s, 'd')
 	}
 }
@@ -116,7 +116,7 @@ func (st StackTrace) Format(s fmt.State, verb rune) {
 	case 's':
 		st.formatSlice(&b, s, verb)
 	}
-	io.Copy(s, &b)
+	_, _ = io.Copy(s, &b)
 }
 
 // formatSlice will format this StackTrace into the given buffer as a slice of
@@ -146,19 +146,15 @@ const stackMinLen = 96
 type stack []uintptr
 
 func (s *stack) Format(st fmt.State, verb rune) {
-	switch verb {
-	case 'v':
-		switch {
-		case st.Flag('+'):
-			var b bytes.Buffer
-			b.Grow(len(*s) * stackMinLen)
-			for _, pc := range *s {
-				f := Frame(pc)
-				b.WriteByte('\n')
-				f.format(&b, st, 'v')
-			}
-			io.Copy(st, &b)
+	if verb == 'v' && st.Flag('+') {
+		var b bytes.Buffer
+		b.Grow(len(*s) * stackMinLen)
+		for _, pc := range *s {
+			f := Frame(pc)
+			b.WriteByte('\n')
+			f.format(&b, st, 'v')
 		}
+		_, _ = io.Copy(st, &b)
 	}
 }
 

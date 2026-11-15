@@ -619,17 +619,18 @@ func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
 		return errors.New("COPY has both a file and a standard stream")
 	}
 	ctx.WriteKeyWord("COPY ")
-	if n.Query != nil {
+	switch {
+	case n.Query != nil:
 		ctx.WritePlain("(")
 		if err := n.Query.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore CopyStmt.Query")
 		}
 		ctx.WritePlain(")")
-	} else if n.Table != nil {
+	case n.Table != nil:
 		if err := n.Table.Restore(ctx); err != nil {
 			return err
 		}
-	} else {
+	default:
 		return errors.New("CopyStmt has neither Table nor Query")
 	}
 	if len(n.Columns) > 0 {

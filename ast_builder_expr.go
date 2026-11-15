@@ -234,7 +234,8 @@ func byItemsFromExprs(exprs []ast.ExprNode) []*ast.ByItem {
 	return items
 }
 
-// groupingSetsFromList returns the grouping sets of a group by list.
+// groupingSetsFromList returns the grouping sets of a group by list. Each
+// element keeps its own slice so that an empty set restores as "()".
 func groupingSetsFromList(l *ast.List) [][]ast.ExprNode {
 	if l == nil {
 		return nil
@@ -244,10 +245,16 @@ func groupingSetsFromList(l *ast.List) [][]ast.ExprNode {
 		switch v := item.(type) {
 		case *ast.ByItem:
 			if v.GroupingSet != nil {
+				if v.GroupingSet.Type == ast.GroupingSetEmpty {
+					sets = append(sets, nil)
+					continue
+				}
+				// shortcut: nested ROLLUP/CUBE/SETS lose their kind and become
+				// plain sets; upgrade if the grammar needs that fidelity.
 				sets = append(sets, v.GroupingSet.Sets...)
 				continue
 			}
-			sets = append(sets, []ast.ExprNode{v.Expr})
+			sets = append(sets, groupingSetExprs(v.Expr))
 		case *ast.GroupingSet:
 			sets = append(sets, v.Sets...)
 		}
@@ -255,7 +262,23 @@ func groupingSetsFromList(l *ast.List) [][]ast.ExprNode {
 	return sets
 }
 
-// windowFuncExpr returns the window function expression of a function call.
+// groupingSetExprs returns the expressions of one grouping set element. The
+// parentheses are re-added by Restore, so unwrap them to stay stable.
+func groupingSetExprs(e ast.ExprNode) []ast.ExprNode {
+	for {
+		paren, ok := e.(*ast.ParenthesesExpr)
+		if !ok {
+			break
+		}
+		e = paren.Expr
+	}
+	if row, ok := e.(*ast.RowExpr); ok {
+		return row.Values
+	}
+	return []ast.ExprNode{e}
+}
+
+// windowFuncExpr returns the window expression of a function call.
 func windowFuncExpr(fn *ast.FuncCallExpr, spec *ast.WindowSpec) ast.ExprNode {
 	wf := &ast.WindowFuncExpr{F: fn.FnName.O, Args: fn.Args, Star: fn.Star,
 		Distinct: fn.Distinct, OrderBy: fn.OrderBy, Filter: fn.Filter, WithinGroup: fn.WithinGroup}

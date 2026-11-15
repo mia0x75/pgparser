@@ -3,9 +3,7 @@ package types
 import (
 	"bytes"
 	"fmt"
-	"log/slog"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 	gotime "time"
@@ -187,16 +185,14 @@ func (t *Time) ConvertTimeZone(from, to *gotime.Location) error {
 func (t Time) String() string {
 	if t.Type == postgres.TypeDate {
 		// We control the format, so no error would occur.
-		str, err := t.DateFormat("%Y-%m-%d")
-		sqlerr.Log(errors.Trace(err))
+		str, _ := t.DateFormat("%Y-%m-%d")
 		return str
 	}
 
-	str, err := t.DateFormat("%Y-%m-%d %H:%i:%s")
-	sqlerr.Log(errors.Trace(err))
+	str, _ := t.DateFormat("%Y-%m-%d %H:%i:%s")
 	if t.Fsp > 0 {
 		tmp := fmt.Sprintf(".%06d", t.Time.Microsecond())
-		str = str + tmp[:1+t.Fsp]
+		str += tmp[:1+t.Fsp]
 	}
 
 	return str
@@ -234,10 +230,7 @@ func (t Time) ToNumber() *PgDecimal {
 		tfStr = numberFormat
 	}
 
-	s, err := t.DateFormat(tfStr)
-	if err != nil {
-		slog.Error("Fatal: never happen because we've control the format!")
-	}
+	s, _ := t.DateFormat(tfStr)
 
 	if t.Fsp > 0 {
 		s1 := fmt.Sprintf("%s.%06d", s, t.Time.Microsecond())
@@ -246,8 +239,7 @@ func (t Time) ToNumber() *PgDecimal {
 
 	// We skip checking error here because time formatted string can be parsed certainly.
 	dec := new(PgDecimal)
-	err = dec.FromString([]byte(s))
-	sqlerr.Log(errors.Trace(err))
+	_ = dec.FromString([]byte(s))
 	return dec
 }
 
@@ -300,12 +292,6 @@ func compareTime(a, b PgTime) int {
 	}
 
 	return 0
-}
-
-// roundTime rounds the time value according to digits count specified by fsp.
-func roundTime(t gotime.Time, fsp int) gotime.Time {
-	d := gotime.Duration(math.Pow10(9 - fsp))
-	return t.Round(d)
 }
 
 // GetFsp gets the fsp of a string.
@@ -424,32 +410,6 @@ func ParseDateFormat(format string) []string {
 	return seps
 }
 
-// The only delimiter recognized between a date and time part and a fractional seconds part is the decimal point.
-func splitDateTime(format string) (seps []string, fracStr string) {
-	if i := strings.LastIndex(format, "."); i > 0 {
-		fracStr = strings.TrimSpace(format[i+1:])
-		format = format[:i]
-	}
-
-	seps = ParseDateFormat(format)
-	return
-}
-
-func scanTimeArgs(seps []string, args ...*int) error {
-	if len(seps) != len(args) {
-		return errors.Trace(ErrInvalidTimeFormat.GenWithStackByArgs(seps))
-	}
-
-	var err error
-	for i, s := range seps {
-		*args[i], err = strconv.Atoi(s)
-		if err != nil {
-			return errors.Trace(err)
-		}
-	}
-	return nil
-}
-
 // ParseYear parses a formatted string and returns a year number.
 func ParseYear(str string) (int16, error) {
 	v, err := strconv.ParseInt(str, 10, 16)
@@ -458,11 +418,12 @@ func ParseYear(str string) (int16, error) {
 	}
 	y := int16(v)
 
-	if len(str) == 4 {
+	switch len(str) {
+	case 4:
 		// Nothing to do.
-	} else if len(str) == 2 || len(str) == 1 {
+	case 2, 1:
 		y = int16(adjustYear(int(y)))
-	} else {
+	default:
 		return 0, errors.Trace(ErrInvalidYearFormat)
 	}
 
@@ -505,9 +466,6 @@ type Duration struct {
 
 // Add adds d to d, returns a duration value.
 func (d Duration) Add(v Duration) (Duration, error) {
-	if &v == nil {
-		return d, nil
-	}
 	dsum, err := AddInt64(int64(d.Duration), int64(v.Duration))
 	if err != nil {
 		return Duration{}, errors.Trace(err)
@@ -520,9 +478,6 @@ func (d Duration) Add(v Duration) (Duration, error) {
 
 // Sub subtracts d to d, returns a duration value.
 func (d Duration) Sub(v Duration) (Duration, error) {
-	if &v == nil {
-		return d, nil
-	}
 	dsum, err := SubInt64(int64(d.Duration), int64(v.Duration))
 	if err != nil {
 		return Duration{}, errors.Trace(err)
@@ -580,8 +535,7 @@ func (d Duration) ToNumber() *PgDecimal {
 
 	// We skip checking error here because time formatted string can be parsed certainly.
 	dec := new(PgDecimal)
-	err := dec.FromString([]byte(s))
-	sqlerr.Log(errors.Trace(err))
+	_ = dec.FromString([]byte(s))
 	return dec
 }
 
@@ -607,11 +561,12 @@ func (d Duration) RoundFrac(fsp int) (Duration, error) {
 // Compare returns an integer comparing the Duration instant t to o.
 // If d is after o, return 1, equal o, return 0, before o, return -1.
 func (d Duration) Compare(o Duration) int {
-	if d.Duration > o.Duration {
+	switch {
+	case d.Duration > o.Duration:
 		return 1
-	} else if d.Duration == o.Duration {
+	case d.Duration == o.Duration:
 		return 0
-	} else {
+	default:
 		return -1
 	}
 }
@@ -1320,544 +1275,4 @@ func abbrDayOfMonth(day int) string {
 		str = "th"
 	}
 	return str
-}
-
-// pgTimeFix fixes the PgTime use the values in the context.
-func pgTimeFix(t *PgTime, ctx map[string]int) error {
-	// Key of the ctx is the format char, such as `%j` `%p` and so on.
-	if yearOfDay, ok := ctx["%j"]; ok {
-		// TODO: Implement the function that converts day of year to yy:mm:dd.
-		_ = yearOfDay
-	}
-	if valueAMorPm, ok := ctx["%p"]; ok {
-		if t.hour == 0 {
-			return ErrInvalidTimeFormat.GenWithStackByArgs(t)
-		}
-		if t.hour == 12 {
-			// 12 is a special hour.
-			switch valueAMorPm {
-			case constForAM:
-				t.hour = 0
-			case constForPM:
-				t.hour = 12
-			}
-			return nil
-		}
-		if valueAMorPm == constForPM {
-			t.hour += 12
-		}
-	}
-	return nil
-}
-
-// strToDate converts date string according to format, returns true on success,
-// the value will be stored in argument t or ctx.
-func strToDate(t *PgTime, date string, format string, ctx map[string]int) bool {
-	date = skipWhiteSpace(date)
-	format = skipWhiteSpace(format)
-
-	token, formatRemain, succ := getFormatToken(format)
-	if !succ {
-		return false
-	}
-
-	if token == "" {
-		// Extra characters at the end of date are ignored.
-		return true
-	}
-
-	dateRemain, succ := matchDateWithToken(t, date, token, ctx)
-	if !succ {
-		return false
-	}
-
-	return strToDate(t, dateRemain, formatRemain, ctx)
-}
-
-// getFormatToken takes one format control token from the string.
-// format "%d %H %m" will get token "%d" and the remain is " %H %m".
-func getFormatToken(format string) (token string, remain string, succ bool) {
-	if len(format) == 0 {
-		return "", "", true
-	}
-
-	// Just one character.
-	if len(format) == 1 {
-		if format[0] == '%' {
-			return "", "", false
-		}
-		return format, "", true
-	}
-
-	// More than one character.
-	if format[0] == '%' {
-		return format[:2], format[2:], true
-	}
-
-	return format[:1], format[1:], true
-}
-
-func skipWhiteSpace(input string) string {
-	for i, c := range input {
-		if !unicode.IsSpace(c) {
-			return input[i:]
-		}
-	}
-	return ""
-}
-
-var weekdayAbbrev = map[string]gotime.Weekday{
-	"Sun": gotime.Sunday,
-	"Mon": gotime.Monday,
-	"Tue": gotime.Tuesday,
-	"Wed": gotime.Wednesday,
-	"Thu": gotime.Tuesday,
-	"Fri": gotime.Friday,
-	"Sat": gotime.Saturday,
-}
-
-var monthAbbrev = map[string]gotime.Month{
-	"Jan": gotime.January,
-	"Feb": gotime.February,
-	"Mar": gotime.March,
-	"Apr": gotime.April,
-	"May": gotime.May,
-	"Jun": gotime.June,
-	"Jul": gotime.July,
-	"Aug": gotime.August,
-	"Sep": gotime.September,
-	"Oct": gotime.October,
-	"Nov": gotime.November,
-	"Dec": gotime.December,
-}
-
-type dateFormatParser func(t *PgTime, date string, ctx map[string]int) (remain string, succ bool)
-
-var dateFormatParserTable = map[string]dateFormatParser{
-	"%b": abbreviatedMonth,      // Abbreviated month name (Jan..Dec)
-	"%c": monthNumeric,          // Month, numeric (0..12)
-	"%d": dayOfMonthNumeric,     // Day of the month, numeric (0..31)
-	"%e": dayOfMonthNumeric,     // Day of the month, numeric (0..31)
-	"%f": microSeconds,          // Microseconds (000000..999999)
-	"%h": hour24TwoDigits,       // Hour (01..12)
-	"%H": hour24TwoDigits,       // Hour (01..12)
-	"%I": hour24TwoDigits,       // Hour (01..12)
-	"%i": minutesNumeric,        // Minutes, numeric (00..59)
-	"%j": dayOfYearThreeDigits,  // Day of year (001..366)
-	"%k": hour24Numeric,         // Hour (0..23)
-	"%l": hour12Numeric,         // Hour (1..12)
-	"%M": fullNameMonth,         // Month name (January..December)
-	"%m": monthNumeric,          // Month, numeric (00..12)
-	"%p": isAMOrPM,              // AM or PM
-	"%r": time12Hour,            // Time, 12-hour (hh:mm:ss followed by AM or PM)
-	"%s": secondsNumeric,        // Seconds (00..59)
-	"%S": secondsNumeric,        // Seconds (00..59)
-	"%T": time24Hour,            // Time, 24-hour (hh:mm:ss)
-	"%Y": yearNumericFourDigits, // Year, numeric, four digits
-	"%y": yearNumericTwoDigits,  // Year, numeric (two digits)
-	// TODO: Add the following...
-	// "%a": abbreviatedWeekday,         // Abbreviated weekday name (Sun..Sat)
-	// "%D": dayOfMonthWithSuffix,       // Day of the month with English suffix (0th, 1st, 2nd, 3rd)
-	// "%U": weekMode0,                  // Week (00..53), where Sunday is the first day of the week; WEEK() mode 0
-	// "%u": weekMode1,                  // Week (00..53), where Monday is the first day of the week; WEEK() mode 1
-	// "%V": weekMode2,                  // Week (01..53), where Sunday is the first day of the week; WEEK() mode 2; used with %X
-	// "%v": weekMode3,                  // Week (01..53), where Monday is the first day of the week; WEEK() mode 3; used with %x
-	// "%W": weekdayName,                // Weekday name (Sunday..Saturday)
-	// "%w": dayOfWeek,                  // Day of the week (0=Sunday..6=Saturday)
-	// "%X": yearOfWeek,                 // Year for the week where Sunday is the first day of the week, numeric, four digits; used with %V
-	// "%x": yearOfWeek,                 // Year for the week, where Monday is the first day of the week, numeric, four digits; used with %v
-}
-
-// GetFormatType checks the type(Duration, Date or Datetime) of a format string.
-func GetFormatType(format string) (isDuration, isDate bool) {
-	durationTokens := map[string]struct{}{
-		"%h": {},
-		"%H": {},
-		"%i": {},
-		"%I": {},
-		"%s": {},
-		"%S": {},
-		"%k": {},
-		"%l": {},
-	}
-	dateTokens := map[string]struct{}{
-		"%y": {},
-		"%Y": {},
-		"%m": {},
-		"%M": {},
-		"%c": {},
-		"%b": {},
-		"%D": {},
-		"%d": {},
-		"%e": {},
-	}
-
-	format = skipWhiteSpace(format)
-	var token string
-	var succ bool
-	for {
-		token, format, succ = getFormatToken(format)
-		if len(token) == 0 {
-			break
-		}
-		if !succ {
-			isDuration, isDate = false, false
-			break
-		}
-		if _, ok := durationTokens[token]; ok {
-			isDuration = true
-		} else if _, ok := dateTokens[token]; ok {
-			isDate = true
-		}
-		if isDuration && isDate {
-			break
-		}
-	}
-	return
-}
-
-func matchDateWithToken(t *PgTime, date string, token string, ctx map[string]int) (remain string, succ bool) {
-	if parse, ok := dateFormatParserTable[token]; ok {
-		return parse(t, date, ctx)
-	}
-
-	if strings.HasPrefix(date, token) {
-		return date[len(token):], true
-	}
-	return date, false
-}
-
-func parseDigits(input string, count int) (int, bool) {
-	if count <= 0 || len(input) < count {
-		return 0, false
-	}
-
-	// Reject signs and non-ASCII digits before Atoi would accept them.
-	for i := 0; i < count; i++ {
-		if input[i] < '0' || input[i] > '9' {
-			return 0, false
-		}
-	}
-	v, err := strconv.Atoi(input[:count])
-	if err != nil {
-		return 0, false
-	}
-	return v, true
-}
-
-func hour24TwoDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	v, succ := parseDigits(input, 2)
-	if !succ || v >= 24 {
-		return input, false
-	}
-	t.hour = v
-	return input[2:], true
-}
-
-func secondsNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	v, succ := parseDigits(input, 2)
-	if !succ || v >= 60 {
-		return input, false
-	}
-	t.second = uint8(v)
-	return input[2:], true
-}
-
-func minutesNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	v, succ := parseDigits(input, 2)
-	if !succ || v >= 60 {
-		return input, false
-	}
-	t.minute = uint8(v)
-	return input[2:], true
-}
-
-const time12HourLen = len("hh:mm:ssAM")
-
-func time12Hour(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	// hh:mm:ss AM
-	if len(input) < time12HourLen {
-		return input, false
-	}
-	hour, succ := parseDigits(input, 2)
-	if !succ || hour > 12 || hour == 0 || input[2] != ':' {
-		return input, false
-	}
-
-	minute, succ := parseDigits(input[3:], 2)
-	if !succ || minute > 59 || input[5] != ':' {
-		return input, false
-	}
-
-	second, succ := parseDigits(input[6:], 2)
-	if !succ || second > 59 {
-		return input, false
-	}
-
-	remain := skipWhiteSpace(input[8:])
-	switch {
-	case strings.HasPrefix(remain, "AM"):
-		t.hour = hour
-	case strings.HasPrefix(remain, "PM"):
-		t.hour = hour + 12
-	default:
-		return input, false
-	}
-
-	t.minute = uint8(minute)
-	t.second = uint8(second)
-	return remain, true
-}
-
-const time24HourLen = len("hh:mm:ss")
-
-func time24Hour(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	// hh:mm:ss
-	if len(input) < time24HourLen {
-		return input, false
-	}
-
-	hour, succ := parseDigits(input, 2)
-	if !succ || hour > 23 || input[2] != ':' {
-		return input, false
-	}
-
-	minute, succ := parseDigits(input[3:], 2)
-	if !succ || minute > 59 || input[5] != ':' {
-		return input, false
-	}
-
-	second, succ := parseDigits(input[6:], 2)
-	if !succ || second > 59 {
-		return input, false
-	}
-
-	t.hour = hour
-	t.minute = uint8(minute)
-	t.second = uint8(second)
-	return input[8:], true
-}
-
-const (
-	constForAM = 1 + iota
-	constForPM
-)
-
-func isAMOrPM(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	if strings.HasPrefix(input, "AM") {
-		ctx["%p"] = constForAM
-	} else if strings.HasPrefix(input, "PM") {
-		ctx["%p"] = constForPM
-	} else {
-		return input, false
-	}
-	return input[2:], true
-}
-
-// digitRegex: it was used to scan a variable-length monthly day or month in the string. Ex:  "01" or "1" or "30"
-var oneOrTwoDigitRegex = regexp.MustCompile("^[0-9]{1,2}")
-
-// twoDigitRegex: it was just for two digit number string. Ex: "01" or "12"
-var twoDigitRegex = regexp.MustCompile("^[1-9][0-9]?")
-
-// parseTwoNumeric is used for pattens 0..31 0..24 0..60 and so on.
-// It returns the parsed int, and remain data after parse.
-func parseTwoNumeric(input string) (int, string) {
-	if len(input) > 1 && input[0] == '0' {
-		return 0, input[1:]
-	}
-	matched := twoDigitRegex.FindAllString(input, -1)
-	if len(matched) == 0 {
-		return 0, input
-	}
-
-	str := matched[0]
-	v, err := strconv.Atoi(str)
-	if err != nil {
-		return 0, input
-	}
-	return v, input[len(str):]
-}
-
-func dayOfMonthNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	result := oneOrTwoDigitRegex.FindString(input) // 0..31
-	length := len(result)
-
-	v, ok := parseDigits(input, length)
-
-	if !ok || v > 31 {
-		return input, false
-	}
-	t.day = uint8(v)
-	return input[length:], true
-}
-
-func hour24Numeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	result := oneOrTwoDigitRegex.FindString(input) // 0..23
-	length := len(result)
-
-	v, ok := parseDigits(input, length)
-
-	if !ok || v > 23 {
-		return input, false
-	}
-	t.hour = v
-	return input[length:], true
-}
-
-func hour12Numeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	result := oneOrTwoDigitRegex.FindString(input) // 1..12
-	length := len(result)
-
-	v, ok := parseDigits(input, length)
-
-	if !ok || v > 12 || v == 0 {
-		return input, false
-	}
-	t.hour = v
-	return input[length:], true
-}
-
-func microSeconds(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	if len(input) < 6 {
-		return input, false
-	}
-	v, err := strconv.ParseUint(input[:6], 10, 64)
-	if err != nil {
-		return input, false
-	}
-	if v > math.MaxUint32 {
-		return input, false
-	}
-	t.microsecond = uint32(v)
-	return input[6:], true
-}
-
-func yearNumericFourDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	return yearNumericNDigits(t, input, ctx, 4)
-}
-
-func yearNumericTwoDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	return yearNumericNDigits(t, input, ctx, 2)
-}
-
-func yearNumericNDigits(t *PgTime, input string, ctx map[string]int, n int) (string, bool) {
-	effectiveCount, effectiveValue := 0, 0
-	for effectiveCount+1 <= n {
-		value, succeed := parseDigits(input, effectiveCount+1)
-		if !succeed {
-			break
-		}
-		effectiveCount++
-		effectiveValue = value
-	}
-	if effectiveCount == 0 {
-		return input, false
-	}
-	if effectiveCount <= 2 {
-		effectiveValue = adjustYear(effectiveValue)
-	}
-	t.year = uint16(effectiveValue)
-	return input[effectiveCount:], true
-}
-
-func dayOfYearThreeDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	v, succ := parseDigits(input, 3)
-	if !succ || v == 0 || v > 366 {
-		return input, false
-	}
-	ctx["%j"] = v
-	return input[3:], true
-}
-
-func abbreviatedWeekday(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	if len(input) >= 3 {
-		dayName := input[:3]
-		if _, ok := weekdayAbbrev[dayName]; ok {
-			// TODO: The internal time representation has no field for a parsed weekday.
-			return input, false
-		}
-	}
-	return input, false
-}
-
-func abbreviatedMonth(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	if len(input) >= 3 {
-		monthName := input[:3]
-		if month, ok := monthAbbrev[monthName]; ok {
-			t.month = uint8(month)
-			return input[len(monthName):], true
-		}
-	}
-	return input, false
-}
-
-func fullNameMonth(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	for i, month := range MonthNames {
-		if strings.HasPrefix(input, month) {
-			t.month = uint8(i + 1)
-			return input[len(month):], true
-		}
-	}
-	return input, false
-}
-
-func monthNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	result := oneOrTwoDigitRegex.FindString(input) // 1..12
-	length := len(result)
-
-	v, ok := parseDigits(input, length)
-
-	if !ok || v > 12 {
-		return input, false
-	}
-	t.month = uint8(v)
-	return input[length:], true
-}
-
-func dayOfMonthWithSuffix(t *PgTime, input string, ctx map[string]int) (string, bool) {
-	month, remain := parseOrdinalNumbers(input)
-	if month >= 0 {
-		t.month = uint8(month)
-		return remain, true
-	}
-	return input, false
-}
-
-func parseOrdinalNumbers(input string) (value int, remain string) {
-	for i, c := range input {
-		if !unicode.IsDigit(c) {
-			v, err := strconv.Atoi(input[:i])
-			if err != nil {
-				return -1, input
-			}
-			value = v
-			break
-		}
-	}
-	switch {
-	case strings.HasPrefix(remain, "st"):
-		if value == 1 {
-			remain = remain[2:]
-			return
-		}
-	case strings.HasPrefix(remain, "nd"):
-		if value == 2 {
-			remain = remain[2:]
-			return
-		}
-	case strings.HasPrefix(remain, "th"):
-		remain = remain[2:]
-		return
-	}
-	return -1, input
-}
-
-// DateFSP gets fsp from date string.
-func DateFSP(date string) (fsp int) {
-	i := strings.LastIndex(date, ".")
-	if i != -1 {
-		fsp = len(date) - i - 1
-	}
-	return
 }

@@ -19749,12 +19749,20 @@ yydefault:
 	case 301:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			yyVAL.node = &ast.ColumnOption{Tp: ast.ColumnOptionAutoIncrement}
+			yyVAL.node = &ast.ColumnOption{
+				Tp:              ast.ColumnOptionIdentity,
+				GeneratedWhen:   byte('a'),
+				SequenceOptions: yyDollar[5].list,
+			}
 		}
 	case 302:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.node = &ast.ColumnOption{Tp: ast.ColumnOptionAutoIncrement}
+			yyVAL.node = &ast.ColumnOption{
+				Tp:              ast.ColumnOptionIdentity,
+				GeneratedWhen:   byte('d'),
+				SequenceOptions: yyDollar[6].list,
+			}
 		}
 	case 303:
 		yyDollar = yyS[yypt-7 : yypt+1]
@@ -30746,7 +30754,7 @@ yydefault:
 		{
 			yyVAL.node = &ast.CommentStmt{
 				ObjectType: strings.ToLower(objectTypeName(yyDollar[3].ival)),
-				ObjectName: commentObjectName(yyDollar[4].list),
+				ObjectName: commentNameParts(yyDollar[4].list),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30754,8 +30762,8 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_COLUMN"),
-				ObjectName: commentObjectName(yyDollar[4].expr),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_COLUMN))),
+				ObjectName: commentNameParts(yyDollar[4].expr),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30764,7 +30772,7 @@ yydefault:
 		{
 			yyVAL.node = &ast.CommentStmt{
 				ObjectType: strings.ToLower(objectTypeName(yyDollar[3].ival)),
-				ObjectName: commentObjectName(&ast.String{Str: yyDollar[4].str}),
+				ObjectName: commentNameParts(&ast.String{Str: yyDollar[4].str}),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30772,8 +30780,8 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_TYPE"),
-				ObjectName: commentObjectName(yyDollar[4].list),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_TYPE))),
+				ObjectName: commentNameParts(yyDollar[4].list),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30781,8 +30789,8 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_DOMAIN"),
-				ObjectName: commentObjectName(yyDollar[4].list),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_DOMAIN))),
+				ObjectName: commentNameParts(yyDollar[4].list),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30790,8 +30798,9 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_AGGREGATE"),
-				ObjectName: commentObjectName(yyDollar[4].node),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_AGGREGATE))),
+				ObjectName: commentNameParts(yyDollar[4].node),
+				Suffix:     commentArgsSuffix(yyDollar[4].node),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30799,8 +30808,9 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_FUNCTION"),
-				ObjectName: functionObjectName(yyDollar[4].node),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_FUNCTION))),
+				ObjectName: commentNameParts(yyDollar[4].node),
+				Suffix:     commentArgsSuffix(yyDollar[4].node),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30808,8 +30818,9 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_PROCEDURE"),
-				ObjectName: commentObjectName(yyDollar[4].node),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_PROCEDURE))),
+				ObjectName: commentNameParts(yyDollar[4].node),
+				Suffix:     commentArgsSuffix(yyDollar[4].node),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30817,8 +30828,9 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_ROUTINE"),
-				ObjectName: commentObjectName(yyDollar[4].node),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_ROUTINE))),
+				ObjectName: commentNameParts(yyDollar[4].node),
+				Suffix:     commentArgsSuffix(yyDollar[4].node),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30826,8 +30838,9 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_OPERATOR"),
-				ObjectName: commentObjectName(yyDollar[4].node),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_OPERATOR))),
+				ObjectName: commentNameParts(yyDollar[4].node),
+				Suffix:     commentArgsSuffix(yyDollar[4].node),
 				Comment:    commentPtr(yyDollar[6].str),
 			}
 		}
@@ -30835,8 +30848,9 @@ yydefault:
 		yyDollar = yyS[yypt-8 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_TABCONSTRAINT"),
-				ObjectName: commentObjectName(appendList(yyDollar[6].list, &ast.String{Str: yyDollar[4].str})),
+				ObjectType: "tabconstraint",
+				ObjectName: []string{yyDollar[4].str},
+				ParentName: commentNameParts(yyDollar[6].list),
 				Comment:    commentPtr(yyDollar[8].str),
 			}
 		}
@@ -30844,8 +30858,9 @@ yydefault:
 		yyDollar = yyS[yypt-9 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_DOMCONSTRAINT"),
-				ObjectName: commentObjectName(appendList(yyDollar[7].list, &ast.String{Str: yyDollar[4].str})),
+				ObjectType: "domconstraint",
+				ObjectName: []string{yyDollar[4].str},
+				ParentName: commentNameParts(yyDollar[7].list),
 				Comment:    commentPtr(yyDollar[9].str),
 			}
 		}
@@ -30853,8 +30868,9 @@ yydefault:
 		yyDollar = yyS[yypt-8 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeName(yyDollar[3].ival),
-				ObjectName: commentObjectName(appendList(yyDollar[6].list, &ast.String{Str: yyDollar[4].str})),
+				ObjectType: strings.ToLower(objectTypeName(yyDollar[3].ival)),
+				ObjectName: []string{yyDollar[4].str},
+				ParentName: commentNameParts(yyDollar[6].list),
 				Comment:    commentPtr(yyDollar[8].str),
 			}
 		}
@@ -30862,8 +30878,9 @@ yydefault:
 		yyDollar = yyS[yypt-9 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_TRANSFORM"),
-				ObjectName: commentObjectName(&ast.List{Items: []ast.Node{typeNameNode(yyDollar[5].tp), &ast.String{Str: yyDollar[7].str}}}),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_TRANSFORM))),
+				Suffix:     commentNodeString(typeNameNode(yyDollar[5].tp)),
+				ExtraName:  []string{yyDollar[7].str},
 				Comment:    commentPtr(yyDollar[9].str),
 			}
 		}
@@ -30871,8 +30888,9 @@ yydefault:
 		yyDollar = yyS[yypt-9 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_OPCLASS"),
-				ObjectName: commentObjectName(prependList(&ast.String{Str: yyDollar[7].str}, yyDollar[5].list)),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_OPCLASS))),
+				ObjectName: commentNameParts(yyDollar[5].list),
+				ExtraName:  []string{yyDollar[7].str},
 				Comment:    commentPtr(yyDollar[9].str),
 			}
 		}
@@ -30880,8 +30898,9 @@ yydefault:
 		yyDollar = yyS[yypt-9 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_OPFAMILY"),
-				ObjectName: commentObjectName(prependList(&ast.String{Str: yyDollar[7].str}, yyDollar[5].list)),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_OPFAMILY))),
+				ObjectName: commentNameParts(yyDollar[5].list),
+				ExtraName:  []string{yyDollar[7].str},
 				Comment:    commentPtr(yyDollar[9].str),
 			}
 		}
@@ -30889,8 +30908,8 @@ yydefault:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_LARGEOBJECT"),
-				ObjectName: commentObjectName(yyDollar[5].node),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_LARGEOBJECT))),
+				ObjectName: commentNameParts(yyDollar[5].node),
 				Comment:    commentPtr(yyDollar[7].str),
 			}
 		}
@@ -30898,8 +30917,8 @@ yydefault:
 		yyDollar = yyS[yypt-8 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_FDW"),
-				ObjectName: commentObjectName(&ast.String{Str: yyDollar[6].str}),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_FDW))),
+				ObjectName: commentNameParts(&ast.String{Str: yyDollar[6].str}),
 				Comment:    commentPtr(yyDollar[8].str),
 			}
 		}
@@ -30907,8 +30926,8 @@ yydefault:
 		yyDollar = yyS[yypt-10 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_CAST"),
-				ObjectName: commentObjectName(&ast.List{Items: []ast.Node{typeNameNode(yyDollar[5].tp), typeNameNode(yyDollar[7].tp)}}),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_CAST))),
+				Suffix:     commentNodeString(typeNameNode(yyDollar[5].tp)) + " AS " + commentNodeString(typeNameNode(yyDollar[7].tp)),
 				Comment:    commentPtr(yyDollar[10].str),
 			}
 		}
@@ -30916,8 +30935,8 @@ yydefault:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		{
 			yyVAL.node = &ast.CommentStmt{
-				ObjectType: objectTypeNameOf("OBJECT_EVENT_TRIGGER"),
-				ObjectName: commentObjectName(&ast.String{Str: yyDollar[5].str}),
+				ObjectType: strings.ToLower(objectTypeName(int64(ast.OBJECT_EVENT_TRIGGER))),
+				ObjectName: commentNameParts(&ast.String{Str: yyDollar[5].str}),
 				Comment:    commentPtr(yyDollar[7].str),
 			}
 		}

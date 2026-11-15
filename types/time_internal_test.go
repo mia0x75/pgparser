@@ -1,8 +1,6 @@
 package types
 
 import (
-	"math"
-	"strconv"
 	"testing"
 )
 
@@ -44,113 +42,5 @@ func TestCheckDatetimeTypeInternal(t *testing.T) {
 				t.Fatalf("checkDatetimeType(%+v) = %v; want error %t", tt.input, err, tt.wantErr)
 			}
 		})
-	}
-}
-
-func TestStrToDateAndPgTimeFixInternal(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  string
-		format string
-		want   PgTime
-	}{
-		{
-			name:   "microseconds",
-			input:  "20000101010203123456",
-			format: "%Y%m%d%H%i%s%f",
-			want:   PgTime{year: 2000, month: 1, day: 1, hour: 1, minute: 2, second: 3, microsecond: 123456},
-		},
-		{
-			name:   "midnight am",
-			input:  "120000AM",
-			format: "%I%i%s%p",
-			want:   PgTime{year: 2000, month: 1, day: 1},
-		},
-		{
-			name:   "noon pm",
-			input:  "120000PM",
-			format: "%I%i%s%p",
-			want:   PgTime{year: 2000, month: 1, day: 1, hour: 12},
-		},
-		{
-			name:   "morning am",
-			input:  "090000AM",
-			format: "%I%i%s%p",
-			want:   PgTime{year: 2000, month: 1, day: 1, hour: 9},
-		},
-		{
-			name:   "evening pm",
-			input:  "090000PM",
-			format: "%I%i%s%p",
-			want:   PgTime{year: 2000, month: 1, day: 1, hour: 21},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := PgTime{year: 2000, month: 1, day: 1}
-			ctx := map[string]int{}
-			if !strToDate(&got, tt.input, tt.format, ctx) {
-				t.Fatalf("strToDate(%q, %q) = false, want true", tt.input, tt.format)
-			}
-			if err := pgTimeFix(&got, ctx); err != nil {
-				t.Fatalf("pgTimeFix(%q) = %v, want nil", tt.input, err)
-			}
-			if got != tt.want {
-				t.Fatalf("got time %+v, want %+v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestUnfinishedTokenHelpersReject(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		parse func(*PgTime, string, map[string]int) (string, bool)
-	}{
-		{name: "recognized weekday", input: "Sun", parse: abbreviatedWeekday},
-		{name: "unknown weekday", input: "Foo", parse: abbreviatedWeekday},
-		{name: "ordinal suffix", input: "1st", parse: dayOfMonthWithSuffix},
-		{name: "teen ordinal", input: "15th", parse: dayOfMonthWithSuffix},
-		{name: "mismatched suffix", input: "1nd", parse: dayOfMonthWithSuffix},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			want := PgTime{year: 2000, month: 1, day: 1}
-			got := want
-			ctx := map[string]int{}
-			remain, ok := tt.parse(&got, tt.input, ctx)
-			if ok || remain != tt.input {
-				t.Fatalf("parse(%q) = (%q, %t), want (%q, false)", tt.input, remain, ok, tt.input)
-			}
-			if got != want || len(ctx) != 0 {
-				t.Fatalf("rejection changed time or context: %+v, %v", got, ctx)
-			}
-		})
-	}
-
-	t.Run("ordinal token", func(t *testing.T) {
-		want := PgTime{year: 2000, month: 1, day: 1}
-		got := want
-		ctx := map[string]int{}
-		if strToDate(&got, "1st", "%D", ctx) {
-			t.Fatal("strToDate accepted an unsupported ordinal token")
-		}
-		if got != want || len(ctx) != 0 {
-			t.Fatalf("rejection changed time or context: %+v, %v", got, ctx)
-		}
-	})
-}
-
-// parseDigits must reject values above the platform int range; a MaxInt64
-// guard would still let a 32-bit build truncate.
-func TestParseDigitsIntBounds(t *testing.T) {
-	maxDigits := strconv.FormatUint(uint64(math.MaxInt), 10)
-	if got, ok := parseDigits(maxDigits, len(maxDigits)); !ok || got != math.MaxInt {
-		t.Fatalf("parseDigits(%q) = (%d, %t), want (%d, true)", maxDigits, got, ok, math.MaxInt)
-	}
-	over := strconv.FormatUint(uint64(math.MaxInt)+1, 10)
-	if _, ok := parseDigits(over, len(over)); ok {
-		t.Fatalf("parseDigits(%q) accepted a value above the platform int range", over)
 	}
 }

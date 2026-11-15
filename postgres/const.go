@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	. "github.com/mia0x75/pgparser/format"
+	"github.com/mia0x75/pgparser/format"
 )
 
 func newInvalidModeErr(s string) error {
@@ -608,7 +608,7 @@ func GetSQLMode(s string) (SQLMode, error) {
 		if !ok && strs[i] != "" {
 			return sqlMode, newInvalidModeErr(strs[i])
 		}
-		sqlMode = sqlMode | mode
+		sqlMode |= mode
 	}
 	return sqlMode, nil
 }
@@ -714,7 +714,7 @@ func Str2Priority(val string) PriorityEnum {
 }
 
 // Restore implements Node interface.
-func (n *PriorityEnum) Restore(ctx *RestoreCtx) error {
+func (n *PriorityEnum) Restore(ctx *format.RestoreCtx) error {
 	switch *n {
 	case NoPriority:
 		return nil

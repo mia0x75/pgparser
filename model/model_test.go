@@ -173,7 +173,9 @@ func TestUnmarshalCIStr(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ci.UnmarshalJSON(buf)
+	if err := ci.UnmarshalJSON(buf); err != nil {
+		t.Fatal(err)
+	}
 	if ci.O != str {
 		t.Fatalf("got %#v, want %#v", ci.O, str)
 	}
@@ -188,7 +190,9 @@ func TestUnmarshalCIStr(t *testing.T) {
 	if string(buf) != `{"O":"aaBB","L":"aabb"}` {
 		t.Fatalf("got %#v, want %#v", string(buf), `{"O":"aaBB","L":"aabb"}`)
 	}
-	ci.UnmarshalJSON(buf)
+	if err := ci.UnmarshalJSON(buf); err != nil {
+		t.Fatal(err)
+	}
 	if ci.O != str {
 		t.Fatalf("got %#v, want %#v", ci.O, str)
 	}

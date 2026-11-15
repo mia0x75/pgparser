@@ -82,7 +82,7 @@ func TestParseRejectsNUL(t *testing.T) {
 		"SELECT 1 -- \x00\n; SELECT 2",
 	} {
 		t.Run(sql, func(t *testing.T) {
-			if _, _, err := pgparser.New().Parse(sql); err == nil {
+			if _, err := pgparser.New().Parse(sql); err == nil {
 				t.Fatal("expected an error for a NUL byte")
 			}
 		})
@@ -617,12 +617,12 @@ func TestTypeNameMetadataPreserved(t *testing.T) {
 		{
 			name: "comment cast",
 			sql:  `COMMENT ON CAST (int AS text) IS 'mock_comment'`,
-			want: []string{`"int4"."text"`},
+			want: []string{`"int4" AS "text"`},
 		},
 		{
 			name: "comment transform",
 			sql:  `COMMENT ON TRANSFORM FOR app.widget LANGUAGE plpgsql IS NULL`,
-			want: []string{`"app"."widget".plpgsql`},
+			want: []string{`"app"."widget"`, "plpgsql"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -633,7 +633,11 @@ func TestTypeNameMetadataPreserved(t *testing.T) {
 					got = append(got, object.Name.O)
 				}
 			case *ast.CommentStmt:
-				got = []string{stmt.ObjectName}
+				if stmt.Suffix != "" {
+					got = append(got, stmt.Suffix)
+				}
+				got = append(got, stmt.ObjectName...)
+				got = append(got, stmt.ExtraName...)
 			default:
 				t.Fatalf("unexpected statement type %T", stmt)
 			}

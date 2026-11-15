@@ -92,12 +92,12 @@ func (n *BetweenExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *BetweenExpr) Format(w io.Writer) {
 	n.Expr.Format(w)
 	if n.Not {
-		fmt.Fprint(w, " NOT BETWEEN ")
+		_, _ = fmt.Fprint(w, " NOT BETWEEN ")
 	} else {
-		fmt.Fprint(w, " BETWEEN ")
+		_, _ = fmt.Fprint(w, " BETWEEN ")
 	}
 	n.Left.Format(w)
-	fmt.Fprint(w, " AND ")
+	_, _ = fmt.Fprint(w, " AND ")
 	n.Right.Format(w)
 }
 
@@ -177,17 +177,17 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 // Format the ExprNode into a Writer.
 func (n *BinaryOperationExpr) Format(w io.Writer) {
 	n.L.Format(w)
-	fmt.Fprint(w, " ")
+	_, _ = fmt.Fprint(w, " ")
 	if n.OpName != "" {
-		fmt.Fprint(w, n.OpName)
+		_, _ = fmt.Fprint(w, n.OpName)
 	} else {
 		n.Op.Format(w)
 	}
-	fmt.Fprint(w, " ")
+	_, _ = fmt.Fprint(w, " ")
 	if strings.HasSuffix(n.OpName, "ANY") || strings.HasSuffix(n.OpName, "ALL") {
-		fmt.Fprint(w, "(")
+		_, _ = fmt.Fprint(w, "(")
 		n.R.Format(w)
-		fmt.Fprint(w, ")")
+		_, _ = fmt.Fprint(w, ")")
 	} else {
 		n.R.Format(w)
 	}
@@ -299,24 +299,24 @@ func (n *CaseExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *CaseExpr) Format(w io.Writer) {
-	fmt.Fprint(w, "CASE")
+	_, _ = fmt.Fprint(w, "CASE")
 	// Because the presence of `case when` syntax, `Value` could be nil and we need check this.
 	if n.Value != nil {
-		fmt.Fprint(w, " ")
+		_, _ = fmt.Fprint(w, " ")
 		n.Value.Format(w)
 	}
 	for _, clause := range n.WhenClauses {
-		fmt.Fprint(w, " ")
-		fmt.Fprint(w, "WHEN ")
+		_, _ = fmt.Fprint(w, " ")
+		_, _ = fmt.Fprint(w, "WHEN ")
 		clause.Expr.Format(w)
-		fmt.Fprint(w, " THEN ")
+		_, _ = fmt.Fprint(w, " THEN ")
 		clause.Result.Format(w)
 	}
 	if n.ElseClause != nil {
-		fmt.Fprint(w, " ELSE ")
+		_, _ = fmt.Fprint(w, " ELSE ")
 		n.ElseClause.Format(w)
 	}
-	fmt.Fprint(w, " END")
+	_, _ = fmt.Fprint(w, " END")
 }
 
 // Accept implements Node Accept interface.
@@ -374,7 +374,7 @@ func (n *SubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *SubqueryExpr) Format(w io.Writer) {
-	fmt.Fprint(w, "(SELECT ...)")
+	_, _ = fmt.Fprint(w, "(SELECT ...)")
 }
 
 // Accept implements Node Accept interface.
@@ -428,9 +428,9 @@ func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *CompareSubqueryExpr) Format(w io.Writer) {
 	n.L.Format(w)
 	if n.All {
-		fmt.Fprint(w, " ALL ")
+		_, _ = fmt.Fprint(w, " ALL ")
 	} else {
-		fmt.Fprint(w, " ANY ")
+		_, _ = fmt.Fprint(w, " ANY ")
 	}
 	n.R.Format(w)
 }
@@ -484,18 +484,18 @@ func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
 // Format formats the ColumnName into a Writer.
 func (n *ColumnName) Format(w io.Writer) {
 	if n.Schema.O != "" {
-		fmt.Fprint(w, n.Schema.O)
-		fmt.Fprint(w, ".")
+		_, _ = fmt.Fprint(w, n.Schema.O)
+		_, _ = fmt.Fprint(w, ".")
 	}
 	if n.Table.O != "" {
-		fmt.Fprint(w, n.Table.O)
-		fmt.Fprint(w, ".")
+		_, _ = fmt.Fprint(w, n.Table.O)
+		_, _ = fmt.Fprint(w, ".")
 	}
 	if n.Name.O == "*" {
-		fmt.Fprint(w, "*")
+		_, _ = fmt.Fprint(w, "*")
 		return
 	}
-	fmt.Fprint(w, n.Name.O)
+	_, _ = fmt.Fprint(w, n.Name.O)
 }
 
 // Accept implements Node Accept interface.
@@ -556,8 +556,8 @@ func (n *ColumnNameExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *ColumnNameExpr) Format(w io.Writer) {
-	name := strings.Replace(n.Name.String(), ".", "`.`", -1)
-	fmt.Fprintf(w, "`%s`", name)
+	name := strings.ReplaceAll(n.Name.String(), ".", "`.`")
+	_, _ = fmt.Fprintf(w, "`%s`", name)
 }
 
 // Accept implements Node Accept interface.
@@ -600,7 +600,7 @@ func (n *DefaultExpr) Format(w io.Writer) {
 	if n.Name != nil {
 		n.Name.Format(w)
 	} else {
-		fmt.Fprint(w, "DEFAULT")
+		_, _ = fmt.Fprint(w, "DEFAULT")
 	}
 }
 
@@ -646,9 +646,9 @@ func (n *ExistsSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 // Format the ExprNode into a Writer.
 func (n *ExistsSubqueryExpr) Format(w io.Writer) {
 	if n.Not {
-		fmt.Fprint(w, "NOT EXISTS ")
+		_, _ = fmt.Fprint(w, "NOT EXISTS ")
 	} else {
-		fmt.Fprint(w, "EXISTS ")
+		_, _ = fmt.Fprint(w, "EXISTS ")
 	}
 	if n.Sel != nil {
 		n.Sel.Format(w)
@@ -716,17 +716,17 @@ func (n *PatternInExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *PatternInExpr) Format(w io.Writer) {
 	n.Expr.Format(w)
 	if n.Not {
-		fmt.Fprint(w, " NOT IN (")
+		_, _ = fmt.Fprint(w, " NOT IN (")
 	} else {
-		fmt.Fprint(w, " IN (")
+		_, _ = fmt.Fprint(w, " IN (")
 	}
 	for i, expr := range n.List {
 		if i != 0 {
-			fmt.Fprint(w, ",")
+			_, _ = fmt.Fprint(w, ",")
 		}
 		expr.Format(w)
 	}
-	fmt.Fprint(w, ")")
+	_, _ = fmt.Fprint(w, ")")
 }
 
 // Accept implements Node Accept interface.
@@ -784,10 +784,10 @@ func (n *IsNullExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *IsNullExpr) Format(w io.Writer) {
 	n.Expr.Format(w)
 	if n.Not {
-		fmt.Fprint(w, " IS NOT NULL")
+		_, _ = fmt.Fprint(w, " IS NOT NULL")
 		return
 	}
-	fmt.Fprint(w, " IS NULL")
+	_, _ = fmt.Fprint(w, " IS NULL")
 }
 
 // Accept implements Node Accept interface.
@@ -838,14 +838,14 @@ func (n *IsTruthExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *IsTruthExpr) Format(w io.Writer) {
 	n.Expr.Format(w)
 	if n.Not {
-		fmt.Fprint(w, " IS NOT")
+		_, _ = fmt.Fprint(w, " IS NOT")
 	} else {
-		fmt.Fprint(w, " IS")
+		_, _ = fmt.Fprint(w, " IS")
 	}
 	if n.True > 0 {
-		fmt.Fprint(w, " TRUE")
+		_, _ = fmt.Fprint(w, " TRUE")
 	} else {
-		fmt.Fprint(w, " FALSE")
+		_, _ = fmt.Fprint(w, " FALSE")
 	}
 }
 
@@ -918,17 +918,17 @@ func (n *PatternLikeExpr) Format(w io.Writer) {
 	n.Expr.Format(w)
 	switch {
 	case n.Not && n.ILike:
-		fmt.Fprint(w, " NOT ILIKE ")
+		_, _ = fmt.Fprint(w, " NOT ILIKE ")
 	case n.ILike:
-		fmt.Fprint(w, " ILIKE ")
+		_, _ = fmt.Fprint(w, " ILIKE ")
 	case n.Not:
-		fmt.Fprint(w, " NOT LIKE ")
+		_, _ = fmt.Fprint(w, " NOT LIKE ")
 	default:
-		fmt.Fprint(w, " LIKE ")
+		_, _ = fmt.Fprint(w, " LIKE ")
 	}
 	n.Pattern.Format(w)
 	if n.Escape != nil {
-		fmt.Fprint(w, " ESCAPE ")
+		_, _ = fmt.Fprint(w, " ESCAPE ")
 		n.Escape.Format(w)
 	}
 }
@@ -990,9 +990,9 @@ func (n *ParenthesesExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *ParenthesesExpr) Format(w io.Writer) {
-	fmt.Fprint(w, "(")
+	_, _ = fmt.Fprint(w, "(")
 	n.Expr.Format(w)
-	fmt.Fprint(w, ")")
+	_, _ = fmt.Fprint(w, ")")
 }
 
 // Accept implements Node Accept interface.
@@ -1030,7 +1030,7 @@ func (n *PositionExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *PositionExpr) Format(w io.Writer) {
-	fmt.Fprintf(w, "%d", n.N)
+	_, _ = fmt.Fprintf(w, "%d", n.N)
 }
 
 // Accept implements Node Accept interface.
@@ -1098,13 +1098,13 @@ func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *PatternRegexpExpr) Format(w io.Writer) {
 	n.Expr.Format(w)
 	if n.Not {
-		fmt.Fprint(w, " NOT SIMILAR TO ")
+		_, _ = fmt.Fprint(w, " NOT SIMILAR TO ")
 	} else {
-		fmt.Fprint(w, " SIMILAR TO ")
+		_, _ = fmt.Fprint(w, " SIMILAR TO ")
 	}
 	n.Pattern.Format(w)
 	if n.Escape != nil {
-		fmt.Fprint(w, " ESCAPE ")
+		_, _ = fmt.Fprint(w, " ESCAPE ")
 		n.Escape.Format(w)
 	}
 }
@@ -1161,14 +1161,14 @@ func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *RowExpr) Format(w io.Writer) {
-	fmt.Fprint(w, "(")
+	_, _ = fmt.Fprint(w, "(")
 	for i, val := range n.Values {
 		if i != 0 {
-			fmt.Fprint(w, ", ")
+			_, _ = fmt.Fprint(w, ", ")
 		}
 		val.Format(w)
 	}
-	fmt.Fprint(w, ")")
+	_, _ = fmt.Fprint(w, ")")
 }
 
 // Accept implements Node Accept interface.
@@ -1215,7 +1215,7 @@ func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 // Format the ExprNode into a Writer.
 func (n *UnaryOperationExpr) Format(w io.Writer) {
 	if n.OpName != "" {
-		fmt.Fprint(w, n.OpName)
+		_, _ = fmt.Fprint(w, n.OpName)
 	} else {
 		n.Op.Format(w)
 	}
@@ -1274,9 +1274,9 @@ func (n *ValuesExpr) Accept(v Visitor) (Node, bool) {
 	if !ok {
 		return n, false
 	}
-	// `node` may be *ast.ValueExpr, to avoid panic, we write `ok` but do not use
-	// it.
-	n.Column, ok = node.(*ColumnNameExpr)
+	if col, isColumn := node.(*ColumnNameExpr); isColumn {
+		n.Column = col
+	}
 	return v.Leave(n)
 }
 
@@ -1325,20 +1325,20 @@ func (n *VariableExpr) Restore(ctx *format.RestoreCtx) error {
 // Format the ExprNode into a Writer.
 func (n *VariableExpr) Format(w io.Writer) {
 	if n.IsSystem {
-		fmt.Fprint(w, "@@")
+		_, _ = fmt.Fprint(w, "@@")
 		if n.ExplicitScope {
 			if n.IsGlobal {
-				fmt.Fprint(w, "GLOBAL.")
+				_, _ = fmt.Fprint(w, "GLOBAL.")
 			} else {
-				fmt.Fprint(w, "SESSION.")
+				_, _ = fmt.Fprint(w, "SESSION.")
 			}
 		}
 	} else {
-		fmt.Fprint(w, "@")
+		_, _ = fmt.Fprint(w, "@")
 	}
-	fmt.Fprint(w, n.Name)
+	_, _ = fmt.Fprint(w, n.Name)
 	if n.Value != nil {
-		fmt.Fprint(w, ":=")
+		_, _ = fmt.Fprint(w, ":=")
 		n.Value.Format(w)
 	}
 }
@@ -1375,7 +1375,7 @@ func (n *MaxValueExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *MaxValueExpr) Format(w io.Writer) {
-	fmt.Fprint(w, "MAXVALUE")
+	_, _ = fmt.Fprint(w, "MAXVALUE")
 }
 
 // Accept implements Node Accept interface.

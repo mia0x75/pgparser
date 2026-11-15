@@ -353,7 +353,7 @@ func (ft *FieldType) FormatAsCastType(w io.Writer) {
 	var sb strings.Builder
 	restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)
 	ft.RestoreAsCastType(restoreCtx)
-	fmt.Fprint(w, sb.String())
+	_, _ = fmt.Fprint(w, sb.String())
 }
 
 // VarStorageLen indicates this column is a variable length column.
@@ -450,11 +450,12 @@ func mergeEvalType(lhs, rhs EvalType, lft, rft *FieldType, isLHSUnsigned, isRHSU
 			rhs = lhs
 		}
 	}
-	if lhs.IsStringKind() || rhs.IsStringKind() {
+	switch {
+	case lhs.IsStringKind() || rhs.IsStringKind():
 		return ETString
-	} else if lhs == ETReal || rhs == ETReal {
+	case lhs == ETReal || rhs == ETReal:
 		return ETReal
-	} else if lhs == ETDecimal || rhs == ETDecimal || isLHSUnsigned != isRHSUnsigned {
+	case lhs == ETDecimal || rhs == ETDecimal || isLHSUnsigned != isRHSUnsigned:
 		return ETDecimal
 	}
 	return ETInt
@@ -646,926 +647,926 @@ const (
 var fieldTypeMergeRules = [fieldTypeNum][fieldTypeNum]byte{
 	/* postgres.TypeDecimal -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeNewDecimal,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeNewDecimal, postgres.TypeNewDecimal,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeDecimal, postgres.TypeDecimal,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeTiny -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeTiny,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeShort, postgres.TypeLong,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeFloat, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeTiny, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLonglong, postgres.TypeInt24,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeTiny,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeShort -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeShort,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeShort, postgres.TypeLong,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeFloat, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeShort, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLonglong, postgres.TypeInt24,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeShort,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeLong -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeLong,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeLong, postgres.TypeLong,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeLong, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLonglong, postgres.TypeLong,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeLong,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeFloat -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeDouble, postgres.TypeFloat,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeFloat, postgres.TypeDouble,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeFloat, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeFloat, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeFloat, postgres.TypeFloat,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeFloat,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeDouble, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeDouble -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeDouble, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeDouble,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeDouble, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeNull -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeTiny,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeShort, postgres.TypeLong,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeFloat, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeNull, postgres.TypeTimestamp,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLonglong, postgres.TypeLonglong,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeDate, postgres.TypeDuration,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeDatetime, postgres.TypeYear,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeBit,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeJSON,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeEnum,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeSet, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeGeometry,
 	},
 	/* postgres.TypeTimestamp -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeTimestamp, postgres.TypeTimestamp,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeDatetime, postgres.TypeDatetime,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeDatetime, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeLonglong -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeLonglong,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeLonglong, postgres.TypeLonglong,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeLonglong, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLonglong, postgres.TypeLong,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeLonglong,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeInt24 -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeInt24,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeInt24, postgres.TypeLong,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeFloat, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeInt24, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLonglong, postgres.TypeInt24,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeInt24,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal    postgres.TypeEnum
+		// postgres.TypeNewDecimal    postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeDate -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeDate, postgres.TypeDatetime,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeDate, postgres.TypeDatetime,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeDatetime, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeTime -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeDuration, postgres.TypeDatetime,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeDatetime, postgres.TypeDuration,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeDatetime, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeDatetime -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeDatetime, postgres.TypeDatetime,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeDatetime, postgres.TypeDatetime,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeDatetime, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeYear -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeDecimal, postgres.TypeTiny,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeShort, postgres.TypeLong,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeFloat, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeYear, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLonglong, postgres.TypeInt24,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeYear,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeNewDate -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeNewDate, postgres.TypeDatetime,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeNewDate, postgres.TypeDatetime,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeDatetime, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeNewDate, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeVarchar -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeVarchar, postgres.TypeVarchar,
 	},
 	/* postgres.TypeBit -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeBit, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeBit,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeJSON -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewFloat     postgres.TypeDouble
+		// postgres.TypeNewFloat     postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeJSON, postgres.TypeVarchar,
-		//postgres.TypeLongLONG     postgres.TypeInt24
+		// postgres.TypeLongLONG     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
 		// postgres.TypeDate         postgres.TypeDuration
 		postgres.TypeVarchar, postgres.TypeVarchar,
 		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeJSON,
 		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeLongBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeLongBlob, postgres.TypeVarchar,
 		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeNewDecimal -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeNewDecimal, postgres.TypeNewDecimal,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeNewDecimal, postgres.TypeNewDecimal,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeDouble, postgres.TypeDouble,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeNewDecimal, postgres.TypeNewDecimal,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeNewDecimal,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeNewDecimal, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeEnum -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeEnum, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeSet -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeSet, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeVarchar,
 	},
 	/* postgres.TypeTinyBlob -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeTinyBlob,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeLongBlob,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeTinyBlob,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeTinyBlob, postgres.TypeTinyBlob,
 	},
 	/* postgres.TypeMediumBlob -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeMediumBlob,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeLongBlob,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeMediumBlob, postgres.TypeMediumBlob,
 	},
 	/* postgres.TypeLongBlob -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeLongBlob,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeLongBlob,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeLongBlob, postgres.TypeLongBlob,
 	},
 	/* postgres.TypeBlob -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeBlob,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeLongBlob,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeBlob,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeBlob, postgres.TypeBlob,
 	},
 	/* postgres.TypeVarString -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeVarchar, postgres.TypeVarchar,
 	},
 	/* postgres.TypeString -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeString, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeString,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeString,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeString, postgres.TypeString,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeString, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeString,
 	},
 	/* postgres.TypeGeometry -> */
 	{
-		//postgres.TypeDecimal      postgres.TypeTiny
+		// postgres.TypeDecimal      postgres.TypeTiny
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeShort        postgres.TypeLong
+		// postgres.TypeShort        postgres.TypeLong
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeFloat        postgres.TypeDouble
+		// postgres.TypeFloat        postgres.TypeDouble
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNull         postgres.TypeTimestamp
+		// postgres.TypeNull         postgres.TypeTimestamp
 		postgres.TypeGeometry, postgres.TypeVarchar,
-		//postgres.TypeLonglong     postgres.TypeInt24
+		// postgres.TypeLonglong     postgres.TypeInt24
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDate         postgres.TypeTime
+		// postgres.TypeDate         postgres.TypeTime
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeDatetime     postgres.TypeYear
+		// postgres.TypeDatetime     postgres.TypeYear
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeNewDate      postgres.TypeVarchar
+		// postgres.TypeNewDate      postgres.TypeVarchar
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeBit          <16>-<244>
+		// postgres.TypeBit          <16>-<244>
 		postgres.TypeVarchar,
-		//postgres.TypeJSON
+		// postgres.TypeJSON
 		postgres.TypeVarchar,
-		//postgres.TypeNewDecimal   postgres.TypeEnum
+		// postgres.TypeNewDecimal   postgres.TypeEnum
 		postgres.TypeVarchar, postgres.TypeVarchar,
-		//postgres.TypeSet          postgres.TypeTinyBlob
+		// postgres.TypeSet          postgres.TypeTinyBlob
 		postgres.TypeVarchar, postgres.TypeTinyBlob,
-		//postgres.TypeMediumBlob  postgres.TypeLongBlob
+		// postgres.TypeMediumBlob  postgres.TypeLongBlob
 		postgres.TypeMediumBlob, postgres.TypeLongBlob,
-		//postgres.TypeBlob         postgres.TypeVarString
+		// postgres.TypeBlob         postgres.TypeVarString
 		postgres.TypeBlob, postgres.TypeVarchar,
-		//postgres.TypeString       postgres.TypeGeometry
+		// postgres.TypeString       postgres.TypeGeometry
 		postgres.TypeString, postgres.TypeGeometry,
 	},
 }

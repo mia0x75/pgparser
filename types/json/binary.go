@@ -15,7 +15,6 @@ import (
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/hack"
-	"github.com/mia0x75/pgparser/sqlerr"
 )
 
 /*
@@ -88,8 +87,7 @@ type BinaryJSON struct {
 
 // String implements fmt.Stringer interface.
 func (bj BinaryJSON) String() string {
-	out, err := bj.MarshalJSON()
-	sqlerr.Log(err)
+	out, _ := bj.MarshalJSON()
 	return string(out)
 }
 
@@ -111,6 +109,9 @@ func (bj BinaryJSON) marshalTo(buf []byte) ([]byte, error) {
 	case TypeCodeString:
 		return marshalStringTo(buf, bj.GetString()), nil
 	case TypeCodeLiteral:
+		if len(bj.Value) == 0 {
+			return buf, errors.New("literal JSON value is empty")
+		}
 		return marshalLiteralTo(buf, bj.Value[0]), nil
 	case TypeCodeInt64:
 		return strconv.AppendInt(buf, bj.GetInt64(), 10), nil
@@ -128,11 +129,17 @@ func (bj BinaryJSON) marshalTo(buf []byte) ([]byte, error) {
 
 // GetInt64 gets the int64 value.
 func (bj BinaryJSON) GetInt64() int64 {
+	if len(bj.Value) < 8 {
+		return 0
+	}
 	return int64(endian.Uint64(bj.Value))
 }
 
 // GetUint64 gets the uint64 value.
 func (bj BinaryJSON) GetUint64() uint64 {
+	if len(bj.Value) < 8 {
+		return 0
+	}
 	return endian.Uint64(bj.Value)
 }
 
@@ -143,9 +150,20 @@ func (bj BinaryJSON) GetFloat64() float64 {
 
 // GetString gets the string value.
 func (bj BinaryJSON) GetString() []byte {
+	if len(bj.Value) == 0 {
+		return nil
+	}
 	strLen, lenLen := uint64(bj.Value[0]), 1
 	if strLen >= utf8.RuneSelf {
-		strLen, lenLen = binary.Uvarint(bj.Value)
+		var n int
+		strLen, n = binary.Uvarint(bj.Value)
+		if n <= 0 {
+			return nil
+		}
+		lenLen = n
+	}
+	if strLen > uint64(len(bj.Value)-lenLen) {
+		return nil
 	}
 	return bj.Value[lenLen : lenLen+int(strLen)]
 }
@@ -167,6 +185,9 @@ func (bj BinaryJSON) GetKeys() BinaryJSON {
 
 // GetElemCount gets the count of Object or Array.
 func (bj BinaryJSON) GetElemCount() int {
+	if len(bj.Value) < 4 {
+		return 0
+	}
 	return int(endian.Uint32(bj.Value))
 }
 
@@ -250,7 +271,10 @@ func (bj BinaryJSON) marshalFloat64To(buf []byte) ([]byte, error) {
 }
 
 func (bj BinaryJSON) marshalArrayTo(buf []byte) ([]byte, error) {
-	elemCount := int(endian.Uint32(bj.Value))
+	elemCount := bj.GetElemCount()
+	if len(bj.Value) < headerSize+elemCount*valEntrySize {
+		return nil, errors.New("truncated JSON array")
+	}
 	buf = append(buf, '[')
 	for i := range elemCount {
 		if i != 0 {
@@ -266,7 +290,10 @@ func (bj BinaryJSON) marshalArrayTo(buf []byte) ([]byte, error) {
 }
 
 func (bj BinaryJSON) marshalObjTo(buf []byte) ([]byte, error) {
-	elemCount := int(endian.Uint32(bj.Value))
+	elemCount := bj.GetElemCount()
+	if len(bj.Value) < headerSize+elemCount*(keyEntrySize+valEntrySize) {
+		return nil, errors.New("truncated JSON object")
+	}
 	buf = append(buf, '{')
 	for i := range elemCount {
 		if i != 0 {
@@ -353,23 +380,6 @@ func marshalStringTo(buf, s []byte) []byte {
 	}
 	buf = append(buf, '"')
 	return buf
-}
-
-func (bj BinaryJSON) marshalValueEntryTo(buf []byte, entryOff int) ([]byte, error) {
-	tpCode := bj.Value[entryOff]
-	switch tpCode {
-	case TypeCodeLiteral:
-		buf = marshalLiteralTo(buf, bj.Value[entryOff+1])
-	default:
-		offset := endian.Uint32(bj.Value[entryOff+1:])
-		tmp := BinaryJSON{TypeCode: tpCode, Value: bj.Value[offset:]}
-		var err error
-		buf, err = tmp.marshalTo(buf)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-	}
-	return buf, nil
 }
 
 func marshalLiteralTo(b []byte, litType byte) []byte {
@@ -576,8 +586,7 @@ func appendBinaryValElem(buf []byte, docOff, valEntryOff int, val any) ([]byte, 
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	switch typeCode {
-	case TypeCodeLiteral:
+	if typeCode == TypeCodeLiteral {
 		litCode := buf[elemDocOff]
 		buf = buf[:elemDocOff]
 		buf[valEntryOff] = TypeCodeLiteral

@@ -37,7 +37,6 @@ const (
 	LiteralFalse byte = 0x02
 )
 
-const unknownTypeCodeErrorMsg = "unknown type code: %d"
 const unknownTypeErrorMsg = "unknown type: %s"
 
 // htmlSafeSet holds the value true if the ASCII character with the given

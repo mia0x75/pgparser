@@ -52,7 +52,6 @@ type LexerState int
 const (
 	stateInitial LexerState = iota
 	stateXB                 // bit string literal
-	stateXC                 // extended C-style comments
 	stateXD                 // delimited identifiers (double-quoted)
 	stateXH                 // hexadecimal byte string
 	stateXQ                 // standard quoted strings
@@ -93,11 +92,6 @@ type Lexer struct {
 	// Configuration
 	StandardConformingStrings bool // If true, backslash is not escape in standard strings
 	BackslashQuote            int  // 0=off, 1=on, 2=safe_encoding
-	EscapeStringWarning       bool
-
-	// Warning tracking
-	warnOnFirstEscape bool
-	sawNonASCII       bool
 
 	// Error handling
 	Err error
@@ -118,7 +112,6 @@ func NewLexer(input string) *Lexer {
 		state:                     stateInitial,
 		StandardConformingStrings: true,
 		BackslashQuote:            BackslashQuoteSafeEncoding,
-		EscapeStringWarning:       true,
 	}
 	if pos := strings.IndexByte(input, 0); pos >= 0 {
 		l.pos = pos
@@ -150,9 +143,6 @@ func (l *Lexer) NextToken() Token {
 		case stateInitial:
 			l.start = l.pos
 			return l.lexInitial()
-		case stateXC:
-			l.lexComment()
-			continue
 		case stateXB, stateXH:
 			return l.lexBitOrHexString()
 		case stateXQ, stateXE, stateXUS:
@@ -174,27 +164,16 @@ func (l *Lexer) NextToken() Token {
 
 // lexInitial handles tokens in the initial state.
 func (l *Lexer) lexInitial() Token {
-	l.skipWhitespace()
+	if err := l.skipWhitespaceAndComments(); err != nil {
+		l.Err = err
+		return Token{Type: lex_EOF, Loc: l.pos}
+	}
 	if l.pos >= len(l.input) {
 		return Token{Type: lex_EOF, Loc: l.pos}
 	}
 
 	l.start = l.pos
 	ch := l.input[l.pos]
-
-	// Check for C-style comment start
-	if ch == '/' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '*' {
-		l.pos += 2
-		l.state = stateXC
-		// Return to main loop to handle comment
-		return l.NextToken()
-	}
-
-	// Check for SQL comment
-	if (ch == '-' || ch == '/') && l.pos+1 < len(l.input) && l.input[l.pos+1] == ch {
-		l.skipLineComment()
-		return l.NextToken()
-	}
 
 	// Bit string: B'...'
 	if (ch == 'b' || ch == 'B') && l.pos+1 < len(l.input) && l.input[l.pos+1] == '\'' {
@@ -231,8 +210,6 @@ func (l *Lexer) lexInitial() Token {
 	if (ch == 'e' || ch == 'E') && l.pos+1 < len(l.input) && l.input[l.pos+1] == '\'' {
 		l.pos += 2
 		l.state = stateXE
-		l.warnOnFirstEscape = false
-		l.sawNonASCII = false
 		l.literalbuf.Reset()
 		return l.NextToken()
 	}
@@ -265,8 +242,6 @@ func (l *Lexer) lexInitial() Token {
 	// Standard quoted string: '...'
 	if ch == '\'' {
 		l.pos++
-		l.warnOnFirstEscape = true
-		l.sawNonASCII = false
 		if l.StandardConformingStrings {
 			l.state = stateXQ
 		} else {
@@ -355,21 +330,6 @@ func (l *Lexer) lexInitial() Token {
 	return Token{Type: int(ch), Str: string(ch), Loc: l.start}
 }
 
-// skipWhitespace skips whitespace characters.
-func (l *Lexer) skipWhitespace() {
-	for l.pos < len(l.input) {
-		ch := l.input[l.pos]
-		switch {
-		case ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' || ch == '\f' || ch == '\v':
-			l.pos++
-		case ch == '-' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '-':
-			l.skipLineComment()
-		default:
-			return
-		}
-	}
-}
-
 // skipLineComment skips a -- comment to end of line.
 func (l *Lexer) skipLineComment() {
 	l.pos += 2 // skip --
@@ -402,14 +362,6 @@ func (l *Lexer) skipBlockComment() bool {
 		}
 	}
 	return false
-}
-
-// lexComment handles C-style comments /* ... */
-func (l *Lexer) lexComment() {
-	if !l.skipBlockComment() {
-		l.Err = fmt.Errorf("unterminated /* comment")
-	}
-	l.state = stateInitial
 }
 
 // lexBitOrHexString handles B'...' and X'...' strings.
@@ -504,17 +456,11 @@ func (l *Lexer) handleEscapeSequence() {
 		l.pos--
 		val := l.scanOctal()
 		l.literalbuf.WriteByte(byte(val))
-		if val > 127 {
-			l.sawNonASCII = true
-		}
 	case 'x':
 		// Hex escape: \xNN
 		if l.pos < len(l.input) && isHexDigit(l.input[l.pos]) {
 			val := l.scanHex(2)
 			l.literalbuf.WriteByte(byte(val))
-			if val > 127 {
-				l.sawNonASCII = true
-			}
 		} else {
 			l.literalbuf.WriteByte('x')
 		}
@@ -1087,16 +1033,12 @@ func (l *Lexer) lexIdent() Token {
 		l.pos++
 	}
 
-	ident := l.input[start:l.pos]
+	ident := l.downcase(l.input[start:l.pos])
 
-	// Check if it's a keyword
-	kw := LookupKeyword(ident)
-	if kw != nil {
+	// Keywords are stored lowercase, so one lowering serves both lookups.
+	if kw := lookupKeywordLower(ident); kw != nil {
 		return Token{Type: kw.Token, Str: kw.Name, Loc: l.start}
 	}
-
-	// Convert to lowercase for non-keywords
-	ident = l.downcase(ident)
 
 	return Token{Type: lex_IDENT, Str: truncateIdentifier(ident), Loc: l.start}
 }
@@ -1228,7 +1170,7 @@ func (l *Lexer) skipWhitespaceAndComments() error {
 			continue
 		}
 
-		if ch == '-' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '-' {
+		if (ch == '-' || ch == '/') && l.pos+1 < len(l.input) && l.input[l.pos+1] == ch {
 			l.skipLineComment()
 			continue
 		}
@@ -1341,6 +1283,17 @@ func (l *Lexer) contextAt(pos int) string {
 		pos = len(l.input)
 	}
 	start := max(pos-16, 0)
+	// Do not begin in the middle of a word: back up to the previous space or
+	// self-delimiting character, bounded so a long token cannot bloat the message.
+	for start > 0 && start > pos-32 && !isSpaceByte(l.input[start-1]) && !isSelf(l.input[start-1]) {
+		start--
+	}
+	for start < pos && !utf8.RuneStart(l.input[start]) {
+		start++
+	}
 	end := min(pos+16, len(l.input))
+	for end < len(l.input) && !utf8.RuneStart(l.input[end]) {
+		end++
+	}
 	return strings.TrimSpace(l.input[start:end])
 }

@@ -2,7 +2,7 @@ package sqlerr
 
 import (
 	"encoding/json"
-	"runtime"
+	"go/build"
 	"strings"
 	"testing"
 
@@ -136,11 +136,11 @@ func TestTraceAndLocation(t *testing.T) {
 	lines := strings.Split(stack, "\n")
 	var sysStack = 0
 	for _, line := range lines {
-		if strings.Contains(line, runtime.GOROOT()) {
+		if strings.Contains(line, build.Default.GOROOT) {
 			sysStack++
 		}
 	}
-	if !(len(lines)-(2*sysStack) > 2) {
+	if len(lines)-(2*sysStack) <= 2 {
 		t.Fatalf("got %#v, want > 2", len(lines)-(2*sysStack))
 	}
 	var containTerr bool

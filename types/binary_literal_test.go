@@ -203,9 +203,17 @@ func TestNewBinaryLiteralFromUint(t *testing.T) {
 		{0x4920616D2061206C, 5, []byte{0x6D, 0x20, 0x61, 0x20, 0x6C}},
 	}
 	for _, tt := range tbl {
-		hex := NewBinaryLiteralFromUint(tt.Input, tt.ByteSize)
+		hex, err := NewBinaryLiteralFromUint(tt.Input, tt.ByteSize)
+		if err != nil {
+			t.Fatalf("NewBinaryLiteralFromUint(%#x, %d) error: %v", tt.Input, tt.ByteSize, err)
+		}
 		if !reflect.DeepEqual([]byte(hex), tt.Expected) {
 			t.Fatalf("got %#v, want %#v: %#v", []byte(hex), tt.Expected, tt)
+		}
+	}
+	for _, byteSize := range []int{0, 9, 100} {
+		if _, err := NewBinaryLiteralFromUint(0, byteSize); err == nil {
+			t.Fatalf("NewBinaryLiteralFromUint(0, %d) accepted an invalid byteSize", byteSize)
 		}
 	}
 }

@@ -8,13 +8,6 @@ import (
 	"github.com/mia0x75/pgparser/postgres"
 )
 
-func truncateStr(str string, flen int) string {
-	if flen != UnspecifiedLength && len(str) > flen {
-		str = str[:flen]
-	}
-	return str
-}
-
 // UnsignedUpperBound retains the width limits of the internal integer types.
 var UnsignedUpperBound = map[byte]uint64{
 	postgres.TypeTiny:     math.MaxUint8,
@@ -90,27 +83,6 @@ func ConvertUintToUint(val uint64, upperBound uint64, tp byte) (uint64, error) {
 	}
 
 	return val, nil
-}
-
-// roundIntStr is to round int string base on the number following dot.
-func roundIntStr(numNextDot byte, intStr string) string {
-	if numNextDot < '5' {
-		return intStr
-	}
-	retStr := []byte(intStr)
-	for i := len(intStr) - 1; i >= 0; i-- {
-		if retStr[i] != '9' {
-			retStr[i]++
-			break
-		}
-		if i == 0 {
-			retStr[i] = '1'
-			retStr = append(retStr, '0')
-			break
-		}
-		retStr[i] = '0'
-	}
-	return string(retStr)
 }
 
 // ToString converts an interface to a string.

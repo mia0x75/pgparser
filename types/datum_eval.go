@@ -31,15 +31,13 @@ func ComputePlus(a, b Datum) (d Datum, err error) {
 			return d, errors.Trace(err1)
 		}
 	case KindFloat64:
-		switch b.Kind() {
-		case KindFloat64:
+		if b.Kind() == KindFloat64 {
 			r := a.GetFloat64() + b.GetFloat64()
 			d.SetFloat64(r)
 			return d, nil
 		}
 	case KindDecimal:
-		switch b.Kind() {
-		case KindDecimal:
+		if b.Kind() == KindDecimal {
 			r := new(PgDecimal)
 			err = DecimalAdd(a.GetPgDecimal(), b.GetPgDecimal(), r)
 			d.SetPgDecimal(r)

@@ -39,9 +39,9 @@ func trimLeadingZeroBytes(bytes []byte) []byte {
 // NewBinaryLiteralFromUint creates a new BinaryLiteral instance by the given uint value in BitEndian.
 // byteSize will be used as the length of the new BinaryLiteral, with leading bytes filled to zero.
 // If byteSize is -1, the leading zeros in new BinaryLiteral will be trimmed.
-func NewBinaryLiteralFromUint(value uint64, byteSize int) BinaryLiteral {
+func NewBinaryLiteralFromUint(value uint64, byteSize int) (BinaryLiteral, error) {
 	if byteSize != -1 && (byteSize < 1 || byteSize > 8) {
-		panic("Invalid byteSize")
+		return nil, errors.Errorf("invalid byteSize %d", byteSize)
 	}
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, value)
@@ -50,7 +50,7 @@ func NewBinaryLiteralFromUint(value uint64, byteSize int) BinaryLiteral {
 	} else {
 		buf = buf[8-byteSize:]
 	}
-	return buf
+	return buf, nil
 }
 
 // String implements fmt.Stringer interface.
@@ -105,12 +105,13 @@ func ParseBitStr(s string) (BinaryLiteral, error) {
 		return nil, errors.Errorf("invalid empty string for parsing bit type")
 	}
 
-	if s[0] == 'b' || s[0] == 'B' {
+	switch {
+	case s[0] == 'b' || s[0] == 'B':
 		// format is b'val' or B'val'
 		s = strings.Trim(s[1:], "'")
-	} else if strings.HasPrefix(s, "0b") {
+	case strings.HasPrefix(s, "0b"):
 		s = s[2:]
-	} else {
+	default:
 		// here means format is not b'val', B'val' or 0bval.
 		return nil, errors.Errorf("invalid bit type format %s", s)
 	}
@@ -151,15 +152,16 @@ func ParseHexStr(s string) (BinaryLiteral, error) {
 		return nil, errors.Errorf("invalid empty string for parsing hexadecimal literal")
 	}
 
-	if s[0] == 'x' || s[0] == 'X' {
+	switch {
+	case s[0] == 'x' || s[0] == 'X':
 		// format is x'val' or X'val'
 		s = strings.Trim(s[1:], "'")
 		if len(s)%2 != 0 {
 			return nil, errors.Errorf("invalid hexadecimal format, must even numbers, but %d", len(s))
 		}
-	} else if strings.HasPrefix(s, "0x") {
+	case strings.HasPrefix(s, "0x"):
 		s = s[2:]
-	} else {
+	default:
 		// here means format is not x'val', X'val' or 0xval.
 		return nil, errors.Errorf("invalid hexadecimal format %s", s)
 	}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/postgres"
-	"github.com/mia0x75/pgparser/sqlerr"
 )
 
 // RoundMode is the type for round mode.
@@ -195,8 +194,7 @@ func (d *PgDecimal) GetDigitsFrac() int8 {
 // String returns the decimal string representation rounded to resultFrac.
 func (d *PgDecimal) String() string {
 	tmp := *d
-	err := tmp.Round(&tmp, int(tmp.resultFrac), ModeHalfEven)
-	sqlerr.Log(errors.Trace(err))
+	_ = tmp.Round(&tmp, int(tmp.resultFrac), ModeHalfEven)
 	return string(tmp.ToString())
 }
 
@@ -361,6 +359,28 @@ func (d *PgDecimal) FromString(str []byte) error {
 		*d = zeroPgDecimal
 		return ErrBadNumber
 	}
+	// Reject anything after the number except an exponent and trailing spaces.
+	expEnd := endIdx
+	if expEnd < len(str) && (str[expEnd] == 'e' || str[expEnd] == 'E') {
+		expEnd++
+		if expEnd < len(str) && (str[expEnd] == '+' || str[expEnd] == '-') {
+			expEnd++
+		}
+		digitsStart := expEnd
+		for expEnd < len(str) && isDigit(str[expEnd]) {
+			expEnd++
+		}
+		if expEnd == digitsStart {
+			*d = zeroPgDecimal
+			return ErrBadNumber
+		}
+	}
+	for i := expEnd; i < len(str); i++ {
+		if !isSpace(str[i]) {
+			*d = zeroPgDecimal
+			return ErrBadNumber
+		}
+	}
 	wordsInt := digitsToWords(digitsInt)
 	wordsFrac := digitsToWords(digitsFrac)
 	wordsInt, wordsFrac, err := fixWordCntError(wordsInt, wordsFrac)
@@ -413,7 +433,7 @@ func (d *PgDecimal) FromString(str []byte) error {
 		d.wordBuf[wordIdx] = word * powers10[digitsPerWord-innerIdx]
 	}
 	if endIdx+1 <= len(str) && (str[endIdx] == 'e' || str[endIdx] == 'E') {
-		exponent, err1 := strToInt(string(str[endIdx+1:]))
+		exponent, err1 := strToInt(string(str[endIdx+1 : expEnd]))
 		if err1 != nil {
 			err = errors.Cause(err1)
 			if err != ErrTruncated {
@@ -712,7 +732,7 @@ func (d *PgDecimal) doMiniRightShift(shift, beg, end int) {
 		d.wordBuf[bufFrom] = d.wordBuf[bufFrom]/powers10[shift] + (d.wordBuf[bufFrom-1]%powers10[shift])*powers10[cShift]
 		bufFrom--
 	}
-	d.wordBuf[bufFrom] = d.wordBuf[bufFrom] / powers10[shift]
+	d.wordBuf[bufFrom] /= powers10[shift]
 }
 
 // Round rounds the decimal to "frac" digits.
@@ -879,10 +899,7 @@ func (d *PgDecimal) Round(to *PgDecimal, frac int, roundMode RoundMode) (err err
 			}
 		}
 	} else {
-		for {
-			if to.wordBuf[toIdx] != 0 {
-				break
-			}
+		for to.wordBuf[toIdx] == 0 {
 			if toIdx == 0 {
 				/* making 'zero' with the proper scale */
 				idx := wordsFracTo + 1
@@ -1407,8 +1424,7 @@ func writeWord(b []byte, word int32, size int) {
 // Compare compares one decimal to another, returns -1/0/1.
 func (d *PgDecimal) Compare(to *PgDecimal) int {
 	if d.negative == to.negative {
-		cmp, err := doSub(d, to, nil)
-		sqlerr.Log(errors.Trace(err))
+		cmp, _ := doSub(d, to, nil)
 		return cmp
 	}
 	if d.negative {
@@ -1623,11 +1639,12 @@ func doAdd(from1, from2, to *PgDecimal) error {
 	)
 
 	var x int32
-	if wordsInt1 > wordsInt2 {
+	switch {
+	case wordsInt1 > wordsInt2:
 		x = from1.wordBuf[0]
-	} else if wordsInt2 > wordsInt1 {
+	case wordsInt2 > wordsInt1:
 		x = from2.wordBuf[0]
-	} else {
+	default:
 		x = from1.wordBuf[0] + from2.wordBuf[0]
 	}
 	if x > wordMax-1 { /* yes, there is */
@@ -1852,10 +1869,7 @@ func DecimalMul(from1, from2, to *PgDecimal) error {
 	if to.negative {
 		idx := 0
 		end := wordsIntTo + wordsFracTo
-		for {
-			if to.wordBuf[idx] != 0 {
-				break
-			}
+		for to.wordBuf[idx] == 0 {
 			idx++
 			/* We got decimal zero */
 			if idx == end {
@@ -2195,22 +2209,20 @@ func NewDecFromUint(i uint64) *PgDecimal {
 // NewDecFromFloatForTest creates a PgDecimal from float, as it returns no error, it should only be used in test.
 func NewDecFromFloatForTest(f float64) *PgDecimal {
 	dec := new(PgDecimal)
-	err := dec.FromFloat64(f)
-	sqlerr.Log(errors.Trace(err))
+	_ = dec.FromFloat64(f)
 	return dec
 }
 
 // NewDecFromStringForTest creates a PgDecimal from string, as it returns no error, it should only be used in test.
 func NewDecFromStringForTest(s string) *PgDecimal {
 	dec := new(PgDecimal)
-	err := dec.FromString([]byte(s))
-	sqlerr.Log(errors.Trace(err))
+	_ = dec.FromString([]byte(s))
 	return dec
 }
 
 // NewMaxOrMinDec returns the max or min value decimal for given precision and fraction.
 func NewMaxOrMinDec(negative bool, prec, frac int) *PgDecimal {
-	if prec == 0 && frac == 0 {
+	if prec <= 0 || frac < 0 || frac > prec {
 		return new(PgDecimal)
 	}
 	str := make([]byte, prec+2)
@@ -2224,7 +2236,6 @@ func NewMaxOrMinDec(negative bool, prec, frac int) *PgDecimal {
 	}
 	str[1+prec-frac] = '.'
 	dec := new(PgDecimal)
-	err := dec.FromString(str)
-	sqlerr.Log(errors.Trace(err))
+	_ = dec.FromString(str)
 	return dec
 }

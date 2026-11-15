@@ -52,10 +52,8 @@ func TestValidatePathExpr(t *testing.T) {
 			if len(pe.legs) != tt.legs {
 				t.Fatalf("got %#v, want %#v", len(pe.legs), tt.legs)
 			}
-		} else {
-			if err == nil {
-				t.Fatal("got nil, want error")
-			}
+		} else if err == nil {
+			t.Fatal("got nil, want error")
 		}
 	}
 }

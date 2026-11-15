@@ -58,16 +58,12 @@ func formatENUS(number string, precision string) (string, error) {
 	}
 
 	for i, v := range number {
-		if unicode.IsDigit(v) {
+		switch {
+		case unicode.IsDigit(v), i == 1 && number[1] == '.', v == '.' && number[1] != '.':
 			continue
-		} else if i == 1 && number[1] == '.' {
-			continue
-		} else if v == '.' && number[1] != '.' {
-			continue
-		} else {
-			number = number[:i]
-			break
 		}
+		number = number[:i]
+		break
 	}
 
 	comma := []byte{','}

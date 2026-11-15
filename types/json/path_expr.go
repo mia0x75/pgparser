@@ -74,11 +74,12 @@ func (pe PathExpression) popOneLeg() (pathLeg, PathExpression) {
 		flags: 0,
 	}
 	for _, leg := range newPe.legs {
-		if leg.typ == pathLegIndex && leg.arrayIndex == -1 {
+		switch {
+		case leg.typ == pathLegIndex && leg.arrayIndex == -1:
 			newPe.flags |= pathExpressionContainsAsterisk
-		} else if leg.typ == pathLegKey && leg.dotKey == "*" {
+		case leg.typ == pathLegKey && leg.dotKey == "*":
 			newPe.flags |= pathExpressionContainsAsterisk
-		} else if leg.typ == pathLegDoubleAsterisk {
+		case leg.typ == pathLegDoubleAsterisk:
 			newPe.flags |= pathExpressionContainsDoubleAsterisk
 		}
 	}
@@ -137,7 +138,8 @@ func ParseJSONPathExpr(pathExpr string) (pe PathExpression, err error) {
 		}
 		lastEnd = end
 
-		if pathExprSuffix[start] == '[' {
+		switch pathExprSuffix[start] {
+		case '[':
 			// The leg is an index of a JSON array.
 			var leg = strings.TrimFunc(pathExprSuffix[start+1:end], isBlank)
 			var indexStr = strings.TrimFunc(leg[0:len(leg)-1], isBlank)
@@ -152,7 +154,7 @@ func ParseJSONPathExpr(pathExpr string) (pe PathExpression, err error) {
 				}
 			}
 			pe.legs = append(pe.legs, pathLeg{typ: pathLegIndex, arrayIndex: index})
-		} else if pathExprSuffix[start] == '.' {
+		case '.':
 			// The leg is a key of a JSON object.
 			var key = strings.TrimFunc(pathExprSuffix[start+1:end], isBlank)
 			if len(key) == 1 && key[0] == '*' {
@@ -165,7 +167,7 @@ func ParseJSONPathExpr(pathExpr string) (pe PathExpression, err error) {
 				}
 			}
 			pe.legs = append(pe.legs, pathLeg{typ: pathLegKey, dotKey: key})
-		} else {
+		default:
 			// The leg is '**'.
 			pe.flags |= pathExpressionContainsDoubleAsterisk
 			pe.legs = append(pe.legs, pathLeg{typ: pathLegDoubleAsterisk})

@@ -142,7 +142,7 @@ LIMIT 10 OFFSET 2;`
 
 // Ported from parser_test.go multi-statement behavior.
 func TestParseSQLMultiStatement(t *testing.T) {
-	stmts, _, err := pgparser.New().Parse("SELECT 1; SELECT 2;")
+	stmts, err := pgparser.New().Parse("SELECT 1; SELECT 2;")
 	if err != nil {
 		t.Fatalf("Parse error: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestScannerDollarQuoteAndComments(t *testing.T) {
 }
 
 func TestParseSQLEmptyInput(t *testing.T) {
-	stmts, _, err := pgparser.New().Parse("")
+	stmts, err := pgparser.New().Parse("")
 	if err != nil {
 		t.Fatalf("empty input: unexpected error: %v", err)
 	}
@@ -542,7 +542,7 @@ func TestParseSQLInsertOnConflict(t *testing.T) {
 
 func TestParseSQLCommentOn(t *testing.T) {
 	c, ok := mustParseOne(t, "COMMENT ON COLUMN s.t.c IS 'hello';").(*ast.CommentStmt)
-	if !ok || c.ObjectType != "column" || c.ObjectName != "s.t.c" || c.Comment == nil || *c.Comment != "hello" {
+	if !ok || c.ObjectType != "column" || !reflect.DeepEqual(c.ObjectName, []string{"s", "t", "c"}) || c.Comment == nil || *c.Comment != "hello" {
 		t.Fatalf("unexpected comment: %#v", c)
 	}
 	c, ok = mustParseOne(t, "COMMENT ON TABLE t IS NULL;").(*ast.CommentStmt)
@@ -785,7 +785,7 @@ func TestParseSQLCreateIndexOptionsAndDefaults(t *testing.T) {
 
 func TestParseSQLCommentFunctionAndSetScope(t *testing.T) {
 	c, ok := mustParseOne(t, "COMMENT ON FUNCTION public.f(integer) IS 'x';").(*ast.CommentStmt)
-	if !ok || c.ObjectName == "" {
+	if !ok || len(c.ObjectName) == 0 {
 		t.Fatalf("unexpected comment: %#v", c)
 	}
 	for _, sql := range []string{
@@ -1314,7 +1314,7 @@ func TestParseSQLPlaceholders(t *testing.T) {
 }
 
 func TestParseSQLPlaceholdersMultiStatement(t *testing.T) {
-	stmts, _, err := pgparser.New().Parse("SELECT * FROM a WHERE id = $1; SELECT * FROM b WHERE status = $1;")
+	stmts, err := pgparser.New().Parse("SELECT * FROM a WHERE id = $1; SELECT * FROM b WHERE status = $1;")
 	if err != nil {
 		t.Fatalf("Parse error: %v", err)
 	}

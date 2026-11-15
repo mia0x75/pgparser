@@ -86,34 +86,6 @@ func TestYear(t *testing.T) {
 	}
 }
 
-func getLocation(t *testing.T) *time.Location {
-	locations := []string{"Asia/Shanghai", "Europe/Berlin"}
-	timeFormat := "Jan 2, 2006 at 3:04pm (MST)"
-
-	z, err := time.LoadLocation(locations[0])
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	t1, err := time.ParseInLocation(timeFormat, "Jul 9, 2012 at 5:02am (CEST)", z)
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-	t2, err := time.Parse(timeFormat, "Jul 9, 2012 at 5:02am (CEST)")
-	if err != nil {
-		t.Fatalf("unexpected error %v", err)
-	}
-
-	if t1.Equal(t2) {
-		z, err = time.LoadLocation(locations[1])
-		if err != nil {
-			t.Fatalf("unexpected error %v", err)
-		}
-	}
-
-	return z
-}
-
 func TestTimeSuite_ParseFrac(t *testing.T) {
 	tbl := []struct {
 		S        string
@@ -214,24 +186,6 @@ func TestTamestampDiff(t *testing.T) {
 	}
 }
 
-func TestDateFSP(t *testing.T) {
-	tests := []struct {
-		date   string
-		expect int
-	}{
-		{"2004-01-01 12:00:00.111", 3},
-		{"2004-01-01 12:00:00.11", 2},
-		{"2004-01-01 12:00:00.111111", 6},
-		{"2004-01-01 12:00:00", 0},
-	}
-
-	for _, test := range tests {
-		if got := types.DateFSP(test.date); got != test.expect {
-			t.Fatalf("got %#v, want %#v", got, test.expect)
-		}
-	}
-}
-
 func TestConvertTimeZone(t *testing.T) {
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	tests := []struct {
@@ -248,7 +202,7 @@ func TestConvertTimeZone(t *testing.T) {
 	for _, test := range tests {
 		var tm types.Time
 		tm.Time = test.input
-		tm.ConvertTimeZone(test.from, test.to)
+		_ = tm.ConvertTimeZone(test.from, test.to)
 		if tm.Compare(types.Time{Time: test.expect}) != 0 {
 			t.Fatalf("got %#v, want %#v", tm.Compare(types.Time{Time: test.expect}), 0)
 		}

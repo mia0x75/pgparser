@@ -418,18 +418,18 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *FuncCallExpr) Format(w io.Writer) {
-	fmt.Fprintf(w, "%s(", n.FnName.L)
+	_, _ = fmt.Fprintf(w, "%s(", n.FnName.L)
 	if n.Star {
-		fmt.Fprint(w, "*")
+		_, _ = fmt.Fprint(w, "*")
 	} else {
 		for i, arg := range n.Args {
 			arg.Format(w)
 			if i != len(n.Args)-1 {
-				fmt.Fprint(w, ", ")
+				_, _ = fmt.Fprint(w, ", ")
 			}
 		}
 	}
-	fmt.Fprint(w, ")")
+	_, _ = fmt.Fprint(w, ")")
 }
 
 // Accept implements Node interface.
@@ -527,19 +527,19 @@ func (n *FuncCastExpr) Restore(ctx *format.RestoreCtx) error {
 func (n *FuncCastExpr) Format(w io.Writer) {
 	switch n.FunctionType {
 	case CastFunction:
-		fmt.Fprint(w, "CAST(")
+		_, _ = fmt.Fprint(w, "CAST(")
 		n.Expr.Format(w)
-		fmt.Fprint(w, " AS ")
+		_, _ = fmt.Fprint(w, " AS ")
 		n.Tp.FormatAsCastType(w)
-		fmt.Fprint(w, ")")
+		_, _ = fmt.Fprint(w, ")")
 	case CastConvertFunction:
-		fmt.Fprint(w, "CONVERT(")
+		_, _ = fmt.Fprint(w, "CONVERT(")
 		n.Expr.Format(w)
-		fmt.Fprint(w, ", ")
+		_, _ = fmt.Fprint(w, ", ")
 		n.Tp.FormatAsCastType(w)
-		fmt.Fprint(w, ")")
+		_, _ = fmt.Fprint(w, ")")
 	case CastBinaryOperator:
-		fmt.Fprint(w, "BINARY ")
+		_, _ = fmt.Fprint(w, "BINARY ")
 		n.Expr.Format(w)
 	}
 }
@@ -677,34 +677,34 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *AggregateFuncExpr) Format(w io.Writer) {
-	fmt.Fprintf(w, "%s(", n.F)
+	_, _ = fmt.Fprintf(w, "%s(", n.F)
 	if n.Distinct {
-		fmt.Fprint(w, "DISTINCT ")
+		_, _ = fmt.Fprint(w, "DISTINCT ")
 	}
 	if n.Star {
-		fmt.Fprint(w, "*")
+		_, _ = fmt.Fprint(w, "*")
 	} else {
 		for i, arg := range n.Args {
 			if i != 0 {
-				fmt.Fprint(w, ", ")
+				_, _ = fmt.Fprint(w, ", ")
 			}
 			arg.Format(w)
 		}
 	}
 	if n.OrderBy != nil {
-		fmt.Fprint(w, " ")
+		_, _ = fmt.Fprint(w, " ")
 		n.OrderBy.Format(w)
 	}
-	fmt.Fprint(w, ")")
+	_, _ = fmt.Fprint(w, ")")
 	if n.WithinGroup != nil {
-		fmt.Fprint(w, " WITHIN GROUP (")
+		_, _ = fmt.Fprint(w, " WITHIN GROUP (")
 		n.WithinGroup.Format(w)
-		fmt.Fprint(w, ")")
+		_, _ = fmt.Fprint(w, ")")
 	}
 	if n.Filter != nil {
-		fmt.Fprint(w, " FILTER (WHERE ")
+		_, _ = fmt.Fprint(w, " FILTER (WHERE ")
 		n.Filter.Format(w)
-		fmt.Fprint(w, ")")
+		_, _ = fmt.Fprint(w, ")")
 	}
 }
 
@@ -848,31 +848,31 @@ func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the window function expression into a Writer.
 func (n *WindowFuncExpr) Format(w io.Writer) {
-	fmt.Fprintf(w, "%s(", n.F)
+	_, _ = fmt.Fprintf(w, "%s(", n.F)
 	if n.Distinct {
-		fmt.Fprint(w, "DISTINCT ")
+		_, _ = fmt.Fprint(w, "DISTINCT ")
 	}
 	for i, arg := range n.Args {
 		if i != 0 {
-			fmt.Fprint(w, ", ")
+			_, _ = fmt.Fprint(w, ", ")
 		}
 		arg.Format(w)
 	}
-	fmt.Fprint(w, ")")
+	_, _ = fmt.Fprint(w, ")")
 	if n.Filter != nil {
-		fmt.Fprint(w, " FILTER (WHERE ")
+		_, _ = fmt.Fprint(w, " FILTER (WHERE ")
 		n.Filter.Format(w)
-		fmt.Fprint(w, ")")
+		_, _ = fmt.Fprint(w, ")")
 	}
 	if n.WithinGroup != nil {
-		fmt.Fprint(w, " WITHIN GROUP (")
+		_, _ = fmt.Fprint(w, " WITHIN GROUP (")
 		n.WithinGroup.Format(w)
-		fmt.Fprint(w, ")")
+		_, _ = fmt.Fprint(w, ")")
 	}
 	if n.IgnoreNull {
-		fmt.Fprint(w, " IGNORE NULLS")
+		_, _ = fmt.Fprint(w, " IGNORE NULLS")
 	}
-	fmt.Fprint(w, " OVER ")
+	_, _ = fmt.Fprint(w, " OVER ")
 	if n.Spec != (WindowSpec{}) {
 		n.Spec.Format(w)
 	}

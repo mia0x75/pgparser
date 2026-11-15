@@ -408,6 +408,12 @@ func objectTypeName(code int64) string {
 		return "TEXT SEARCH CONFIGURATION"
 	case ast.OBJECT_ACCESS_METHOD:
 		return "ACCESS METHOD"
+	case ast.OBJECT_POLICY:
+		return "POLICY"
+	case ast.OBJECT_RULE:
+		return "RULE"
+	case ast.OBJECT_TRIGGER:
+		return "TRIGGER"
 	}
 	return "OBJECT"
 }
@@ -443,47 +449,73 @@ func makeIndexColNameList(l *ast.List) []*ast.IndexColName {
 	return result
 }
 
-// objectTypeNameOf returns the name of an object type constant.
-// objectTypeNameOf returns the name of an object type.
-func objectTypeNameOf(name string) string {
-	return strings.ToLower(strings.TrimPrefix(name, "OBJECT_"))
-}
-
-// commentObjectName returns the name of a commented object.
-func commentObjectName(n ast.Node) string {
+// commentNameParts returns the unquoted name parts of a commented object.
+func commentNameParts(n ast.Node) []string {
 	switch v := n.(type) {
 	case *ast.List:
-		return nameListString(v)
+		parts := make([]string, 0, len(v.Items))
+		for _, item := range v.Items {
+			parts = append(parts, commentNameParts(item)...)
+		}
+		return parts
 	case *ast.ColumnRef:
-		return nameListString(v.Fields)
+		return commentNameParts(v.Fields)
 	case *ast.ColumnNameExpr:
 		if v.Name == nil {
-			return ""
+			return nil
+		}
+		parts := []string{v.Name.Name.String()}
+		if v.Name.Table.String() != "" {
+			parts = append([]string{v.Name.Table.String()}, parts...)
 		}
 		if v.Name.Schema.String() != "" {
-			return v.Name.Schema.String() + "." + v.Name.Table.String() + "." + v.Name.Name.String()
+			parts = append([]string{v.Name.Schema.String()}, parts...)
 		}
-		if v.Name.Table.String() != "" {
-			return v.Name.Table.String() + "." + v.Name.Name.String()
-		}
-		return v.Name.Name.String()
+		return parts
 	case *ast.String:
-		return v.Str
+		return []string{v.Str}
 	case *ast.TableName:
+		parts := []string{v.Name.String()}
 		if v.Schema.String() != "" {
-			return v.Schema.String() + "." + v.Name.String()
+			parts = append([]string{v.Schema.String()}, parts...)
 		}
-		return v.Name.String()
+		return parts
+	case *ast.Integer:
+		return []string{strconv.FormatInt(v.Ival, 10)}
+	case *ast.Float:
+		return []string{v.Fval}
 	case *ast.ObjectWithArgs:
-		// COMMENT ON FUNCTION/AGGREGATE keeps the qualified signature so
-		// the restored SQL re-parses against func_name func_args.
-		var buf strings.Builder
-		if err := v.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &buf)); err == nil {
-			return buf.String()
-		}
-		return nameListString(v.Objname)
+		return commentNameParts(v.Objname)
 	}
-	return ""
+	return nil
+}
+
+// commentArgsSuffix returns the restored argument list of a routine reference.
+func commentArgsSuffix(n ast.Node) string {
+	obj, ok := n.(*ast.ObjectWithArgs)
+	if !ok || obj.ArgsUnspecified {
+		return ""
+	}
+	var sb strings.Builder
+	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)
+	ctx.WritePlain("(")
+	if obj.Objargs != nil {
+		if err := obj.Objargs.Restore(ctx); err != nil {
+			return ""
+		}
+	}
+	ctx.WritePlain(")")
+	return sb.String()
+}
+
+// commentNodeString rewrites a node as plain SQL, for the type parts of
+// transform and cast comments.
+func commentNodeString(n ast.Node) string {
+	var sb strings.Builder
+	if err := n.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+		return ""
+	}
+	return sb.String()
 }
 
 // tableNamesFromNameList returns the table names of a name list.
@@ -951,17 +983,6 @@ func dropObjectStmt(removeType int, objects []*ast.TableName, ifExists bool, beh
 		Behavior:   behavior,
 		Missing_ok: ifExists,
 	}
-}
-
-// functionObjectName returns the name of a function with arguments.
-func functionObjectName(n ast.Node) string {
-	switch v := n.(type) {
-	case *ast.ObjectWithArgs:
-		return nameListString(v.Objname)
-	case *ast.List:
-		return nameListString(v)
-	}
-	return ""
 }
 
 // truncateOnly returns the ONLY marker of a truncate statement.

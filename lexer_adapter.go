@@ -10,25 +10,19 @@ import (
 // interface. It also implements the one-token lookahead logic used by
 // PostgreSQL's parser to disambiguate NOT, WITH, NULLS, WITHOUT and FORMAT.
 type Scanner struct {
-	lexer    *Lexer
-	result   *ast.List
-	errs     []error
-	warnings []error
+	lexer  *Lexer
+	result *ast.List
+	errs   []error
 
 	haveLookahead    bool
 	lookaheadToken   Token
 	lookaheadTokType int
-
-	// params counts the placeholder parameters of the parsed statement.
-	params int
 }
 
 func (s *Scanner) reset(input string) {
 	s.lexer = NewLexer(input)
-	s.params = 0
 	s.result = nil
 	s.errs = nil
-	s.warnings = nil
 	s.haveLookahead = false
 	s.lookaheadToken = Token{}
 	s.lookaheadTokType = 0
@@ -121,8 +115,8 @@ func (s *Scanner) Error(msg string) {
 	})
 }
 
-func (s *Scanner) Errors() ([]error, []error) {
-	return s.warnings, s.errs
+func (s *Scanner) Errors() []error {
+	return s.errs
 }
 
 func (s *Scanner) mapTokenType(tok Token) int {
