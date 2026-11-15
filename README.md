@@ -34,11 +34,11 @@ import (
 )
 
 func main() {
-	stmts, warns, err := pgparser.New().Parse("SELECT a, b FROM t WHERE a = 1;")
+	stmts, err := pgparser.New().Parse("SELECT a, b FROM t WHERE a = 1;")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("stmts=%d warns=%d\n", len(stmts), len(warns))
+	fmt.Printf("stmts=%d\n", len(stmts))
 
 	for _, stmt := range stmts {
 		if sel, ok := stmt.(*ast.SelectStmt); ok {
@@ -56,7 +56,7 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 
 > 多条语句需以 `;` 分隔，并以 `;` 结尾，例如 `SELECT 1;SELECT 2;`。
 
-`Parse` 返回 `([]ast.StmtNode, []error, error)`；`ParseOneStmt` 要求恰好一条语句，否则返回 `ErrSyntax`。
+`Parse` 返回 `([]ast.StmtNode, error)`；`ParseOneStmt` 要求恰好一条语句，否则返回 `ErrSyntax`。
 
 `*Parser` 不是并发安全的：`Parse` 会把结果与词法状态写回接收者。每个 goroutine 请单独调用 `pgparser.New()` 创建 Parser，不要跨 goroutine 共享。
 
@@ -145,7 +145,7 @@ PGPARSER_TESTDATA=1 go test -v ./tests -run TestParseTestdataSQL   # 附加逐�
 ### 性能验证
 
 ```bash
-go test ./tests -run '^$' -bench '^Benchmark(ParserNew|LexerOperator)$' -benchmem -benchtime=100ms -count=10 -cpu=1
+go test ./tests -run '^$' -bench '^Benchmark(Parse|LexerOperator)$' -benchmem -benchtime=100ms -count=10 -cpu=1
 ```
 
 ## 许可证
