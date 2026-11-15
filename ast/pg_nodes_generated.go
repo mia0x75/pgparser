@@ -97,7 +97,7 @@ func (n *List) Accept(v Visitor) (Node, bool) {
 			if !ok {
 				return n, false
 			}
-			n.Items[i0] = updated.(Node)
+			n.Items[i0] = updated
 		}
 	}
 	return v.Leave(n)
@@ -267,7 +267,7 @@ func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Partbound = updated.(Node)
+		n.Partbound = updated
 	}
 	if n.Partspec != nil {
 		updated, ok := n.Partspec.Accept(v)
@@ -332,7 +332,7 @@ func (n *ViewStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Query = updated.(Node)
+		n.Query = updated
 	}
 	if n.Options != nil {
 		updated, ok := n.Options.Accept(v)
@@ -413,7 +413,7 @@ func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.WhereClause = updated.(Node)
+		n.WhereClause = updated
 	}
 	if n.ExcludeOpNames != nil {
 		updated, ok := n.ExcludeOpNames.Accept(v)
@@ -485,7 +485,7 @@ func (n *AlterTableCmd) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Def = updated.(Node)
+		n.Def = updated
 	}
 	return v.Leave(n)
 }
@@ -616,7 +616,7 @@ func (n *IntoClause) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.ViewQuery = updated.(Node)
+		n.ViewQuery = updated
 	}
 	return v.Leave(n)
 }
@@ -673,7 +673,7 @@ func (n *ResTarget) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Val = updated.(Node)
+		n.Val = updated
 	}
 	return v.Leave(n)
 }
@@ -698,7 +698,7 @@ func (n *MultiAssignRef) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Source = updated.(Node)
+		n.Source = updated
 	}
 	return v.Leave(n)
 }
@@ -732,14 +732,14 @@ func (n *A_Expr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Lexpr = updated.(Node)
+		n.Lexpr = updated
 	}
 	if n.Rexpr != nil {
 		updated, ok := n.Rexpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Rexpr = updated.(Node)
+		n.Rexpr = updated
 	}
 	return v.Leave(n)
 }
@@ -764,7 +764,7 @@ func (n *A_Const) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Val = updated.(Node)
+		n.Val = updated
 	}
 	return v.Leave(n)
 }
@@ -789,7 +789,7 @@ func (n *TypeCast) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(Node)
+		n.Arg = updated
 	}
 	return v.Leave(n)
 }
@@ -843,14 +843,14 @@ func (n *FuncCall) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.AggFilter = updated.(Node)
+		n.AggFilter = updated
 	}
 	if n.Over != nil {
 		updated, ok := n.Over.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Over = updated.(Node)
+		n.Over = updated
 	}
 	return v.Leave(n)
 }
@@ -876,7 +876,7 @@ func (n *NamedArgExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(Node)
+		n.Arg = updated
 	}
 	return v.Leave(n)
 }
@@ -947,7 +947,7 @@ func (n *SortBy) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Node = updated.(Node)
+		n.Node = updated
 	}
 	if n.UseOp != nil {
 		updated, ok := n.UseOp.Accept(v)
@@ -996,21 +996,21 @@ func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Ctequery = updated.(Node)
+		n.Ctequery = updated
 	}
 	if n.SearchClause != nil {
 		updated, ok := n.SearchClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.SearchClause = updated.(Node)
+		n.SearchClause = updated
 	}
 	if n.CycleClause != nil {
 		updated, ok := n.CycleClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.CycleClause = updated.(Node)
+		n.CycleClause = updated
 	}
 	if n.Ctecolnames != nil {
 		updated, ok := n.Ctecolnames.Accept(v)
@@ -1103,14 +1103,14 @@ func (n *CTECycleClause) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.CycleMarkValue = updated.(Node)
+		n.CycleMarkValue = updated
 	}
 	if n.CycleMarkDefault != nil {
 		updated, ok := n.CycleMarkDefault.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.CycleMarkDefault = updated.(Node)
+		n.CycleMarkDefault = updated
 	}
 	return v.Leave(n)
 }
@@ -1153,7 +1153,7 @@ func (n *CollateClause) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(Node)
+		n.Arg = updated
 	}
 	if n.Collname != nil {
 		updated, ok := n.Collname.Accept(v)
@@ -1212,7 +1212,7 @@ func (n *PartitionElem) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	if n.Collation != nil {
 		updated, ok := n.Collation.Accept(v)
@@ -1291,7 +1291,7 @@ func (n *InferClause) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.WhereClause = updated.(Node)
+		n.WhereClause = updated
 	}
 	return v.Leave(n)
 }
@@ -1318,7 +1318,7 @@ func (n *DefElem) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(Node)
+		n.Arg = updated
 	}
 	return v.Leave(n)
 }
@@ -1383,14 +1383,14 @@ func (n *A_Indices) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Lidx = updated.(Node)
+		n.Lidx = updated
 	}
 	if n.Uidx != nil {
 		updated, ok := n.Uidx.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Uidx = updated.(Node)
+		n.Uidx = updated
 	}
 	return v.Leave(n)
 }
@@ -1414,7 +1414,7 @@ func (n *A_Indirection) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(Node)
+		n.Arg = updated
 	}
 	if n.Indirection != nil {
 		updated, ok := n.Indirection.Accept(v)
@@ -1465,14 +1465,14 @@ func (n *WindowDef) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.StartOffset = updated.(Node)
+		n.StartOffset = updated
 	}
 	if n.EndOffset != nil {
 		updated, ok := n.EndOffset.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.EndOffset = updated.(Node)
+		n.EndOffset = updated
 	}
 	return v.Leave(n)
 }
@@ -1503,14 +1503,14 @@ func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Larg = updated.(Node)
+		n.Larg = updated
 	}
 	if n.Rarg != nil {
 		updated, ok := n.Rarg.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Rarg = updated.(Node)
+		n.Rarg = updated
 	}
 	if n.UsingClause != nil {
 		updated, ok := n.UsingClause.Accept(v)
@@ -1531,7 +1531,7 @@ func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Quals = updated.(Node)
+		n.Quals = updated
 	}
 	if n.Alias != nil {
 		updated, ok := n.Alias.Accept(v)
@@ -1569,7 +1569,7 @@ func (n *FromExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Quals = updated.(Node)
+		n.Quals = updated
 	}
 	return v.Leave(n)
 }
@@ -1599,7 +1599,7 @@ func (n *IndexElem) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	if n.Collation != nil {
 		updated, ok := n.Collation.Accept(v)
@@ -1683,7 +1683,7 @@ func (n *SubLink) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Testexpr = updated.(Node)
+		n.Testexpr = updated
 	}
 	if n.OperName != nil {
 		updated, ok := n.OperName.Accept(v)
@@ -1697,7 +1697,7 @@ func (n *SubLink) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Subselect = updated.(Node)
+		n.Subselect = updated
 	}
 	return v.Leave(n)
 }
@@ -1750,7 +1750,7 @@ func (n *NullTest) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(Node)
+		n.Arg = updated
 	}
 	return v.Leave(n)
 }
@@ -1777,7 +1777,7 @@ func (n *BooleanTest) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(Node)
+		n.Arg = updated
 	}
 	return v.Leave(n)
 }
@@ -1802,7 +1802,7 @@ func (n *RangeSubselect) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Subquery = updated.(Node)
+		n.Subquery = updated
 	}
 	if n.Alias != nil {
 		updated, ok := n.Alias.Accept(v)
@@ -1878,7 +1878,7 @@ func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(Node)
+		n.Relation = updated
 	}
 	if n.Method != nil {
 		updated, ok := n.Method.Accept(v)
@@ -1899,7 +1899,7 @@ func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Repeatable = updated.(Node)
+		n.Repeatable = updated
 	}
 	return v.Leave(n)
 }
@@ -1965,14 +1965,14 @@ func (n *CaseWhen) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	if n.Result != nil {
 		updated, ok := n.Result.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Result = updated.(Node)
+		n.Result = updated
 	}
 	return v.Leave(n)
 }
@@ -2167,14 +2167,14 @@ func (n *WindowClause) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.StartOffset = updated.(Node)
+		n.StartOffset = updated
 	}
 	if n.EndOffset != nil {
 		updated, ok := n.EndOffset.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.EndOffset = updated.(Node)
+		n.EndOffset = updated
 	}
 	if n.RunCondition != nil {
 		updated, ok := n.RunCondition.Accept(v)
@@ -2301,7 +2301,7 @@ func (n *FunctionParameter) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Defexpr = updated.(Node)
+		n.Defexpr = updated
 	}
 	return v.Leave(n)
 }
@@ -2439,7 +2439,7 @@ func (n *AlterDomainStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Def = updated.(Node)
+		n.Def = updated
 	}
 	return v.Leave(n)
 }
@@ -2504,7 +2504,7 @@ func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.WhenClause = updated.(Node)
+		n.WhenClause = updated
 	}
 	if n.TransitionRels != nil {
 		updated, ok := n.TransitionRels.Accept(v)
@@ -2571,7 +2571,7 @@ func (n *CreateTableAsStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Query = updated.(Node)
+		n.Query = updated
 	}
 	if n.Into != nil {
 		updated, ok := n.Into.Accept(v)
@@ -2695,14 +2695,14 @@ func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Larg = updated.(Node)
+		n.Larg = updated
 	}
 	if n.Rarg != nil {
 		updated, ok := n.Rarg.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Rarg = updated.(Node)
+		n.Rarg = updated
 	}
 	if n.ColTypes != nil {
 		updated, ok := n.ColTypes.Accept(v)
@@ -2787,7 +2787,7 @@ func (n *RenameStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Object = updated.(Node)
+		n.Object = updated
 	}
 	return v.Leave(n)
 }
@@ -2821,7 +2821,7 @@ func (n *AlterObjectSchemaStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Object = updated.(Node)
+		n.Object = updated
 	}
 	return v.Leave(n)
 }
@@ -2854,7 +2854,7 @@ func (n *AlterOwnerStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Object = updated.(Node)
+		n.Object = updated
 	}
 	if n.Newowner != nil {
 		updated, ok := n.Newowner.Accept(v)
@@ -2991,7 +2991,7 @@ func (n *SecLabelStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Object = updated.(Node)
+		n.Object = updated
 	}
 	return v.Leave(n)
 }
@@ -3080,7 +3080,7 @@ func (n *AlterRoleSetStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Setstmt = updated.(Node)
+		n.Setstmt = updated
 	}
 	return v.Leave(n)
 }
@@ -3152,7 +3152,7 @@ func (n *AlterDatabaseSetStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Setstmt = updated.(Node)
+		n.Setstmt = updated
 	}
 	return v.Leave(n)
 }
@@ -3200,7 +3200,7 @@ func (n *AlterSystemStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Setstmt = updated.(Node)
+		n.Setstmt = updated
 	}
 	return v.Leave(n)
 }
@@ -3446,7 +3446,7 @@ func (n *RuleStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.WhereClause = updated.(Node)
+		n.WhereClause = updated
 	}
 	if n.Actions != nil {
 		updated, ok := n.Actions.Accept(v)
@@ -3826,7 +3826,7 @@ func (n *AlterExtensionContentsStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Object = updated.(Node)
+		n.Object = updated
 	}
 	return v.Leave(n)
 }
@@ -3971,14 +3971,14 @@ func (n *CreatePolicyStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Qual = updated.(Node)
+		n.Qual = updated
 	}
 	if n.WithCheck != nil {
 		updated, ok := n.WithCheck.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.WithCheck = updated.(Node)
+		n.WithCheck = updated
 	}
 	return v.Leave(n)
 }
@@ -4019,14 +4019,14 @@ func (n *AlterPolicyStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Qual = updated.(Node)
+		n.Qual = updated
 	}
 	if n.WithCheck != nil {
 		updated, ok := n.WithCheck.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.WithCheck = updated.(Node)
+		n.WithCheck = updated
 	}
 	return v.Leave(n)
 }
@@ -4151,7 +4151,7 @@ func (n *PublicationTable) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.WhereClause = updated.(Node)
+		n.WhereClause = updated
 	}
 	if n.Columns != nil {
 		updated, ok := n.Columns.Accept(v)
@@ -4277,14 +4277,14 @@ func (n *AlterObjectDependsStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Object = updated.(Node)
+		n.Object = updated
 	}
 	if n.Extname != nil {
 		updated, ok := n.Extname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Extname = updated.(Node)
+		n.Extname = updated
 	}
 	return v.Leave(n)
 }
@@ -4528,7 +4528,7 @@ func (n *StatsElem) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	return v.Leave(n)
 }
@@ -4903,7 +4903,7 @@ func (n *XmlSerialize) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	return v.Leave(n)
 }
@@ -4932,14 +4932,14 @@ func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Docexpr = updated.(Node)
+		n.Docexpr = updated
 	}
 	if n.Rowexpr != nil {
 		updated, ok := n.Rowexpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Rowexpr = updated.(Node)
+		n.Rowexpr = updated
 	}
 	if n.Namespaces != nil {
 		updated, ok := n.Namespaces.Accept(v)
@@ -4989,14 +4989,14 @@ func (n *RangeTableFuncCol) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Colexpr = updated.(Node)
+		n.Colexpr = updated
 	}
 	if n.Coldefexpr != nil {
 		updated, ok := n.Coldefexpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Coldefexpr = updated.(Node)
+		n.Coldefexpr = updated
 	}
 	return v.Leave(n)
 }
@@ -5068,14 +5068,14 @@ func (n *JsonValueExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.RawExpr = updated.(Node)
+		n.RawExpr = updated
 	}
 	if n.FormattedExpr != nil {
 		updated, ok := n.FormattedExpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FormattedExpr = updated.(Node)
+		n.FormattedExpr = updated
 	}
 	if n.FormatClause != nil {
 		updated, ok := n.FormatClause.Accept(v)
@@ -5162,14 +5162,14 @@ func (n *JsonBehavior) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	if n.Coerce != nil {
 		updated, ok := n.Coerce.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Coerce = updated.(Node)
+		n.Coerce = updated
 	}
 	return v.Leave(n)
 }
@@ -5211,7 +5211,7 @@ func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Pathspec = updated.(Node)
+		n.Pathspec = updated
 	}
 	if n.Passing != nil {
 		updated, ok := n.Passing.Accept(v)
@@ -5265,7 +5265,7 @@ func (n *JsonTablePathSpec) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.String = updated.(Node)
+		n.String = updated
 	}
 	return v.Leave(n)
 }
@@ -5417,7 +5417,7 @@ func (n *JsonKeyValue) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Key = updated.(Node)
+		n.Key = updated
 	}
 	if n.Value != nil {
 		updated, ok := n.Value.Accept(v)
@@ -5482,7 +5482,7 @@ func (n *JsonScalarExpr) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	if n.Output != nil {
 		updated, ok := n.Output.Accept(v)
@@ -5617,7 +5617,7 @@ func (n *JsonArrayQueryConstructor) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Query = updated.(Node)
+		n.Query = updated
 	}
 	if n.Output != nil {
 		updated, ok := n.Output.Accept(v)
@@ -5665,7 +5665,7 @@ func (n *JsonAggConstructor) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Agg_filter = updated.(Node)
+		n.Agg_filter = updated
 	}
 	if n.Agg_order != nil {
 		updated, ok := n.Agg_order.Accept(v)
@@ -5773,7 +5773,7 @@ func (n *JsonIsPredicate) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(Node)
+		n.Expr = updated
 	}
 	if n.FormatClause != nil {
 		updated, ok := n.FormatClause.Accept(v)

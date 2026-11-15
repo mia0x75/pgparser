@@ -931,13 +931,15 @@ func (n *ByItem) Format(w io.Writer) {
 			_, _ = fmt.Fprint(w, "()")
 		case GroupingSetRollup:
 			_, _ = fmt.Fprint(w, "ROLLUP (")
-			// Note: restoreExprSets not available in Format, skipping
+			formatExprSets(w, n.GroupingSet.Sets, false)
 			_, _ = fmt.Fprint(w, ")")
 		case GroupingSetCube:
 			_, _ = fmt.Fprint(w, "CUBE (")
+			formatExprSets(w, n.GroupingSet.Sets, false)
 			_, _ = fmt.Fprint(w, ")")
 		case GroupingSetSets:
 			_, _ = fmt.Fprint(w, "GROUPING SETS (")
+			formatExprSets(w, n.GroupingSet.Sets, true)
 			_, _ = fmt.Fprint(w, ")")
 		}
 		return
@@ -953,6 +955,28 @@ func (n *ByItem) Format(w io.Writer) {
 		_, _ = fmt.Fprint(w, " NULLS FIRST")
 	case 2:
 		_, _ = fmt.Fprint(w, " NULLS LAST")
+	}
+}
+
+// formatExprSets writes grouping-set expressions; each set is parenthesised when
+// withParens is true (GROUPING SETS) and left flat for ROLLUP/CUBE.
+func formatExprSets(w io.Writer, sets [][]ExprNode, withParens bool) {
+	for i, set := range sets {
+		if i > 0 {
+			_, _ = fmt.Fprint(w, ", ")
+		}
+		if withParens {
+			_, _ = fmt.Fprint(w, "(")
+		}
+		for j, e := range set {
+			if j > 0 {
+				_, _ = fmt.Fprint(w, ", ")
+			}
+			e.Format(w)
+		}
+		if withParens {
+			_, _ = fmt.Fprint(w, ")")
+		}
 	}
 }
 
@@ -2710,6 +2734,10 @@ func (n *MergeWhenClause) Restore(ctx *format.RestoreCtx) error {
 				}
 			}
 			ctx.WritePlain(")")
+		}
+		if len(n.Values) == 0 {
+			ctx.WriteKeyWord(" DEFAULT VALUES")
+			break
 		}
 		ctx.WriteKeyWord(" VALUES (")
 		for i, e := range n.Values {

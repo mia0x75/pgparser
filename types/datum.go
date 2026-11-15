@@ -8,7 +8,6 @@ import (
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/hack"
-	"github.com/mia0x75/pgparser/postgres"
 	"github.com/mia0x75/pgparser/types/json"
 )
 
@@ -74,11 +73,6 @@ func (d *Datum) Collation() byte {
 	return d.collation
 }
 
-// SetCollation sets the collation of the datum.
-func (d *Datum) SetCollation(collation byte) {
-	d.collation = collation
-}
-
 // Frac gets the frac of the datum.
 func (d *Datum) Frac() int {
 	return int(d.decimal)
@@ -92,11 +86,6 @@ func (d *Datum) SetFrac(frac int) {
 // Length gets the length of the datum.
 func (d *Datum) Length() int {
 	return int(d.length)
-}
-
-// SetLength sets the length of the datum.
-func (d *Datum) SetLength(l int) {
-	d.length = uint32(l)
 }
 
 // IsNull checks if datum is null.
@@ -174,12 +163,6 @@ func (d *Datum) SetBytes(b []byte) {
 	d.b = b
 }
 
-// SetBytesAsString sets bytes value to datum as string type.
-func (d *Datum) SetBytesAsString(b []byte) {
-	d.k = KindString
-	d.b = b
-}
-
 // GetInterface gets interface value.
 func (d *Datum) GetInterface() any {
 	return d.x
@@ -197,20 +180,9 @@ func (d *Datum) SetNull() {
 	d.x = nil
 }
 
-// SetMinNotNull sets datum to minNotNull value.
-func (d *Datum) SetMinNotNull() {
-	d.k = KindMinNotNull
-	d.x = nil
-}
-
 // GetBinaryLiteral gets Bit value
 func (d *Datum) GetBinaryLiteral() BinaryLiteral {
 	return d.b
-}
-
-// GetPgBit aliases GetBinaryLiteral for compatibility bit values.
-func (d *Datum) GetPgBit() BinaryLiteral {
-	return d.GetBinaryLiteral()
 }
 
 // SetBinaryLiteral sets Bit value
@@ -297,26 +269,6 @@ func (d *Datum) GetPgTime() Time {
 func (d *Datum) SetPgTime(b Time) {
 	d.k = KindTime
 	d.x = b
-}
-
-// SetRaw sets raw value.
-func (d *Datum) SetRaw(b []byte) {
-	d.k = KindRaw
-	d.b = b
-}
-
-// GetRaw gets raw value.
-func (d *Datum) GetRaw() []byte {
-	return d.b
-}
-
-// SetAutoID set the auto increment ID according to its int flag.
-func (d *Datum) SetAutoID(id int64, flag uint) {
-	if postgres.HasUnsignedFlag(flag) {
-		d.SetUint64(uint64(id))
-	} else {
-		d.SetInt64(id)
-	}
 }
 
 // GetValue gets the value of the datum of any kind.
@@ -435,56 +387,6 @@ func (d *Datum) ToString() (string, error) {
 	}
 }
 
-// ToBytes gets the bytes representation of the datum.
-func (d *Datum) ToBytes() ([]byte, error) {
-	switch d.k {
-	case KindString, KindBytes:
-		return d.GetBytes(), nil
-	default:
-		str, err := d.ToString()
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		return []byte(str), nil
-	}
-}
-
-// ToPgJSON preserves strings as JSON string values instead of parsing JSON text.
-func (d *Datum) ToPgJSON() (j json.BinaryJSON, err error) {
-	var in any
-	switch d.Kind() {
-	case KindJSON:
-		j = d.GetPgJSON()
-		return
-	case KindInt64:
-		in = d.GetInt64()
-	case KindUint64:
-		in = d.GetUint64()
-	case KindFloat32, KindFloat64:
-		in = d.GetFloat64()
-	case KindDecimal:
-		in, err = d.GetPgDecimal().ToFloat64()
-	case KindString, KindBytes:
-		in = d.GetString()
-	case KindBinaryLiteral, KindBit:
-		in = d.GetBinaryLiteral().ToString()
-	case KindNull:
-		in = nil
-	default:
-		in, err = d.ToString()
-	}
-	if err != nil {
-		err = errors.Trace(err)
-		return
-	}
-	j, err = json.CreateBinary(in)
-	if err != nil {
-		err = errors.Trace(err)
-		return
-	}
-	return
-}
-
 // NewDatum creates a new Datum from an interface{}.
 func NewDatum(in any) (d Datum) {
 	switch x := in.(type) {
@@ -532,12 +434,6 @@ func NewFloat32Datum(f float32) (d Datum) {
 	return d
 }
 
-// NewDurationDatum creates a new Datum from a Duration value.
-func NewDurationDatum(dur Duration) (d Datum) {
-	d.SetPgDuration(dur)
-	return d
-}
-
 // NewTimeDatum creates a new Time from a Time value.
 func NewTimeDatum(t Time) (d Datum) {
 	d.SetPgTime(t)
@@ -556,18 +452,6 @@ func NewBinaryLiteralDatum(b BinaryLiteral) (d Datum) {
 	return d
 }
 
-// NewPgBitDatum uses KindBit rather than KindBinaryLiteral for compatibility.
-func NewPgBitDatum(b BinaryLiteral) (d Datum) {
-	d.SetPgBit(b)
-	return d
-}
-
-// NewPgEnumDatum retains compatibility ordinals instead of PostgreSQL enum OIDs.
-func NewPgEnumDatum(e Enum) (d Datum) {
-	d.SetPgEnum(e)
-	return d
-}
-
 // MakeDatums creates datum slice from interfaces.
 func MakeDatums(args ...any) []Datum {
 	datums := make([]Datum, len(args))
@@ -575,16 +459,6 @@ func MakeDatums(args ...any) []Datum {
 		datums[i] = NewDatum(v)
 	}
 	return datums
-}
-
-// MinNotNullDatum returns a datum represents minimum not null value.
-func MinNotNullDatum() Datum {
-	return Datum{k: KindMinNotNull}
-}
-
-// MaxValueDatum returns a datum represents max value.
-func MaxValueDatum() Datum {
-	return Datum{k: KindMaxValue}
 }
 
 // DatumsToString converts several datums to formatted string.
@@ -616,26 +490,4 @@ func DatumsToString(datums []Datum, handleSpecialValue bool) (string, error) {
 		strs[size-1] += ")"
 	}
 	return strings.Join(strs, ", "), nil
-}
-
-// DatumsToStrNoErr converts some datums to a formatted string.
-// If an error occurs, it will print a log instead of returning an error.
-func DatumsToStrNoErr(datums []Datum) string {
-	str, _ := DatumsToString(datums, true)
-	return str
-}
-
-// CopyDatum returns a new copy of the datum.
-// TODO: Abandon this function.
-func CopyDatum(datum Datum) Datum {
-	return *datum.Copy()
-}
-
-// CopyRow deep copies a Datum slice.
-func CopyRow(dr []Datum) []Datum {
-	c := make([]Datum, len(dr))
-	for i, d := range dr {
-		c[i] = *d.Copy()
-	}
-	return c
 }

@@ -706,6 +706,45 @@ func restoreUtilityOptions(ctx *format.RestoreCtx, options *List) error {
 	return nil
 }
 
+// writeBoolKeyword writes TRUE or FALSE.
+func writeBoolKeyword(ctx *format.RestoreCtx, b bool) {
+	if b {
+		ctx.WriteKeyWord("TRUE")
+	} else {
+		ctx.WriteKeyWord("FALSE")
+	}
+}
+
+// isBooleanOption reports whether a utility option takes a boolean value.
+// Values like DELIMITER '1' or NULL '0' are strings, not booleans, so the
+// textual-boolean normalisation must stay limited to these names.
+func isBooleanOption(name string) bool {
+	switch name {
+	case "header", "freeze", "analyze", "verbose", "costs", "buffers", "wal", "timing",
+		"summary", "settings", "memory", "serialize", "generic_plan", "truncate":
+		return true
+	}
+	return false
+}
+
+// isBoolLiteral reports whether s is a textual boolean accepted by COPY options.
+func isBoolLiteral(s string) bool {
+	switch strings.ToLower(s) {
+	case "true", "false", "on", "off", "1", "0":
+		return true
+	}
+	return false
+}
+
+// boolLiteralValue maps the accepted boolean spellings to a value.
+func boolLiteralValue(s string) bool {
+	switch strings.ToLower(s) {
+	case "true", "on", "1":
+		return true
+	}
+	return false
+}
+
 func restoreUtilityOption(ctx *format.RestoreCtx, option *DefElem) error {
 	if option == nil || option.Defname == "" {
 		return errors.New("utility option has no name")
@@ -725,6 +764,17 @@ func restoreUtilityOption(ctx *format.RestoreCtx, option *DefElem) error {
 		return nil
 	}
 	ctx.WritePlain(" ")
+	if boolean, ok := option.Arg.(*Boolean); ok {
+		// A valueless boolean option (e.g. COPY ... (HEADER)) arrives as a
+		// Boolean, while an explicit `HEADER true` arrives as a String. Always
+		// write the TRUE/FALSE form so both restore to the same text.
+		writeBoolKeyword(ctx, boolean.Boolval)
+		return nil
+	}
+	if str, ok := option.Arg.(*String); ok && isBooleanOption(option.Defname) && isBoolLiteral(str.Str) {
+		writeBoolKeyword(ctx, boolLiteralValue(str.Str))
+		return nil
+	}
 	if list, ok := option.Arg.(*List); ok {
 		ctx.WritePlain("(")
 		for i, item := range list.Items {

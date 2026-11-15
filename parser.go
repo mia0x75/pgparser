@@ -27337,12 +27337,12 @@ yydefault:
 	case 1396:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.expr = ast.NewParamMarkerExpr(int(yyDollar[1].ival) - 1)
+			yyVAL.expr = withIndirection(ast.NewParamMarkerExpr(int(yyDollar[1].ival)-1), yyDollar[2].list)
 		}
 	case 1397:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.ParenthesesExpr{Expr: yyDollar[2].expr}
+			yyVAL.expr = withIndirection(&ast.ParenthesesExpr{Expr: yyDollar[2].expr}, yyDollar[4].list)
 		}
 	case 1398:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -27469,7 +27469,7 @@ yydefault:
 	case 1417:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.node = &ast.WindowSpec{Name: model.NewCIStr(yyDollar[2].str)}
+			yyVAL.node = &ast.WindowSpec{Name: model.NewCIStr(yyDollar[2].str), OnlyAlias: true}
 		}
 	case 1418:
 		yyDollar = yyS[yypt-0 : yypt+1]
@@ -27621,12 +27621,12 @@ yydefault:
 	case 1445:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list))
+			yyVAL.expr = ast.NewFuncCallExprParts(funcNameParts(yyDollar[1].list))
 		}
 	case 1446:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), exprsFromList(yyDollar[3].list)...)
+			yyVAL.expr = ast.NewFuncCallExprParts(funcNameParts(yyDollar[1].list), exprsFromList(yyDollar[3].list)...)
 			if yyDollar[4].node != nil {
 				yyVAL.expr.(*ast.FuncCallExpr).OrderBy = yyDollar[4].node.(*ast.OrderByClause)
 			}
@@ -27634,23 +27634,23 @@ yydefault:
 	case 1447:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), yyDollar[4].expr)
+			yyVAL.expr = ast.NewFuncCallExprParts(funcNameParts(yyDollar[1].list), yyDollar[4].expr)
 		}
 	case 1448:
 		yyDollar = yyS[yypt-8 : yypt+1]
 		{
 			args := append(exprsFromList(yyDollar[3].list), yyDollar[6].expr)
-			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), args...)
+			yyVAL.expr = ast.NewFuncCallExprParts(funcNameParts(yyDollar[1].list), args...)
 		}
 	case 1449:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{FnName: model.NewCIStr(funcNameString(yyDollar[1].list)), Star: true}
+			yyVAL.expr = &ast.FuncCallExpr{FnName: model.NewCIStr(funcNameString(yyDollar[1].list)), FnNameParts: funcNameParts(yyDollar[1].list), Star: true}
 		}
 	case 1450:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), exprsFromList(yyDollar[4].list)...)
+			yyVAL.expr = ast.NewFuncCallExprParts(funcNameParts(yyDollar[1].list), exprsFromList(yyDollar[4].list)...)
 			yyVAL.expr.(*ast.FuncCallExpr).Distinct = true
 			if yyDollar[5].node != nil {
 				yyVAL.expr.(*ast.FuncCallExpr).OrderBy = yyDollar[5].node.(*ast.OrderByClause)
@@ -27659,7 +27659,7 @@ yydefault:
 	case 1451:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.expr = ast.NewFuncCallExpr(funcNameString(yyDollar[1].list), exprsFromList(yyDollar[4].list)...)
+			yyVAL.expr = ast.NewFuncCallExprParts(funcNameParts(yyDollar[1].list), exprsFromList(yyDollar[4].list)...)
 			if yyDollar[5].node != nil {
 				yyVAL.expr.(*ast.FuncCallExpr).OrderBy = yyDollar[5].node.(*ast.OrderByClause)
 			}
@@ -31465,7 +31465,8 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.node = &ast.DoStmt{
-				Exprs: doExprs(yyDollar[2].list),
+				Exprs:    doExprs(yyDollar[2].list),
+				Language: doLanguage(yyDollar[2].list),
 			}
 		}
 	case 2045:
@@ -32480,18 +32481,22 @@ yydefault:
 		yyDollar = yyS[yypt-10 : yypt+1]
 		{
 			yyVAL.node = &ast.CreateServerStmt{
-				Name:    yyDollar[3].str,
-				Wrapper: yyDollar[9].str,
-				Options: serverOptions(yyDollar[10].list),
+				Name:       yyDollar[3].str,
+				ServerType: yyDollar[4].str,
+				Version:    yyDollar[5].str,
+				Wrapper:    yyDollar[9].str,
+				Options:    serverOptions(yyDollar[10].list),
 			}
 		}
 	case 2214:
 		yyDollar = yyS[yypt-13 : yypt+1]
 		{
 			yyVAL.node = &ast.CreateServerStmt{
-				Name:    yyDollar[6].str,
-				Wrapper: yyDollar[12].str,
-				Options: serverOptions(yyDollar[13].list),
+				Name:       yyDollar[6].str,
+				ServerType: yyDollar[7].str,
+				Version:    yyDollar[8].str,
+				Wrapper:    yyDollar[12].str,
+				Options:    serverOptions(yyDollar[13].list),
 			}
 		}
 	case 2215:
@@ -32529,6 +32534,7 @@ yydefault:
 		{
 			yyVAL.node = &ast.AlterServerStmt{
 				Name:    yyDollar[3].str,
+				Version: yyDollar[4].str,
 				Options: serverOptions(yyDollar[5].list),
 			}
 		}
@@ -32536,7 +32542,8 @@ yydefault:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			yyVAL.node = &ast.AlterServerStmt{
-				Name: yyDollar[3].str,
+				Name:    yyDollar[3].str,
+				Version: yyDollar[4].str,
 			}
 		}
 	case 2223:

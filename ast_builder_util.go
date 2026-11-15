@@ -1112,11 +1112,31 @@ func doExprs(l *ast.List) []ast.ExprNode {
 		if !ok {
 			continue
 		}
+		if def.Defname != "as" {
+			continue
+		}
 		if s, ok := def.Arg.(*ast.String); ok {
 			result = append(result, ast.NewValueExpr(s.Str))
 		}
 	}
 	return result
+}
+
+// doLanguage returns the LANGUAGE option of a DO statement.
+func doLanguage(l *ast.List) string {
+	if l == nil {
+		return ""
+	}
+	for _, item := range l.Items {
+		def, ok := item.(*ast.DefElem)
+		if !ok || def.Defname != "language" {
+			continue
+		}
+		if s, ok := def.Arg.(*ast.String); ok {
+			return s.Str
+		}
+	}
+	return ""
 }
 
 // tableNameFromSource returns the table name of a table source.

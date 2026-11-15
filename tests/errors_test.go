@@ -53,3 +53,15 @@ DELETE FROM sessions WHERE expires_at < NOW();`
 		t.Fatalf("parameters = %d, want 2", got)
 	}
 }
+
+// ISSUES.md V-12: line numbers must stay correct (and cheap) on long inputs.
+func TestErrorLineNumberOnLongInput(t *testing.T) {
+	sql := strings.Repeat("SELECT 1;\n", 1000) + "SELECT FROM;"
+	_, err := pgparser.New().Parse(sql)
+	if err == nil {
+		t.Fatal("expected a syntax error")
+	}
+	if !strings.Contains(err.Error(), "at line 1001") {
+		t.Fatalf("error = %v, want line 1001", err)
+	}
+}

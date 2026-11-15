@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -37,6 +38,8 @@ func TestParseTestdataSQL(t *testing.T) {
 		t.Fatal("no testdata SQL files found")
 	}
 
+	regenerate := os.Getenv("PGPARSER_REGENERATE") != ""
+	var failures []corpusFailure
 	total, skipped, failed, unsupported, knownHits := 0, 0, 0, 0, 0
 	for _, file := range files {
 		data, err := os.ReadFile(file)
@@ -58,11 +61,15 @@ func TestParseTestdataSQL(t *testing.T) {
 				continue
 			}
 			if err := errors.Join(parseErr, restoreErr); err != nil {
-				if known[key] != "" {
+				if known[key] != "" && !regenerate {
 					knownHits++
 					if verbose {
 						t.Logf("%s:%d: [known: %s] %v", file, stmt.line, known[key], err)
 					}
+					continue
+				}
+				failures = append(failures, corpusFailure{key: key, reason: failureReason(parseErr, restoreErr)})
+				if regenerate {
 					continue
 				}
 				failed++
@@ -77,6 +84,13 @@ func TestParseTestdataSQL(t *testing.T) {
 			t.Logf("%s: %d/%d statements failed", file, fileFailed, len(stmts))
 		}
 	}
+	if regenerate {
+		if err := writeKnownFailures(filepath.Join("testdata", "known_failures.txt"), failures); err != nil {
+			t.Fatalf("write known failures: %v", err)
+		}
+		t.Logf("regenerated known_failures.txt with %d entries", len(failures))
+		return
+	}
 	stale := len(known) - knownHits
 	t.Logf("%d statements; %d explicitly unsupported restores; %d psql-dependent skipped; %d known failures matched (%d stale list entries, %d unexpected failures)",
 		total, unsupported, skipped, knownHits, stale, failed)
@@ -84,6 +98,44 @@ func TestParseTestdataSQL(t *testing.T) {
 	if failed > 0 {
 		t.Errorf("%d SQL statements failed without a known_failures.txt entry (%d skipped); add each to the list or fix the parser/restore", failed, skipped)
 	}
+	if stale > 0 {
+		t.Errorf("%d known_failures.txt entries no longer fail; run PGPARSER_REGENERATE=1 go test -run TestParseTestdataSQL ./tests to prune them", stale)
+	}
+}
+
+// corpusFailure is one known_failures.txt entry.
+type corpusFailure struct {
+	key    string
+	reason string
+}
+
+// failureReason classifies a corpus failure for known_failures.txt.
+func failureReason(parseErr, restoreErr error) string {
+	if parseErr != nil {
+		return "expected parse rejection (unsupported PostgreSQL syntax)"
+	}
+	if strings.Contains(restoreErr.Error(), "Restore is not stable") {
+		return "restore instability"
+	}
+	return "restore round-trip gap"
+}
+
+// writeKnownFailures rewrites the known-failure list, sorted by key.
+func writeKnownFailures(path string, failures []corpusFailure) error {
+	sort.Slice(failures, func(i, j int) bool { return failures[i].key < failures[j].key })
+	var b strings.Builder
+	b.WriteString("# Known corpus failures for TestParseTestdataSQL (ISSUES #12 gate).\n")
+	b.WriteString("# Format: <file.sql>:<line>\t<reason>\n")
+	b.WriteString("# \"expected parse rejection\" = the original SQL is not accepted by the parser.\n")
+	b.WriteString("# \"restore round-trip gap\" / \"restore instability\" = Restore output does not re-parse.\n")
+	b.WriteString("# Regenerate: PGPARSER_REGENERATE=1 go test -run TestParseTestdataSQL ./tests\n")
+	for _, f := range failures {
+		b.WriteString(f.key)
+		b.WriteString("\t")
+		b.WriteString(f.reason)
+		b.WriteByte('\n')
+	}
+	return os.WriteFile(path, []byte(b.String()), 0o644)
 }
 
 // loadKnownFailures reads the known-failure list of the corpus gate.

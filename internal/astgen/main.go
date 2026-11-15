@@ -149,7 +149,14 @@ func visitField(b *strings.Builder, fset *token.FileSet, expr ast.Expr, access s
 		if err := format.Node(&typ, fset, expr); err != nil {
 			return err
 		}
-		fmt.Fprintf(b, "if %s != nil { updated, ok := %s.Accept(v); if !ok { return n, false }; %s = updated.(%s) };", access, access, access, typ.String())
+		typStr := typ.String()
+		if typStr == "Node" {
+			// updated is already the interface type; a redundant assertion
+			// would be flagged by gocritic.
+			fmt.Fprintf(b, "if %s != nil { updated, ok := %s.Accept(v); if !ok { return n, false }; %s = updated };", access, access, access)
+		} else {
+			fmt.Fprintf(b, "if %s != nil { updated, ok := %s.Accept(v); if !ok { return n, false }; %s = updated.(%s) };", access, access, access, typStr)
+		}
 	}
 	return nil
 }

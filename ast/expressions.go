@@ -148,7 +148,10 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.L.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.L")
 	}
-	if ctx.Flags.HasSpacesAroundBinaryOperationFlag() {
+	// Word operators such as IS DISTINCT FROM need spaces even when the caller
+	// asked for compact output: "FROM1" would lex as one identifier.
+	pad := ctx.Flags.HasSpacesAroundBinaryOperationFlag() || wordOperator(n.OpName)
+	if pad {
 		ctx.WritePlain(" ")
 	}
 	if n.OpName != "" {
@@ -156,7 +159,7 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 	} else if err := n.Op.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.Op")
 	}
-	if ctx.Flags.HasSpacesAroundBinaryOperationFlag() {
+	if pad {
 		ctx.WritePlain(" ")
 	}
 	// Subquery-style ANY/ALL/SOME comparisons require the right side in
@@ -191,6 +194,16 @@ func (n *BinaryOperationExpr) Format(w io.Writer) {
 	} else {
 		n.R.Format(w)
 	}
+}
+
+// wordOperator reports whether an operator text starts with a letter, in which
+// case it needs surrounding spaces to stay a separate token.
+func wordOperator(name string) bool {
+	if name == "" {
+		return false
+	}
+	c := name[0]
+	return c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
 }
 
 // Accept implements Node interface.

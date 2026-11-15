@@ -151,6 +151,9 @@ func exprsFromList(v any) []ast.ExprNode {
 	case []ast.ExprNode:
 		return l
 	case *ast.List:
+		if l == nil {
+			return nil
+		}
 		var result []ast.ExprNode
 		for _, item := range l.Items {
 			if e, ok := item.(ast.ExprNode); ok {
@@ -162,10 +165,10 @@ func exprsFromList(v any) []ast.ExprNode {
 	return nil
 }
 
-// funcNameString returns the dotted name of a function name list.
-func funcNameString(l *ast.List) string {
+// funcNameParts returns the name parts of a function name list.
+func funcNameParts(l *ast.List) []string {
 	if l == nil {
-		return ""
+		return nil
 	}
 	parts := make([]string, 0, len(l.Items))
 	for _, item := range l.Items {
@@ -177,23 +180,26 @@ func funcNameString(l *ast.List) string {
 			parts = append(parts, v.Type.String())
 		}
 	}
-	return strings.Join(parts, ".")
+	return parts
+}
+
+// funcNameString returns the dotted name of a function name list.
+func funcNameString(l *ast.List) string {
+	return strings.Join(funcNameParts(l), ".")
 }
 
 // nameListString returns the dotted name of a name list.
 func nameListString(l any) string {
 	switch v := l.(type) {
-	case *ast.List:
-		return funcNameString(v)
+	case string:
+		return v
 	case *ast.CollateClause:
 		// opt_collate_clause clauses carry the collation name list.
 		return nameListString(v.Collname)
-	case string:
-		return v
 	case ast.Node:
-		if s, ok := v.(*ast.String); ok {
-			return s.Str
-		}
+		// commentNameParts is the single node-to-parts helper; join for callers
+		// that store a flattened dotted name.
+		return strings.Join(commentNameParts(v), ".")
 	}
 	return ""
 }
@@ -260,6 +266,14 @@ func groupingSetsFromList(l *ast.List) [][]ast.ExprNode {
 		}
 	}
 	return sets
+}
+
+// withIndirection attaches parsed subscripts and field selections to expr.
+func withIndirection(expr ast.ExprNode, l *ast.List) ast.ExprNode {
+	if l == nil || len(l.Items) == 0 {
+		return expr
+	}
+	return &ast.A_Indirection{Arg: expr, Indirection: l}
 }
 
 // groupingSetExprs returns the expressions of one grouping set element. The

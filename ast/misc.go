@@ -160,7 +160,15 @@ func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 		return nil
 	}
 	ctx.WriteKeyWord("EXPLAIN ")
-	if n.Analyze {
+	// `EXPLAIN ANALYZE` sets both the flag and the option; write it once.
+	analyzeInOptions := false
+	for _, opt := range n.Options {
+		if strings.EqualFold(opt, "analyze") {
+			analyzeInOptions = true
+			break
+		}
+	}
+	if n.Analyze && !analyzeInOptions {
 		ctx.WriteKeyWord("ANALYZE ")
 	}
 	if len(n.Options) > 0 {
@@ -172,7 +180,7 @@ func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(opt)
 		}
 		ctx.WritePlain(") ")
-	} else if !n.Analyze {
+	} else if !n.Analyze && n.Format != "" {
 		ctx.WriteKeyWord("FORMAT ")
 		ctx.WritePlain("= ")
 		ctx.WriteString(n.Format)
@@ -1345,19 +1353,24 @@ func (n *DropUserStmt) Accept(v Visitor) (Node, bool) {
 type DoStmt struct {
 	stmtNode
 
+	// Exprs holds the code literal.
 	Exprs []ExprNode
+	// Language is the optional LANGUAGE clause; empty means the default.
+	Language string
 }
 
 // Restore implements Node interface.
 func (n *DoStmt) Restore(ctx *format.RestoreCtx) error {
+	if len(n.Exprs) == 0 {
+		return errors.New("DO statement has no code")
+	}
 	ctx.WriteKeyWord("DO ")
-	for i, v := range n.Exprs {
-		if i != 0 {
-			ctx.WritePlain(", ")
-		}
-		if err := v.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore DoStmt.Exprs[%d]", i)
-		}
+	if err := n.Exprs[0].Restore(ctx); err != nil {
+		return errors.Annotate(err, "An error occurred while restore DoStmt.Exprs[0]")
+	}
+	if n.Language != "" {
+		ctx.WriteKeyWord(" LANGUAGE ")
+		ctx.WriteName(n.Language)
 	}
 	return nil
 }

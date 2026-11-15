@@ -467,3 +467,25 @@ func BenchmarkLexerOperator(b *testing.B) {
 		})
 	}
 }
+
+// BenchmarkParse measures a full parse, which BenchmarkParserNew does not
+// (parser.New only returns an empty Parser).
+func BenchmarkParse(b *testing.B) {
+	statements := map[string]string{
+		"small":  `SELECT a, b FROM t WHERE a = 1 AND b < 2 ORDER BY a LIMIT 10`,
+		"medium": `SELECT u.id, count(o.id) AS c FROM users u LEFT JOIN orders o ON o.user_id = u.id WHERE u.active AND o.created_at > $1 GROUP BY u.id HAVING count(o.id) > 1 ORDER BY c DESC LIMIT 50`,
+		"wide":   "SELECT " + strings.Repeat("col, ", 200) + "last_col FROM wide_table WHERE a = 1 AND b = 2",
+	}
+	for name, sql := range statements {
+		sql := sql
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			b.SetBytes(int64(len(sql)))
+			for b.Loop() {
+				if _, err := parser.New().Parse(sql); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}

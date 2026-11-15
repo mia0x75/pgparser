@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/mia0x75/pgparser/errors"
 
@@ -39,13 +40,10 @@ const (
 	Xor        = "bitxor"
 	Div        = "div"
 	Mul        = "mul"
-	UnaryNot   = "not" // Avoid name conflict with Not in github/mia0x75/check.
 	BitNeg     = "bitneg"
 	IntDiv     = "intdiv"
 	LogicXor   = "xor"
 	NullEQ     = "nulleq"
-	UnaryPlus  = "unaryplus"
-	UnaryMinus = "unaryminus"
 	In         = "in"
 	Like       = "like"
 	Case       = "case"
@@ -53,263 +51,93 @@ const (
 	IsNull     = "isnull"
 	IsTruth    = "istrue"  // Avoid name conflict with IsTrue in github/mia0x75/check.
 	IsFalsity  = "isfalse" // Avoid name conflict with IsFalse in github/mia0x75/check.
-	RowFunc    = "row"
 	SetVar     = "setvar"
-	GetVar     = "getvar"
 	Values     = "values"
-	BitCount   = "bit_count"
-	GetParam   = "getparam"
 
 	// common functions
-	Coalesce = "coalesce"
-	Greatest = "greatest"
-	Least    = "least"
-	Interval = "interval"
 
 	// math functions
 	Abs      = "abs"
-	Acos     = "acos"
-	Asin     = "asin"
-	Atan     = "atan"
-	Atan2    = "atan2"
-	Ceil     = "ceil"
 	Ceiling  = "ceiling"
-	Conv     = "conv"
-	Cos      = "cos"
-	Cot      = "cot"
-	CRC32    = "crc32"
-	Degrees  = "degrees"
-	Exp      = "exp"
-	Floor    = "floor"
-	Ln       = "ln"
 	Log      = "log"
-	Log2     = "log2"
-	Log10    = "log10"
-	PI       = "pi"
-	Pow      = "pow"
-	Power    = "power"
-	Radians  = "radians"
-	Rand     = "rand"
 	Round    = "round"
 	Sign     = "sign"
-	Sin      = "sin"
-	Sqrt     = "sqrt"
-	Tan      = "tan"
 	Truncate = "truncate"
 
 	// time functions
-	AddDate          = "adddate"
-	AddTime          = "addtime"
-	ConvertTz        = "convert_tz"
-	Curdate          = "curdate"
-	CurrentDate      = "current_date"
-	CurrentTime      = "current_time"
-	CurrentTimestamp = "current_timestamp"
-	Curtime          = "curtime"
-	Date             = "date"
-	DateLiteral      = "dateliteral"
-	DateAdd          = "date_add"
-	DateFormat       = "date_format"
-	DateSub          = "date_sub"
-	DateDiff         = "datediff"
-	Day              = "day"
-	DayName          = "dayname"
-	DayOfMonth       = "dayofmonth"
-	DayOfWeek        = "dayofweek"
-	DayOfYear        = "dayofyear"
-	Extract          = "extract"
-	FromDays         = "from_days"
-	FromUnixTime     = "from_unixtime"
-	GetFormat        = "get_format"
-	Hour             = "hour"
-	LocalTime        = "localtime"
-	LocalTimestamp   = "localtimestamp"
-	MakeDate         = "makedate"
-	MakeTime         = "maketime"
-	MicroSecond      = "microsecond"
-	Minute           = "minute"
-	Month            = "month"
-	MonthName        = "monthname"
-	Now              = "now"
-	PeriodAdd        = "period_add"
-	PeriodDiff       = "period_diff"
-	Quarter          = "quarter"
-	SecToTime        = "sec_to_time"
-	Second           = "second"
-	StrToDate        = "str_to_date"
-	SubDate          = "subdate"
-	SubTime          = "subtime"
-	Sysdate          = "sysdate"
-	Time             = "time"
-	TimeLiteral      = "timeliteral"
-	TimeFormat       = "time_format"
-	TimeToSec        = "time_to_sec"
-	TimeDiff         = "timediff"
-	Timestamp        = "timestamp"
-	TimestampLiteral = "timestampliteral"
-	TimestampAdd     = "timestampadd"
-	TimestampDiff    = "timestampdiff"
-	ToDays           = "to_days"
-	ToSeconds        = "to_seconds"
-	UnixTimestamp    = "unix_timestamp"
-	UTCDate          = "utc_date"
-	UTCTime          = "utc_time"
-	UTCTimestamp     = "utc_timestamp"
-	Week             = "week"
-	Weekday          = "weekday"
-	WeekOfYear       = "weekofyear"
-	Year             = "year"
-	YearWeek         = "yearweek"
-	LastDay          = "last_day"
+	AddDate       = "adddate"
+	CurrentTime   = "current_time"
+	Date          = "date"
+	DateFormat    = "date_format"
+	DateDiff      = "datediff"
+	Day           = "day"
+	Extract       = "extract"
+	Hour          = "hour"
+	MicroSecond   = "microsecond"
+	Minute        = "minute"
+	Month         = "month"
+	Now           = "now"
+	Second        = "second"
+	Time          = "time"
+	TimeFormat    = "time_format"
+	Timestamp     = "timestamp"
+	TimestampDiff = "timestampdiff"
+	Week          = "week"
+	Weekday       = "weekday"
+	Year          = "year"
+	YearWeek      = "yearweek"
 
 	// string functions
-	ASCII           = "ascii"
-	Bin             = "bin"
-	Concat          = "concat"
-	ConcatWS        = "concat_ws"
-	Convert         = "convert"
-	Elt             = "elt"
-	ExportSet       = "export_set"
-	Field           = "field"
-	Format          = "format"
-	FromBase64      = "from_base64"
-	InsertFunc      = "insert_func"
-	Instr           = "instr"
-	Lcase           = "lcase"
-	Left            = "left"
-	Length          = "length"
-	LoadFile        = "load_file"
-	Locate          = "locate"
-	Lower           = "lower"
-	Lpad            = "lpad"
-	LTrim           = "ltrim"
-	MakeSet         = "make_set"
-	Mid             = "mid"
-	Oct             = "oct"
-	Ord             = "ord"
-	Position        = "position"
-	Quote           = "quote"
-	Repeat          = "repeat"
-	Replace         = "replace"
-	Reverse         = "reverse"
-	Right           = "right"
-	RTrim           = "rtrim"
-	Space           = "space"
-	Strcmp          = "strcmp"
-	Substring       = "substring"
-	Substr          = "substr"
-	SubstringIndex  = "substring_index"
-	ToBase64        = "to_base64"
-	Trim            = "trim"
-	Upper           = "upper"
-	Ucase           = "ucase"
-	Hex             = "hex"
-	Unhex           = "unhex"
-	Rpad            = "rpad"
-	BitLength       = "bit_length"
-	CharFunc        = "char_func"
-	CharLength      = "char_length"
-	CharacterLength = "character_length"
-	FindInSet       = "find_in_set"
+	ASCII    = "ascii"
+	Convert  = "convert"
+	Elt      = "elt"
+	Field    = "field"
+	Format   = "format"
+	Left     = "left"
+	Length   = "length"
+	Lower    = "lower"
+	Position = "position"
+	Quote    = "quote"
+	Repeat   = "repeat"
+	Replace  = "replace"
+	Right    = "right"
+	Trim     = "trim"
+	Hex      = "hex"
 
 	// information functions
-	Benchmark    = "benchmark"
 	Charset      = "charset"
-	Coercibility = "coercibility"
 	Collation    = "collation"
 	ConnectionID = "connection_id"
 	CurrentUser  = "current_user"
-	CurrentRole  = "current_role"
 	Database     = "database"
-	FoundRows    = "found_rows"
-	LastInsertId = "last_insert_id"
-	RowCount     = "row_count"
 	Schema       = "schema"
-	SessionUser  = "session_user"
-	SystemUser   = "system_user"
 	User         = "user"
 	Version      = "version"
 
 	// control functions
-	If     = "if"
-	Ifnull = "ifnull"
-	Nullif = "nullif"
+	If = "if"
 
 	// miscellaneous functions
-	AnyValue        = "any_value"
-	DefaultFunc     = "default_func"
-	InetAton        = "inet_aton"
-	InetNtoa        = "inet_ntoa"
-	Inet6Aton       = "inet6_aton"
-	Inet6Ntoa       = "inet6_ntoa"
-	IsFreeLock      = "is_free_lock"
-	IsIPv4          = "is_ipv4"
-	IsIPv4Compat    = "is_ipv4_compat"
-	IsIPv4Mapped    = "is_ipv4_mapped"
-	IsIPv6          = "is_ipv6"
-	IsUsedLock      = "is_used_lock"
-	MasterPosWait   = "master_pos_wait"
-	NameConst       = "name_const"
-	ReleaseAllLocks = "release_all_locks"
-	Sleep           = "sleep"
-	UUID            = "uuid"
-	UUIDShort       = "uuid_short"
+	Sleep = "sleep"
+	UUID  = "uuid"
 	// Compatibility names do not imply lock execution by this syntax-only AST.
-	GetLock     = "get_lock"
-	ReleaseLock = "release_lock"
 
 	// encryption and compression functions
-	AesDecrypt               = "aes_decrypt"
-	AesEncrypt               = "aes_encrypt"
-	Compress                 = "compress"
-	Decode                   = "decode"
-	DesDecrypt               = "des_decrypt"
-	DesEncrypt               = "des_encrypt"
-	Encode                   = "encode"
-	Encrypt                  = "encrypt"
-	MD5                      = "md5"
-	OldPassword              = "old_password"
-	PasswordFunc             = "password_func"
-	RandomBytes              = "random_bytes"
-	SHA1                     = "sha1"
-	SHA                      = "sha"
-	SHA2                     = "sha2"
-	Uncompress               = "uncompress"
-	UncompressedLength       = "uncompressed_length"
-	ValidatePasswordStrength = "validate_password_strength"
+	Decode = "decode"
 
 	// json functions
-	JSONType          = "json_type"
-	JSONExtract       = "json_extract"
-	JSONUnquote       = "json_unquote"
-	JSONArray         = "json_array"
-	JSONObject        = "json_object"
-	JSONMerge         = "json_merge"
-	JSONSet           = "json_set"
-	JSONInsert        = "json_insert"
-	JSONReplace       = "json_replace"
-	JSONRemove        = "json_remove"
-	JSONContains      = "json_contains"
-	JSONContainsPath  = "json_contains_path"
-	JSONValid         = "json_valid"
-	JSONArrayAppend   = "json_array_append"
-	JSONArrayInsert   = "json_array_insert"
-	JSONMergePatch    = "json_merge_patch"
-	JSONMergePreserve = "json_merge_preserve"
-	JSONPretty        = "json_pretty"
-	JSONQuote         = "json_quote"
-	JSONSearch        = "json_search"
-	JSONStorageSize   = "json_storage_size"
-	JSONDepth         = "json_depth"
-	JSONKeys          = "json_keys"
-	JSONLength        = "json_length"
+	JSONExtract  = "json_extract"
+	JSONContains = "json_contains"
 )
 
 // FuncCallExpr is for function expression.
 type FuncCallExpr struct {
 	funcNode
-	// FnName is the function name.
+	// FnName is the dotted function name used by Format and legacy callers.
 	FnName model.CIStr
+	// FnNameParts keeps each name part unquoted so Restore can quote and case
+	// them correctly; a flattened FnName cannot be split when a part contains a dot.
+	FnNameParts []string
 	// Args is the function args.
 	Args []ExprNode
 	// Filter is the optional FILTER (WHERE expr) clause.
@@ -322,73 +150,214 @@ type FuncCallExpr struct {
 	OrderBy  *OrderByClause
 }
 
+// mustQuoteFuncNames are the parser keywords that cannot be written as a bare
+// function name: SELECT "<kw>"(1, 2) parses but SELECT <KW>(1, 2) does not, so
+// if such a word appears as a function-name part it must stay quoted, or the
+// restored SQL would read it back as the keyword.
+// shortcut: the table is maintained by hand with a two-argument call shape;
+// TestVFuncNameQuoteTableMatchesKeywords fails when a required entry is missing. extract and position are excluded because the
+// grammar gives them keyword restore forms (EXTRACT/POSITION) that must stay bare.
+var mustQuoteFuncNames = map[string]struct{}{
+	"analyse":           {},
+	"analyze":           {},
+	"and":               {},
+	"any":               {},
+	"array":             {},
+	"as":                {},
+	"asc":               {},
+	"asymmetric":        {},
+	"between":           {},
+	"bigint":            {},
+	"bit":               {},
+	"boolean":           {},
+	"both":              {},
+	"case":              {},
+	"cast":              {},
+	"char":              {},
+	"character":         {},
+	"check":             {},
+	"collate":           {},
+	"column":            {},
+	"constraint":        {},
+	"create":            {},
+	"current_catalog":   {},
+	"current_date":      {},
+	"current_role":      {},
+	"current_time":      {},
+	"current_timestamp": {},
+	"current_user":      {},
+	"dec":               {},
+	"decimal":           {},
+	"default":           {},
+	"deferrable":        {},
+	"desc":              {},
+	"do":                {},
+	"else":              {},
+	"end":               {},
+	"except":            {},
+	"extract":           {},
+	"exists":            {},
+	"false":             {},
+	"fetch":             {},
+	"float":             {},
+	"for":               {},
+	"foreign":           {},
+	"from":              {},
+	"grant":             {},
+	"group":             {},
+	"in":                {},
+	"initially":         {},
+	"inout":             {},
+	"int":               {},
+	"integer":           {},
+	"intersect":         {},
+	"interval":          {},
+	"into":              {},
+	"json":              {},
+	"json_arrayagg":     {},
+	"json_objectagg":    {},
+	"json_scalar":       {},
+	"json_serialize":    {},
+	"json_table":        {},
+	"lateral":           {},
+	"leading":           {},
+	"localtime":         {},
+	"localtimestamp":    {},
+	"merge_action":      {},
+	"national":          {},
+	"nchar":             {},
+	"none":              {},
+	"normalize":         {},
+	"null":              {},
+	"numeric":           {},
+	"on":                {},
+	"only":              {},
+	"operator":          {},
+	"or":                {},
+	"order":             {},
+	"out":               {},
+	"placing":           {},
+	"position":          {},
+	"precision":         {},
+	"primary":           {},
+	"real":              {},
+	"references":        {},
+	"returning":         {},
+	"select":            {},
+	"session_user":      {},
+	"setof":             {},
+	"smallint":          {},
+	"some":              {},
+	"symmetric":         {},
+	"system_user":       {},
+	"table":             {},
+	"then":              {},
+	"time":              {},
+	"timestamp":         {},
+	"to":                {},
+	"trailing":          {},
+	"treat":             {},
+	"true":              {},
+	"union":             {},
+	"unique":            {},
+	"user":              {},
+	"using":             {},
+	"values":            {},
+	"varchar":           {},
+	"variadic":          {},
+	"when":              {},
+	"window":            {},
+	"with":              {},
+	"xmlattributes":     {},
+	"xmlelement":        {},
+	"xmlexists":         {},
+	"xmlnamespaces":     {},
+	"xmlparse":          {},
+	"xmlpi":             {},
+	"xmlroot":           {},
+	"xmlserialize":      {},
+	"xmltable":          {},
+}
+
+// writeFuncName restores a dotted function name, quoting each part so that
+// quoting, case and reserved words survive identifier folding. A single
+// lowercase part that is not a keyword needing quotes is written as a keyword
+// for readability; every other part is quoted.
+func writeFuncName(ctx *format.RestoreCtx, parts []string, dotted string) {
+	if len(parts) == 0 {
+		if dotted == "" {
+			return
+		}
+		parts = strings.Split(dotted, ".")
+	}
+	for i, p := range parts {
+		if i > 0 {
+			ctx.WritePlain(".")
+		}
+		if len(parts) == 1 && !NeedsQuotedFuncName(p) {
+			ctx.WriteKeyWord(p)
+		} else {
+			ctx.WriteName(p)
+		}
+	}
+}
+
+// NeedsQuotedFuncName reports whether a function-name part must be quoted on
+// restore. A simple lowercase word that can be read back as a bare function name
+// may stay unquoted; everything else (mixed case, spaces, reserved words) must
+// be quoted or folding would change the name or make the call unparseable.
+func NeedsQuotedFuncName(part string) bool {
+	if !simpleLowerIdent(part) {
+		return true
+	}
+	_, reserved := mustQuoteFuncNames[part]
+	return reserved
+}
+
+// simpleLowerIdent reports whether s is a bare lowercase identifier that is safe
+// to fold.
+func simpleLowerIdent(s string) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		isLower := c >= 'a' && c <= 'z'
+		isDigit := c >= '0' && c <= '9'
+		if !isLower && !isDigit && c != '_' {
+			return false
+		}
+	}
+	return true
+}
+
 // Restore implements Node interface.
 func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord(n.FnName.O)
+	keywordForm := n.keywordFormName()
+	if keywordForm {
+		// The grammar's keyword forms (EXTRACT/POSITION/TRIM) must stay bare.
+		ctx.WriteKeyWord(n.FnName.O)
+	} else {
+		writeFuncName(ctx, n.FnNameParts, n.FnName.O)
+	}
 	ctx.WritePlain("(")
 	if n.Distinct {
 		ctx.WriteKeyWord("DISTINCT ")
 	}
-	switch n.FnName.L {
-	case "extract":
-		ctx.WriteKeyWord(n.Args[0].(ValueExpr).GetString())
-		ctx.WriteKeyWord(" FROM ")
-		if err := n.Args[1].Restore(ctx); err != nil {
+	switch {
+	case keywordForm:
+		if err := n.restoreKeywordForm(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
 		}
-	case "position":
-		if err := n.Args[0].Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-		}
-		ctx.WriteKeyWord(" IN ")
-		if err := n.Args[1].Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-		}
-	case "trim":
-		switch len(n.Args) {
-		case 1:
-			if err := n.Args[0].Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-			}
-		case 2:
-			if err := n.Args[1].Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-			}
-			ctx.WriteKeyWord(" FROM ")
-			if err := n.Args[0].Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-			}
-		case 3:
-			switch fmt.Sprint(n.Args[2].(ValueExpr).GetValue()) {
-			case "3":
-				ctx.WriteKeyWord("TRAILING ")
-			case "2":
-				ctx.WriteKeyWord("LEADING ")
-			case "0", "1":
-				ctx.WriteKeyWord("BOTH ")
-			}
-			if n.Args[1].(ValueExpr).GetValue() != nil {
-				if err := n.Args[1].Restore(ctx); err != nil {
-					return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-				}
-				ctx.WritePlain(" ")
-			}
-			ctx.WriteKeyWord("FROM ")
-			if err := n.Args[0].Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr")
-			}
-		}
+	case n.Star:
+		ctx.WritePlain("*")
 	default:
-		if n.Star {
-			ctx.WritePlain("*")
-		} else {
-			for i, argv := range n.Args {
-				if i != 0 {
-					ctx.WritePlain(", ")
-				}
-				if err := argv.Restore(ctx); err != nil {
-					return errors.Annotatef(err, "An error occurred while restore FuncCallExpr.Args %d", i)
-				}
+		for i, argv := range n.Args {
+			if i != 0 {
+				ctx.WritePlain(", ")
+			}
+			if err := argv.Restore(ctx); err != nil {
+				return errors.Annotatef(err, "An error occurred while restore FuncCallExpr.Args %d", i)
 			}
 		}
 	}
@@ -412,6 +381,80 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 		ctx.WritePlain(")")
+	}
+	return nil
+}
+
+// keywordFormName reports whether the call has the argument shape of one of the
+// grammar's keyword forms. A quoted user function like "extract"(a) does not
+// match, so it keeps its quoted name instead of becoming the EXTRACT keyword.
+func (n *FuncCallExpr) keywordFormName() bool {
+	switch n.FnName.L {
+	case "extract":
+		if len(n.Args) != 2 {
+			return false
+		}
+		_, ok := n.Args[0].(ValueExpr)
+		return ok
+	case "position":
+		return len(n.Args) == 2
+	case "trim":
+		switch len(n.Args) {
+		case 1, 2:
+			return true
+		case 3:
+			_, ok2 := n.Args[2].(ValueExpr)
+			_, ok1 := n.Args[1].(ValueExpr)
+			return ok1 && ok2
+		}
+	}
+	return false
+}
+
+// restoreKeywordForm writes extract(), position() and trim() in their SQL forms.
+// It is only called when keywordFormName reports a matching shape.
+func (n *FuncCallExpr) restoreKeywordForm(ctx *format.RestoreCtx) error {
+	switch n.FnName.L {
+	case "extract":
+		ctx.WriteKeyWord(n.Args[0].(ValueExpr).GetString())
+		ctx.WriteKeyWord(" FROM ")
+		return n.Args[1].Restore(ctx)
+	case "position":
+		if err := n.Args[0].Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WriteKeyWord(" IN ")
+		return n.Args[1].Restore(ctx)
+	case "trim":
+		switch len(n.Args) {
+		case 1:
+			return n.Args[0].Restore(ctx)
+		case 2:
+			if err := n.Args[1].Restore(ctx); err != nil {
+				return err
+			}
+			ctx.WriteKeyWord(" FROM ")
+			return n.Args[0].Restore(ctx)
+		case 3:
+			direction := n.Args[2].(ValueExpr)
+			from := n.Args[1].(ValueExpr)
+			switch fmt.Sprint(direction.GetValue()) {
+			case "3":
+				ctx.WriteKeyWord("TRAILING ")
+			case "2":
+				ctx.WriteKeyWord("LEADING ")
+			case "0", "1":
+				ctx.WriteKeyWord("BOTH ")
+			}
+			if from.GetValue() != nil {
+				if err := n.Args[1].Restore(ctx); err != nil {
+					return err
+				}
+				ctx.WritePlain(" ")
+			}
+			ctx.WriteKeyWord("FROM ")
+			return n.Args[0].Restore(ctx)
+		}
 	}
 	return nil
 }
@@ -635,7 +678,7 @@ type AggregateFuncExpr struct {
 
 // Restore implements Node interface.
 func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord(n.F)
+	writeFuncName(ctx, nil, n.F)
 	ctx.WritePlain("(")
 	if n.Distinct {
 		ctx.WriteKeyWord("DISTINCT ")
@@ -796,7 +839,7 @@ type WindowFuncExpr struct {
 
 // Restore implements Node interface.
 func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord(n.F)
+	writeFuncName(ctx, nil, n.F)
 	ctx.WritePlain("(")
 	if n.Star {
 		ctx.WritePlain("*")

@@ -44,6 +44,10 @@ type CreateServerStmt struct {
 
 	Name    string
 	Wrapper string
+	// ServerType is the optional TYPE clause; empty when absent.
+	ServerType string
+	// Version is the optional VERSION clause; empty when absent.
+	Version string
 	Options []*ServerOption
 }
 
@@ -51,6 +55,14 @@ type CreateServerStmt struct {
 func (n *CreateServerStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("CREATE SERVER ")
 	ctx.WriteName(n.Name)
+	if n.ServerType != "" {
+		ctx.WriteKeyWord(" TYPE ")
+		ctx.WriteString(n.ServerType)
+	}
+	if n.Version != "" {
+		ctx.WriteKeyWord(" VERSION ")
+		ctx.WriteString(n.Version)
+	}
 	ctx.WriteKeyWord(" FOREIGN DATA WRAPPER ")
 	ctx.WriteName(n.Wrapper)
 	if len(n.Options) > 0 {
@@ -89,7 +101,9 @@ func (n *CreateServerStmt) Accept(v Visitor) (Node, bool) {
 type AlterServerStmt struct {
 	ddlNode
 
-	Name    string
+	Name string
+	// Version is the optional VERSION clause; empty when absent.
+	Version string
 	Options []*ServerOption
 }
 
@@ -97,6 +111,10 @@ type AlterServerStmt struct {
 func (n *AlterServerStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("ALTER SERVER ")
 	ctx.WriteName(n.Name)
+	if n.Version != "" {
+		ctx.WriteKeyWord(" VERSION ")
+		ctx.WriteString(n.Version)
+	}
 	if len(n.Options) > 0 {
 		ctx.WriteKeyWord(" OPTIONS(")
 		for i, opt := range n.Options {

@@ -264,3 +264,16 @@ func TestTruncateOverflowPostgreSQLTime(t *testing.T) {
 		t.Fatalf("got %#v, want %#v", res, types.MinTime+1)
 	}
 }
+
+// ISSUES.md V-8: a large Fsp (from a `timestamp(7)` typmod) must not panic the
+// string/number formatters; it is clamped to the 6-digit fractional buffer.
+func TestTimeLargeFspDoesNotPanic(t *testing.T) {
+	inner := types.FromDate(2020, 1, 2, 3, 4, 5, 123456)
+	for _, fsp := range []int{-1, 0, 6, 7, 9} {
+		tm := types.Time{Time: inner, Fsp: fsp}
+		// Both formatters slice a fixed 6-digit buffer; Fsp above 6 used to
+		// index out of bounds.
+		_ = tm.String()
+		_ = tm.ToNumber().ToString()
+	}
+}

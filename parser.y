@@ -8792,11 +8792,11 @@ c_expr:
 	| AexprConst { $$ = $1 }
 	| PARAM opt_indirection
 		{
-			$$ = ast.NewParamMarkerExpr(int($1) - 1)
+			$$ = withIndirection(ast.NewParamMarkerExpr(int($1)-1), $2)
 		}
 	| '(' a_expr ')' opt_indirection
 		{
-			$$ = &ast.ParenthesesExpr{Expr: $2}
+			$$ = withIndirection(&ast.ParenthesesExpr{Expr: $2}, $4)
 		}
 	| func_expr { $$ = $1 }
 	| select_with_parens %prec UMINUS
@@ -8886,7 +8886,7 @@ over_clause:
 	OVER window_specification	{ $$ = $2 }
 	| OVER ColId
 		{
-			$$ = &ast.WindowSpec{Name: model.NewCIStr($2)}
+			$$ = &ast.WindowSpec{Name: model.NewCIStr($2), OnlyAlias: true}
 		}
 	| /* EMPTY */				{ $$ = nil }
 	;
@@ -8991,35 +8991,35 @@ opt_window_exclusion_clause:
 func_application:
 	func_name '(' ')'
 		{
-			$$ = ast.NewFuncCallExpr(funcNameString($1))
+			$$ = ast.NewFuncCallExprParts(funcNameParts($1))
 		}
 	| func_name '(' func_arg_list opt_sort_clause ')'
 		{
-			$$ = ast.NewFuncCallExpr(funcNameString($1), exprsFromList($3)...)
+			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($3)...)
 			if $4 != nil { $$.(*ast.FuncCallExpr).OrderBy = $4.(*ast.OrderByClause) }
 		}
 	| func_name '(' VARIADIC func_arg_expr opt_sort_clause ')'
 		{
-			$$ = ast.NewFuncCallExpr(funcNameString($1), $4)
+			$$ = ast.NewFuncCallExprParts(funcNameParts($1), $4)
 		}
 	| func_name '(' func_arg_list ',' VARIADIC func_arg_expr opt_sort_clause ')'
 		{
 			args := append(exprsFromList($3), $6)
-			$$ = ast.NewFuncCallExpr(funcNameString($1), args...)
+			$$ = ast.NewFuncCallExprParts(funcNameParts($1), args...)
 		}
 	| func_name '(' '*' ')'
 		{
-			$$ = &ast.FuncCallExpr{FnName: model.NewCIStr(funcNameString($1)), Star: true}
+			$$ = &ast.FuncCallExpr{FnName: model.NewCIStr(funcNameString($1)), FnNameParts: funcNameParts($1), Star: true}
 		}
 	| func_name '(' DISTINCT func_arg_list opt_sort_clause ')'
 		{
-			$$ = ast.NewFuncCallExpr(funcNameString($1), exprsFromList($4)...)
+			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($4)...)
 			$$.(*ast.FuncCallExpr).Distinct = true
 			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
 		}
 	| func_name '(' ALL func_arg_list opt_sort_clause ')'
 		{
-			$$ = ast.NewFuncCallExpr(funcNameString($1), exprsFromList($4)...)
+			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($4)...)
 			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
 		}
 	;
@@ -12349,7 +12349,8 @@ DoStmt:
 	DO dostmt_opt_list
 		{
 			$$ = &ast.DoStmt{
-				Exprs: doExprs($2),
+				Exprs:    doExprs($2),
+				Language: doLanguage($2),
 			}
 		}
 	;
@@ -13277,18 +13278,22 @@ CreateForeignServerStmt:
 	  FOREIGN DATA_P WRAPPER name create_generic_options
 		{
 			$$ = &ast.CreateServerStmt{
-				Name:    $3,
-				Wrapper: $9,
-				Options: serverOptions($10),
+				Name:       $3,
+				ServerType: $4,
+				Version:    $5,
+				Wrapper:    $9,
+				Options:    serverOptions($10),
 			}
 		}
 	| CREATE SERVER IF_P NOT EXISTS name opt_type opt_foreign_server_version
 	  FOREIGN DATA_P WRAPPER name create_generic_options
 		{
 			$$ = &ast.CreateServerStmt{
-				Name:    $6,
-				Wrapper: $12,
-				Options: serverOptions($13),
+				Name:       $6,
+				ServerType: $7,
+				Version:    $8,
+				Wrapper:    $12,
+				Options:    serverOptions($13),
 			}
 		}
 	;
@@ -13319,13 +13324,15 @@ AlterForeignServerStmt:
 		{
 			$$ = &ast.AlterServerStmt{
 				Name:    $3,
+				Version: $4,
 				Options: serverOptions($5),
 			}
 		}
 	| ALTER SERVER name foreign_server_version
 		{
 			$$ = &ast.AlterServerStmt{
-				Name: $3,
+				Name:    $3,
+				Version: $4,
 			}
 		}
 	| ALTER SERVER name alter_generic_options

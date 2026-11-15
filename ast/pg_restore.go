@@ -26,6 +26,32 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		}
 	case *A_Star:
 		ctx.WritePlain("*")
+	case *A_Indirection:
+		arg, ok := n.Arg.(ExprNode)
+		if !ok || arg == nil {
+			return fmt.Errorf("indirection has no expression")
+		}
+		if err := arg.Restore(ctx); err != nil {
+			return err
+		}
+		if n.Indirection == nil {
+			return nil
+		}
+		for _, item := range n.Indirection.Items {
+			switch v := item.(type) {
+			case *String:
+				ctx.WritePlain(".")
+				ctx.WriteName(v.Str)
+			case *A_Star:
+				ctx.WritePlain(".*")
+			case *A_Indices:
+				if err := restoreIndices(ctx, v); err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("%w: indirection element %T", ErrUnsupportedRestore, item)
+			}
+		}
 	case *A_Const:
 		if n.Isnull {
 			ctx.WriteKeyWord("NULL")
@@ -641,6 +667,30 @@ func restoreSQLValue(ctx *format.RestoreCtx, n *SQLValueFunction) error {
 	if n.Typmod >= 0 {
 		ctx.WritePlainf("(%d)", n.Typmod)
 	}
+	return nil
+}
+
+// restoreIndices writes one array subscript, `[x]`, `[x:y]`, `[:y]` or `[x:]`.
+func restoreIndices(ctx *format.RestoreCtx, n *A_Indices) error {
+	ctx.WritePlain("[")
+	if n.IsSlice {
+		if n.Lidx != nil {
+			if err := n.Lidx.Restore(ctx); err != nil {
+				return err
+			}
+		}
+		ctx.WritePlain(":")
+		if n.Uidx != nil {
+			if err := n.Uidx.Restore(ctx); err != nil {
+				return err
+			}
+		}
+	} else if n.Uidx != nil {
+		if err := n.Uidx.Restore(ctx); err != nil {
+			return err
+		}
+	}
+	ctx.WritePlain("]")
 	return nil
 }
 

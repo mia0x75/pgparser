@@ -158,11 +158,6 @@ type Time struct {
 	Fsp int
 }
 
-// MaxPostgreSQLTime uses the compatibility duration bound, not PostgreSQL's time-of-day range.
-func MaxPostgreSQLTime(fsp int) Time {
-	return Time{Time: FromDate(0, 0, 0, TimeMaxHour, TimeMaxMinute, TimeMaxSecond, 0), Type: postgres.TypeDuration, Fsp: fsp}
-}
-
 // CurrentTime returns current time with type tp.
 func CurrentTime(tp uint8) Time {
 	return Time{Time: FromGoTime(gotime.Now()), Type: tp, Fsp: 0}
@@ -191,8 +186,14 @@ func (t Time) String() string {
 
 	str, _ := t.DateFormat("%Y-%m-%d %H:%i:%s")
 	if t.Fsp > 0 {
+		// The microsecond buffer is 6 digits; clamp so an out-of-range Fsp
+		// (e.g. from a `timestamp(7)` typmod) cannot index out of bounds.
+		fsp := t.Fsp
+		if fsp > 6 {
+			fsp = 6
+		}
 		tmp := fmt.Sprintf(".%06d", t.Time.Microsecond())
-		str += tmp[:1+t.Fsp]
+		str += tmp[:1+fsp]
 	}
 
 	return str
@@ -201,11 +202,6 @@ func (t Time) String() string {
 // IsZero returns a boolean indicating whether the time is equal to ZeroTime.
 func (t Time) IsZero() bool {
 	return compareTime(t.Time, ZeroTime) == 0
-}
-
-// InvalidZero returns a boolean indicating whether the month or day is zero.
-func (t Time) InvalidZero() bool {
-	return t.Time.Month() == 0 || t.Time.Day() == 0
 }
 
 const numberFormat = "%Y%m%d%H%i%s"
@@ -233,31 +229,19 @@ func (t Time) ToNumber() *PgDecimal {
 	s, _ := t.DateFormat(tfStr)
 
 	if t.Fsp > 0 {
+		// Clamp to the 6-digit microsecond buffer; see String above.
+		fsp := t.Fsp
+		if fsp > 6 {
+			fsp = 6
+		}
 		s1 := fmt.Sprintf("%s.%06d", s, t.Time.Microsecond())
-		s = s1[:len(s)+t.Fsp+1]
+		s = s1[:len(s)+fsp+1]
 	}
 
 	// We skip checking error here because time formatted string can be parsed certainly.
 	dec := new(PgDecimal)
 	_ = dec.FromString([]byte(s))
 	return dec
-}
-
-// ConvertToDuration discards the date so only the time-of-day contributes to the duration.
-// e.g,
-// 2012-12-12T10:10:10 -> 10:10:10
-// 2012-12-12 -> 0
-func (t Time) ConvertToDuration() (Duration, error) {
-	if t.IsZero() {
-		return ZeroDuration, nil
-	}
-
-	hour, minute, second := t.Clock()
-	frac := t.Time.Microsecond() * 1000
-
-	d := gotime.Duration(hour*3600+minute*60+second)*gotime.Second + gotime.Duration(frac)
-	// TODO: check convert validation
-	return Duration{Duration: d, Fsp: t.Fsp}, nil
 }
 
 // Compare returns an integer comparing the time instant t to o.
@@ -292,79 +276,6 @@ func compareTime(a, b PgTime) int {
 	}
 
 	return 0
-}
-
-// GetFsp gets the fsp of a string.
-func GetFsp(s string) (fsp int) {
-	fsp = len(s) - strings.LastIndex(s, ".") - 1
-	if fsp == len(s) {
-		fsp = 0
-	} else if fsp > 6 {
-		fsp = 6
-	}
-	return
-}
-
-// RoundFrac rounds fractional seconds precision with new fsp and returns a new one.
-// We will use the “round half up” rule, e.g, >= 0.5 -> 1, < 0.5 -> 0,
-// so 2011:11:11 10:10:10.888888 round 0 -> 2011:11:11 10:10:11
-// and 2011:11:11 10:10:10.111111 round 0 -> 2011:11:11 10:10:10
-func RoundFrac(t gotime.Time, fsp int) (gotime.Time, error) {
-	_, err := CheckFsp(fsp)
-	if err != nil {
-		return t, errors.Trace(err)
-	}
-	return t.Round(gotime.Duration(math.Pow10(9-fsp)) * gotime.Nanosecond), nil
-}
-
-// ToPackedUint encodes Time to a packed uint64 value.
-//
-//	 1 bit  0
-//	17 bits year*13+month   (year 0-9999, month 0-12)
-//	 5 bits day             (0-31)
-//	 5 bits hour            (0-23)
-//	 6 bits minute          (0-59)
-//	 6 bits second          (0-59)
-//	24 bits microseconds    (0-999999)
-//
-//	Total: 64 bits = 8 bytes
-//
-//	0YYYYYYY.YYYYYYYY.YYdddddh.hhhhmmmm.mmssssss.ffffffff.ffffffff.ffffffff
-func (t Time) ToPackedUint() (uint64, error) {
-	tm := t.Time
-	if t.IsZero() {
-		return 0, nil
-	}
-	year, month, day := tm.Year(), tm.Month(), tm.Day()
-	hour, minute, sec := tm.Hour(), tm.Minute(), tm.Second()
-	ymd := uint64(((year*13 + month) << 5) | day)
-	hms := uint64(hour<<12 | minute<<6 | sec)
-	micro := uint64(tm.Microsecond())
-	return ((ymd<<17 | hms) << 24) | micro, nil
-}
-
-// FromPackedUint decodes Time from a packed uint64 value.
-func (t *Time) FromPackedUint(packed uint64) error {
-	if packed == 0 {
-		t.Time = ZeroTime
-		return nil
-	}
-	ymdhms := packed >> 24
-	ymd := ymdhms >> 17
-	day := int(ymd & (1<<5 - 1))
-	ym := ymd >> 5
-	month := int(ym % 13)
-	year := int(ym / 13)
-
-	hms := ymdhms & (1<<17 - 1)
-	second := int(hms & (1<<6 - 1))
-	minute := int((hms >> 6) & (1<<6 - 1))
-	hour := int(hms >> 12)
-	microsec := int(packed % (1 << 24))
-
-	t.Time = FromDate(year, month, day, hour, minute, second, microsec)
-
-	return nil
 }
 
 // TimestampDiff returns t2 - t1 where t1 and t2 are date or datetime expressions.
@@ -539,25 +450,6 @@ func (d Duration) ToNumber() *PgDecimal {
 	return dec
 }
 
-// RoundFrac rounds fractional seconds precision with new fsp and returns a new one.
-// We will use the “round half up” rule, e.g, >= 0.5 -> 1, < 0.5 -> 0,
-// so 10:10:10.999999 round 0 -> 10:10:11
-// and 10:10:10.000000 round 0 -> 10:10:10
-func (d Duration) RoundFrac(fsp int) (Duration, error) {
-	fsp, err := CheckFsp(fsp)
-	if err != nil {
-		return d, errors.Trace(err)
-	}
-
-	if fsp == d.Fsp {
-		return d, nil
-	}
-
-	n := gotime.Date(0, 0, 0, 0, 0, 0, 0, gotime.Local)
-	nd := n.Add(d.Duration).Round(gotime.Duration(math.Pow10(9-fsp)) * gotime.Nanosecond).Sub(n)
-	return Duration{Duration: nd, Fsp: fsp}, nil
-}
-
 // Compare returns an integer comparing the Duration instant t to o.
 // If d is after o, return 1, equal o, return 0, before o, return -1.
 func (d Duration) Compare(o Duration) int {
@@ -630,24 +522,6 @@ func splitDuration(t gotime.Duration) (int, int, int, int, int) {
 
 var maxDaysInMonth = []int{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
 
-// TimeFromDays Converts a day number to a date.
-func TimeFromDays(num int64) Time {
-	if num < 0 {
-		return Time{
-			Time: FromDate(0, 0, 0, 0, 0, 0, 0),
-			Type: postgres.TypeDate,
-			Fsp:  0,
-		}
-	}
-	year, month, day := getDateFromDaynr(uint(num))
-
-	return Time{
-		Time: FromDate(int(year), int(month), int(day), 0, 0, 0, 0),
-		Type: postgres.TypeDate,
-		Fsp:  0,
-	}
-}
-
 func checkDateType(t PgTime, allowZeroInDate, allowInvalidDate bool) error {
 	year, month, day := t.Year(), t.Month(), t.Day()
 	if year == 0 && month == 0 && day == 0 {
@@ -717,404 +591,6 @@ func checkDatetimeType(t PgTime, allowZeroInDate, allowInvalidDate bool) error {
 	}
 
 	return nil
-}
-
-// ExtractDatetimeNum extracts time value number from datetime unit and format.
-func ExtractDatetimeNum(t *Time, unit string) (int64, error) {
-	switch strings.ToUpper(unit) {
-	case "DAY":
-		return int64(t.Time.Day()), nil
-	case "WEEK":
-		week := t.Time.Week(0)
-		return int64(week), nil
-	case "MONTH":
-		// TODO: Consider time_zone variable.
-		t1, err := t.Time.GoTime(gotime.Local)
-		if err != nil {
-			return 0, errors.Trace(err)
-		}
-		return int64(t1.Month()), nil
-	case "QUARTER":
-		m := int64(t.Time.Month())
-		// 1 - 3 -> 1
-		// 4 - 6 -> 2
-		// 7 - 9 -> 3
-		// 10 - 12 -> 4
-		return (m + 2) / 3, nil
-	case "YEAR":
-		return int64(t.Time.Year()), nil
-	case "DAY_MICROSECOND":
-		h, m, s := t.Clock()
-		d := t.Time.Day()
-		return int64(d*1000000+h*10000+m*100+s)*1000000 + int64(t.Time.Microsecond()), nil
-	case "DAY_SECOND":
-		h, m, s := t.Clock()
-		d := t.Time.Day()
-		return int64(d)*1000000 + int64(h)*10000 + int64(m)*100 + int64(s), nil
-	case "DAY_MINUTE":
-		h, m, _ := t.Clock()
-		d := t.Time.Day()
-		return int64(d)*10000 + int64(h)*100 + int64(m), nil
-	case "DAY_HOUR":
-		h, _, _ := t.Clock()
-		d := t.Time.Day()
-		return int64(d)*100 + int64(h), nil
-	case "YEAR_MONTH":
-		y, m := t.Time.Year(), t.Time.Month()
-		return int64(y)*100 + int64(m), nil
-	default:
-		return 0, errors.Errorf("invalid unit %s", unit)
-	}
-}
-
-// ExtractDurationNum extracts duration value number from duration unit and format.
-func ExtractDurationNum(d *Duration, unit string) (int64, error) {
-	switch strings.ToUpper(unit) {
-	case "MICROSECOND":
-		return int64(d.MicroSecond()), nil
-	case "SECOND":
-		return int64(d.Second()), nil
-	case "MINUTE":
-		return int64(d.Minute()), nil
-	case "HOUR":
-		return int64(d.Hour()), nil
-	case "SECOND_MICROSECOND":
-		return int64(d.Second())*1000000 + int64(d.MicroSecond()), nil
-	case "MINUTE_MICROSECOND":
-		return int64(d.Minute())*100000000 + int64(d.Second())*1000000 + int64(d.MicroSecond()), nil
-	case "MINUTE_SECOND":
-		return int64(d.Minute()*100 + d.Second()), nil
-	case "HOUR_MICROSECOND":
-		return int64(d.Hour())*10000000000 + int64(d.Minute())*100000000 + int64(d.Second())*1000000 + int64(d.MicroSecond()), nil
-	case "HOUR_SECOND":
-		return int64(d.Hour())*10000 + int64(d.Minute())*100 + int64(d.Second()), nil
-	case "HOUR_MINUTE":
-		return int64(d.Hour())*100 + int64(d.Minute()), nil
-	default:
-		return 0, errors.Errorf("invalid unit %s", unit)
-	}
-}
-
-func extractSingleTimeValue(unit string, format string) (int64, int64, int64, float64, error) {
-	fv, err := strconv.ParseFloat(format, 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-	iv := int64(math.Round(fv))
-
-	switch strings.ToUpper(unit) {
-	case "MICROSECOND":
-		return 0, 0, 0, fv * float64(gotime.Microsecond), nil
-	case "SECOND":
-		return 0, 0, 0, fv * float64(gotime.Second), nil
-	case "MINUTE":
-		return 0, 0, 0, float64(iv * int64(gotime.Minute)), nil
-	case "HOUR":
-		return 0, 0, 0, float64(iv * int64(gotime.Hour)), nil
-	case "DAY":
-		return 0, 0, iv, 0, nil
-	case "WEEK":
-		return 0, 0, 7 * iv, 0, nil
-	case "MONTH":
-		return 0, iv, 0, 0, nil
-	case "QUARTER":
-		return 0, 3 * iv, 0, 0, nil
-	case "YEAR":
-		return iv, 0, 0, 0, nil
-	}
-
-	return 0, 0, 0, 0, errors.Errorf("invalid singel timeunit - %s", unit)
-}
-
-// extractSecondMicrosecond extracts second and microsecond from a string and its format is `SS.FFFFFF`.
-func extractSecondMicrosecond(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, ".")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	seconds, err := strconv.ParseFloat(fields[0], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	microseconds, err := strconv.ParseFloat(alignFrac(fields[1], MaxFsp), 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, 0, seconds*float64(gotime.Second) + microseconds*float64(gotime.Microsecond), nil
-}
-
-// extractMinuteMicrosecond extracts minutes and microsecond from a string and its format is `MM:SS.FFFFFF`.
-func extractMinuteMicrosecond(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, ":")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	minutes, err := strconv.ParseFloat(fields[0], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	_, _, _, value, err := extractSecondMicrosecond(fields[1])
-	if err != nil {
-		return 0, 0, 0, 0, errors.Trace(err)
-	}
-
-	return 0, 0, 0, minutes*float64(gotime.Minute) + value, nil
-}
-
-// extractMinuteSecond extracts minutes and second from a string and its format is `MM:SS`.
-func extractMinuteSecond(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, ":")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	minutes, err := strconv.ParseFloat(fields[0], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	seconds, err := strconv.ParseFloat(fields[1], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, 0, minutes*float64(gotime.Minute) + seconds*float64(gotime.Second), nil
-}
-
-// extractHourMicrosecond extracts hour and microsecond from a string and its format is `HH:MM:SS.FFFFFF`.
-func extractHourMicrosecond(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, ":")
-	if len(fields) != 3 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	hours, err := strconv.ParseFloat(fields[0], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	minutes, err := strconv.ParseFloat(fields[1], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	_, _, _, value, err := extractSecondMicrosecond(fields[2])
-	if err != nil {
-		return 0, 0, 0, 0, errors.Trace(err)
-	}
-
-	return 0, 0, 0, hours*float64(gotime.Hour) + minutes*float64(gotime.Minute) + value, nil
-}
-
-// extractHourSecond extracts hour and second from a string and its format is `HH:MM:SS`.
-func extractHourSecond(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, ":")
-	if len(fields) != 3 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	hours, err := strconv.ParseFloat(fields[0], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	minutes, err := strconv.ParseFloat(fields[1], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	seconds, err := strconv.ParseFloat(fields[2], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, 0, hours*float64(gotime.Hour) + minutes*float64(gotime.Minute) + seconds*float64(gotime.Second), nil
-}
-
-// extractHourMinute extracts hour and minute from a string and its format is `HH:MM`.
-func extractHourMinute(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, ":")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	hours, err := strconv.ParseFloat(fields[0], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	minutes, err := strconv.ParseFloat(fields[1], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, 0, hours*float64(gotime.Hour) + minutes*float64(gotime.Minute), nil
-}
-
-// extractDayMicrosecond extracts day and microsecond from a string and its format is `DD HH:MM:SS.FFFFFF`.
-func extractDayMicrosecond(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, " ")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	days, err := strconv.ParseInt(fields[0], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	_, _, _, value, err := extractHourMicrosecond(fields[1])
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, days, value, nil
-}
-
-// extractDaySecond extracts day and hour from a string and its format is `DD HH:MM:SS`.
-func extractDaySecond(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, " ")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	days, err := strconv.ParseInt(fields[0], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	_, _, _, value, err := extractHourSecond(fields[1])
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, days, value, nil
-}
-
-// extractDayMinute extracts day and minute from a string and its format is `DD HH:MM`.
-func extractDayMinute(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, " ")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	days, err := strconv.ParseInt(fields[0], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	_, _, _, value, err := extractHourMinute(fields[1])
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, days, value, nil
-}
-
-// extractDayHour extracts day and hour from a string and its format is `DD HH`.
-func extractDayHour(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, " ")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	days, err := strconv.ParseInt(fields[0], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	hours, err := strconv.ParseFloat(fields[1], 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return 0, 0, days, hours * float64(gotime.Hour), nil
-}
-
-// extractYearMonth extracts year and month from a string and its format is `YYYY-MM`.
-func extractYearMonth(format string) (int64, int64, int64, float64, error) {
-	fields := strings.Split(format, "-")
-	if len(fields) != 2 {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	years, err := strconv.ParseInt(fields[0], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	months, err := strconv.ParseInt(fields[1], 10, 64)
-	if err != nil {
-		return 0, 0, 0, 0, ErrIncorrectDatetimeValue.GenWithStackByArgs(format)
-	}
-
-	return years, months, 0, 0, nil
-}
-
-// ExtractTimeValue extracts time value from time unit and format.
-func ExtractTimeValue(unit string, format string) (int64, int64, int64, float64, error) {
-	switch strings.ToUpper(unit) {
-	case "MICROSECOND", "SECOND", "MINUTE", "HOUR", "DAY", "WEEK", "MONTH", "QUARTER", "YEAR":
-		return extractSingleTimeValue(unit, format)
-	case "SECOND_MICROSECOND":
-		return extractSecondMicrosecond(format)
-	case "MINUTE_MICROSECOND":
-		return extractMinuteMicrosecond(format)
-	case "MINUTE_SECOND":
-		return extractMinuteSecond(format)
-	case "HOUR_MICROSECOND":
-		return extractHourMicrosecond(format)
-	case "HOUR_SECOND":
-		return extractHourSecond(format)
-	case "HOUR_MINUTE":
-		return extractHourMinute(format)
-	case "DAY_MICROSECOND":
-		return extractDayMicrosecond(format)
-	case "DAY_SECOND":
-		return extractDaySecond(format)
-	case "DAY_MINUTE":
-		return extractDayMinute(format)
-	case "DAY_HOUR":
-		return extractDayHour(format)
-	case "YEAR_MONTH":
-		return extractYearMonth(format)
-	default:
-		return 0, 0, 0, 0, errors.Errorf("invalid singel timeunit - %s", unit)
-	}
-}
-
-// IsClockUnit returns true when unit is interval unit with hour, minute or second.
-func IsClockUnit(unit string) bool {
-	switch strings.ToUpper(unit) {
-	case "MICROSECOND", "SECOND", "MINUTE", "HOUR",
-		"SECOND_MICROSECOND", "MINUTE_MICROSECOND", "MINUTE_SECOND",
-		"HOUR_MICROSECOND", "HOUR_SECOND", "HOUR_MINUTE",
-		"DAY_MICROSECOND", "DAY_SECOND", "DAY_MINUTE", "DAY_HOUR":
-		return true
-	default:
-		return false
-	}
-}
-
-// IsDateFormat returns true when the specified time format could contain only date.
-func IsDateFormat(format string) bool {
-	format = strings.TrimSpace(format)
-	seps := ParseDateFormat(format)
-	length := len(format)
-	switch len(seps) {
-	case 1:
-		if (length == 8) || (length == 6) {
-			return true
-		}
-	case 3:
-		return true
-	}
-	return false
 }
 
 // DateFormat returns a textual representation of the time value formatted

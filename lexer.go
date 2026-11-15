@@ -4,6 +4,7 @@ package parser
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -95,6 +96,9 @@ type Lexer struct {
 
 	// Error handling
 	Err error
+
+	// newlineIdx caches the byte offsets of '\n' for lineAt, built on first use.
+	newlineIdx []int
 }
 
 // BackslashQuote values
@@ -1268,13 +1272,16 @@ func (l *Lexer) lineAt(pos int) int {
 	if pos > len(l.input) {
 		pos = len(l.input)
 	}
-	line := 1
-	for i := 0; i < pos; i++ {
-		if l.input[i] == '\n' {
-			line++
+	if l.newlineIdx == nil {
+		l.newlineIdx = make([]int, 0, strings.Count(l.input, "\n"))
+		for i := 0; i < len(l.input); i++ {
+			if l.input[i] == '\n' {
+				l.newlineIdx = append(l.newlineIdx, i)
+			}
 		}
 	}
-	return line
+	// Number of newlines before pos, plus one.
+	return 1 + sort.SearchInts(l.newlineIdx, pos)
 }
 
 // contextAt returns the text around the given position.

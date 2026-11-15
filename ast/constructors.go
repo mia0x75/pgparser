@@ -2,6 +2,7 @@ package ast
 
 import (
 	"io"
+	"strings"
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/format"
@@ -44,6 +45,15 @@ func NewUnaryOperationExprByName(name string, v ExprNode) *UnaryOperationExpr {
 // NewFuncCallExpr returns a FuncCallExpr for the given function name.
 func NewFuncCallExpr(name string, args ...ExprNode) *FuncCallExpr {
 	return &FuncCallExpr{FnName: model.NewCIStr(name), Args: args}
+}
+
+// NewFuncCallExprParts returns a FuncCallExpr for the given name parts.
+func NewFuncCallExprParts(parts []string, args ...ExprNode) *FuncCallExpr {
+	return &FuncCallExpr{
+		FnName:      model.NewCIStr(strings.Join(parts, ".")),
+		FnNameParts: parts,
+		Args:        args,
+	}
 }
 
 // NewTypeCastExpr returns a FuncCastExpr casting expr to tp.

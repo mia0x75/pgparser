@@ -3009,10 +3009,11 @@ type TruncateTableStmt struct {
 // Restore implements Node interface.
 func (n *TruncateTableStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("TRUNCATE ")
+	// PostgreSQL wants TRUNCATE [TABLE] [ONLY] name, so TABLE comes first.
+	ctx.WriteKeyWord("TABLE ")
 	if n.Only {
 		ctx.WriteKeyWord("ONLY ")
 	}
-	ctx.WriteKeyWord("TABLE ")
 	tables := n.Tables
 	if len(tables) == 0 && n.Table != nil {
 		tables = []*TableName{n.Table}
