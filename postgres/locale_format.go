@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"bytes"
-	"math"
 	"strconv"
 	"strings"
 	"unicode"
@@ -10,13 +9,16 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 )
 
-// precisionToInt converts a parsed uint64 precision to int, rejecting values
-// that would overflow int on the target platform.
-func precisionToInt(position uint64) (int, error) {
-	if position > uint64(math.MaxInt64) {
-		return 0, errors.Errorf("precision %d out of range", position)
+// precisionToInt parses a precision string, rejecting values that overflow int.
+func precisionToInt(precision string) (int, error) {
+	n, err := strconv.Atoi(precision)
+	if err != nil {
+		return 0, errors.Trace(err)
 	}
-	return int(position), nil
+	if n < 0 {
+		return 0, errors.Errorf("precision %d out of range", n)
+	}
+	return n, nil
 }
 
 func formatENUS(number string, precision string) (string, error) {
@@ -41,12 +43,11 @@ func formatENUS(number string, precision string) (string, error) {
 	if (number[:1] == "-" && !unicode.IsDigit(rune(number[1]))) ||
 		(!unicode.IsDigit(rune(number[0])) && number[:1] != "-") {
 		buffer.Write([]byte{'0'})
-		position, err := strconv.ParseUint(precision, 10, 64)
-		if err == nil && position > 0 {
-			n, perr := precisionToInt(position)
-			if perr != nil {
-				return "", errors.Trace(perr)
-			}
+		n, err := precisionToInt(precision)
+		if err != nil {
+			return "", err
+		}
+		if n > 0 {
 			buffer.Write([]byte{'.'})
 			buffer.WriteString(strings.Repeat("0", n))
 		}
@@ -83,24 +84,21 @@ func formatENUS(number string, precision string) (string, error) {
 	}
 	buffer.Truncate(buffer.Len() - 1)
 
-	position, err := strconv.ParseUint(precision, 10, 64)
-	if err == nil {
-		if position > 0 {
-			n, perr := precisionToInt(position)
-			if perr != nil {
-				return "", errors.Trace(perr)
-			}
-			buffer.Write([]byte{'.'})
-			if len(parts) == 2 {
-				if uint64(len(parts[1])) >= position {
-					buffer.WriteString(parts[1][:n])
-				} else {
-					buffer.WriteString(parts[1])
-					buffer.WriteString(strings.Repeat("0", n-len(parts[1])))
-				}
+	n, err := precisionToInt(precision)
+	if err != nil {
+		return "", err
+	}
+	if n > 0 {
+		buffer.Write([]byte{'.'})
+		if len(parts) == 2 {
+			if len(parts[1]) >= n {
+				buffer.WriteString(parts[1][:n])
 			} else {
-				buffer.WriteString(strings.Repeat("0", n))
+				buffer.WriteString(parts[1])
+				buffer.WriteString(strings.Repeat("0", n-len(parts[1])))
 			}
+		} else {
+			buffer.WriteString(strings.Repeat("0", n))
 		}
 	}
 

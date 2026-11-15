@@ -1,6 +1,10 @@
 package types
 
-import "testing"
+import (
+	"math"
+	"strconv"
+	"testing"
+)
 
 // These tests preserve internal compatibility behavior rather than PostgreSQL date semantics.
 func TestCheckDatetimeTypeInternal(t *testing.T) {
@@ -136,4 +140,17 @@ func TestUnfinishedTokenHelpersReject(t *testing.T) {
 			t.Fatalf("rejection changed time or context: %+v, %v", got, ctx)
 		}
 	})
+}
+
+// parseDigits must reject values above the platform int range; a MaxInt64
+// guard would still let a 32-bit build truncate.
+func TestParseDigitsIntBounds(t *testing.T) {
+	maxDigits := strconv.FormatUint(uint64(math.MaxInt), 10)
+	if got, ok := parseDigits(maxDigits, len(maxDigits)); !ok || got != math.MaxInt {
+		t.Fatalf("parseDigits(%q) = (%d, %t), want (%d, true)", maxDigits, got, ok, math.MaxInt)
+	}
+	over := strconv.FormatUint(uint64(math.MaxInt)+1, 10)
+	if _, ok := parseDigits(over, len(over)); ok {
+		t.Fatalf("parseDigits(%q) accepted a value above the platform int range", over)
+	}
 }

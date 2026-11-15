@@ -1532,14 +1532,17 @@ func parseDigits(input string, count int) (int, bool) {
 		return 0, false
 	}
 
-	v, err := strconv.ParseUint(input[:count], 10, 64)
+	// Reject signs and non-ASCII digits before Atoi would accept them.
+	for i := 0; i < count; i++ {
+		if input[i] < '0' || input[i] > '9' {
+			return 0, false
+		}
+	}
+	v, err := strconv.Atoi(input[:count])
 	if err != nil {
 		return 0, false
 	}
-	if v > math.MaxInt64 {
-		return 0, false
-	}
-	return int(v), true
+	return v, true
 }
 
 func hour24TwoDigits(t *PgTime, input string, ctx map[string]int) (string, bool) {
@@ -1669,14 +1672,11 @@ func parseTwoNumeric(input string) (int, string) {
 	}
 
 	str := matched[0]
-	v, err := strconv.ParseInt(str, 10, 64)
+	v, err := strconv.Atoi(str)
 	if err != nil {
 		return 0, input
 	}
-	if v > math.MaxInt64 {
-		return 0, input
-	}
-	return int(v), input[len(str):]
+	return v, input[len(str):]
 }
 
 func dayOfMonthNumeric(t *PgTime, input string, ctx map[string]int) (string, bool) {
@@ -1827,14 +1827,11 @@ func dayOfMonthWithSuffix(t *PgTime, input string, ctx map[string]int) (string, 
 func parseOrdinalNumbers(input string) (value int, remain string) {
 	for i, c := range input {
 		if !unicode.IsDigit(c) {
-			v, err := strconv.ParseUint(input[:i], 10, 64)
+			v, err := strconv.Atoi(input[:i])
 			if err != nil {
 				return -1, input
 			}
-			if v > math.MaxInt64 {
-				return -1, input
-			}
-			value = int(v)
+			value = v
 			break
 		}
 	}
