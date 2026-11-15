@@ -2052,7 +2052,8 @@ ColConstraint:
 	| OPTIONS '(' generic_option_list ')'
 		{
 			$$ = &ast.ColumnOption{
-				Tp: ast.ColumnOptionNoOption,
+				Tp:      ast.ColumnOptionForeignOptions,
+				Options: $3,
 			}
 		}
 	| ConstraintAttr
@@ -7667,20 +7668,14 @@ table_ref:
 	| func_table func_alias_clause
 		{
 			ts := $1.(*ast.TableSource)
-			if $2 != nil {
-				ts.AsName = model.NewCIStr(aliasName($2))
-				ts.ColumnAliases = aliasColumnNames($2)
-			}
+			applyFunctionAlias(ts, $2)
 			$$ = ts
 		}
 	| LATERAL_P func_table func_alias_clause
 		{
 			ts := $2.(*ast.TableSource)
 			ts.Lateral = true
-			if $3 != nil {
-				ts.AsName = model.NewCIStr(aliasName($3))
-				ts.ColumnAliases = aliasColumnNames($3)
-			}
+			applyFunctionAlias(ts, $3)
 			$$ = ts
 		}
 	| LATERAL_P select_with_parens opt_alias_clause
@@ -7914,9 +7909,10 @@ tablesample_clause:
 	TABLESAMPLE func_name '(' expr_list ')' opt_repeatable_clause
 		{
 			$$ = &ast.TableSample{
-				Method: funcNameString($2),
-				Args: exprsFromList($4),
-				Repeatable: $6,
+				Method:      funcNameString($2),
+				MethodParts: funcNameParts($2),
+				Args:        exprsFromList($4),
+				Repeatable:  $6,
 			}
 		}
 	;
@@ -8145,8 +8141,7 @@ select_limit_value:
 	a_expr { $$ = $1 }
 	| ALL
 		{
-			/* LIMIT ALL is represented as a NULL constant */
-			$$ = ast.NewValueExpr(nil)
+			$$ = nil
 		}
 	;
 
@@ -13439,6 +13434,12 @@ ImportForeignSchemaStmt:
 				Server:       $8,
 				Into:         $10,
 				Options:      defElemNames($11),
+				OptionDefs:   $11,
+			}
+			if $5 != nil {
+				n := $$.(*ast.ImportForeignSchemaStmt)
+				n.ListType = $5.listType
+				n.TableList = $5.tableList
 			}
 		}
 	;

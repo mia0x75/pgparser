@@ -315,16 +315,41 @@ type ImportForeignSchemaStmt struct {
 	Server       string
 	Into         string
 	Options      []string
+	ListType     ImportForeignSchemaType
+	TableList    *List
+	OptionDefs   *List
 }
 
 // Restore implements Node interface.
 func (n *ImportForeignSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("IMPORT FOREIGN SCHEMA ")
 	ctx.WriteName(n.RemoteSchema)
+	switch n.ListType {
+	case FDW_IMPORT_SCHEMA_ALL:
+	case FDW_IMPORT_SCHEMA_LIMIT_TO, FDW_IMPORT_SCHEMA_EXCEPT:
+		if n.TableList == nil || len(n.TableList.Items) == 0 {
+			return errors.New("foreign schema import has no table list")
+		}
+		if n.ListType == FDW_IMPORT_SCHEMA_LIMIT_TO {
+			ctx.WriteKeyWord(" LIMIT TO (")
+		} else {
+			ctx.WriteKeyWord(" EXCEPT (")
+		}
+		if err := n.TableList.Restore(ctx); err != nil {
+			return err
+		}
+		ctx.WritePlain(")")
+	default:
+		return errors.New("invalid foreign schema import selection")
+	}
 	ctx.WriteKeyWord(" FROM SERVER ")
 	ctx.WriteName(n.Server)
 	ctx.WriteKeyWord(" INTO ")
 	ctx.WriteName(n.Into)
+	if n.OptionDefs != nil {
+		ctx.WritePlain(" ")
+		return restoreAlterOptions(ctx, n.OptionDefs)
+	}
 	for _, opt := range n.Options {
 		ctx.WritePlain(" ")
 		ctx.WriteKeyWord(opt)
@@ -338,7 +363,17 @@ func (n *ImportForeignSchemaStmt) Accept(v Visitor) (Node, bool) {
 	if skipChildren {
 		return v.Leave(newNode)
 	}
-	return v.Leave(newNode.(*ImportForeignSchemaStmt))
+	n = newNode.(*ImportForeignSchemaStmt)
+	for _, list := range []**List{&n.TableList, &n.OptionDefs} {
+		if *list != nil {
+			child, ok := (*list).Accept(v)
+			if !ok {
+				return n, false
+			}
+			*list = child.(*List)
+		}
+	}
+	return v.Leave(n)
 }
 
 // ReassignOwnedStmt is a REASSIGN OWNED statement.

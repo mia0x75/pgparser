@@ -34,10 +34,9 @@ func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	if n.Location != "" {
-		ctx.WriteKeyWord(" LOCATION ")
-		ctx.WriteString(n.Location)
-	}
+	// LOCATION is mandatory syntax, so it is written even when empty.
+	ctx.WriteKeyWord(" LOCATION ")
+	ctx.WriteString(n.Location)
 	if n.Options != nil {
 		ctx.WriteKeyWord(" WITH ")
 		if err := restoreRelOptions(ctx, n.Options); err != nil {

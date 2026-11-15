@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 	"io"
+	"math"
 	"regexp"
 	"strings"
 
@@ -150,7 +151,7 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	// Word operators such as IS DISTINCT FROM need spaces even when the caller
 	// asked for compact output: "FROM1" would lex as one identifier.
-	pad := ctx.Flags.HasSpacesAroundBinaryOperationFlag() || wordOperator(n.OpName)
+	pad := ctx.Flags.HasSpacesAroundBinaryOperationFlag() || wordOperator(n.OpName) || endsWithStar(n.L)
 	if pad {
 		ctx.WritePlain(" ")
 	}
@@ -160,6 +161,10 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.Op")
 	}
 	if pad {
+		ctx.WritePlain(" ")
+	}
+	// Adjacent operator characters can become a different token or a comment.
+	if !pad && startsWithSymbol(n.R) {
 		ctx.WritePlain(" ")
 	}
 	// Subquery-style ANY/ALL/SOME comparisons require the right side in
@@ -204,6 +209,44 @@ func wordOperator(name string) bool {
 	}
 	c := name[0]
 	return c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+}
+
+func startsWithSymbol(expr ExprNode) bool {
+	switch n := expr.(type) {
+	case *BinaryOperationExpr:
+		return startsWithSymbol(n.L)
+	case *CollateExpr:
+		return startsWithSymbol(n.Expr)
+	case *UnaryOperationExpr:
+		return !wordOperator(n.OpName) && (n.OpName != "" || n.Op != opcode.Not)
+	case *NumericLiteral:
+		return strings.HasPrefix(n.Value, "-") || strings.HasPrefix(n.Value, "+")
+	case ValueExpr:
+		switch value := n.GetValue().(type) {
+		case int64:
+			return value < 0
+		case float64:
+			return math.Signbit(value)
+		}
+	}
+	return false
+}
+
+func endsWithStar(expr ExprNode) bool {
+	switch n := expr.(type) {
+	case *WildCardField:
+		return true
+	case *A_Indirection:
+		if n.Indirection != nil && len(n.Indirection.Items) > 0 {
+			_, star := n.Indirection.Items[len(n.Indirection.Items)-1].(*A_Star)
+			return star
+		}
+	case *BinaryOperationExpr:
+		return endsWithStar(n.R)
+	case *UnaryOperationExpr:
+		return endsWithStar(n.V)
+	}
+	return false
 }
 
 // Accept implements Node interface.
@@ -1235,10 +1278,21 @@ type UnaryOperationExpr struct {
 
 // Restore implements Node interface.
 func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
-	if n.OpName != "" {
+	switch {
+	case n.OpName != "":
 		ctx.WritePlain(n.OpName)
-	} else if err := n.Op.Restore(ctx); err != nil {
-		return errors.Trace(err)
+		if wordOperator(n.OpName) {
+			ctx.WritePlain(" ")
+		}
+	case n.Op == opcode.Not:
+		ctx.WriteKeyWord("NOT ")
+	default:
+		if err := n.Op.Restore(ctx); err != nil {
+			return errors.Trace(err)
+		}
+	}
+	if startsWithSymbol(n) && startsWithSymbol(n.V) {
+		ctx.WritePlain(" ")
 	}
 	if err := n.V.Restore(ctx); err != nil {
 		return errors.Trace(err)
@@ -1248,10 +1302,19 @@ func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *UnaryOperationExpr) Format(w io.Writer) {
-	if n.OpName != "" {
+	switch {
+	case n.OpName != "":
 		_, _ = fmt.Fprint(w, n.OpName)
-	} else {
+		if wordOperator(n.OpName) {
+			_, _ = fmt.Fprint(w, " ")
+		}
+	case n.Op == opcode.Not:
+		_, _ = fmt.Fprint(w, "NOT ")
+	default:
 		n.Op.Format(w)
+	}
+	if startsWithSymbol(n) && startsWithSymbol(n.V) {
+		_, _ = fmt.Fprint(w, " ")
 	}
 	n.V.Format(w)
 }

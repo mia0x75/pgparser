@@ -19667,7 +19667,8 @@ yydefault:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			yyVAL.node = &ast.ColumnOption{
-				Tp: ast.ColumnOptionNoOption,
+				Tp:      ast.ColumnOptionForeignOptions,
+				Options: yyDollar[3].list,
 			}
 		}
 	case 289:
@@ -25980,10 +25981,7 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			ts := yyDollar[1].node.(*ast.TableSource)
-			if yyDollar[2].node != nil {
-				ts.AsName = model.NewCIStr(aliasName(yyDollar[2].node))
-				ts.ColumnAliases = aliasColumnNames(yyDollar[2].node)
-			}
+			applyFunctionAlias(ts, yyDollar[2].node)
 			yyVAL.node = ts
 		}
 	case 1154:
@@ -25991,10 +25989,7 @@ yydefault:
 		{
 			ts := yyDollar[2].node.(*ast.TableSource)
 			ts.Lateral = true
-			if yyDollar[3].node != nil {
-				ts.AsName = model.NewCIStr(aliasName(yyDollar[3].node))
-				ts.ColumnAliases = aliasColumnNames(yyDollar[3].node)
-			}
+			applyFunctionAlias(ts, yyDollar[3].node)
 			yyVAL.node = ts
 		}
 	case 1155:
@@ -26258,9 +26253,10 @@ yydefault:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
 			yyVAL.node = &ast.TableSample{
-				Method:     funcNameString(yyDollar[2].list),
-				Args:       exprsFromList(yyDollar[4].exprs),
-				Repeatable: yyDollar[6].expr,
+				Method:      funcNameString(yyDollar[2].list),
+				MethodParts: funcNameParts(yyDollar[2].list),
+				Args:        exprsFromList(yyDollar[4].exprs),
+				Repeatable:  yyDollar[6].expr,
 			}
 		}
 	case 1199:
@@ -26529,8 +26525,7 @@ yydefault:
 	case 1248:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			/* LIMIT ALL is represented as a NULL constant */
-			yyVAL.expr = ast.NewValueExpr(nil)
+			yyVAL.expr = nil
 		}
 	case 1249:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -32621,6 +32616,12 @@ yydefault:
 				Server:       yyDollar[8].str,
 				Into:         yyDollar[10].str,
 				Options:      defElemNames(yyDollar[11].list),
+				OptionDefs:   yyDollar[11].list,
+			}
+			if yyDollar[5].iqual != nil {
+				n := yyVAL.node.(*ast.ImportForeignSchemaStmt)
+				n.ListType = yyDollar[5].iqual.listType
+				n.TableList = yyDollar[5].iqual.tableList
 			}
 		}
 	case 2228:

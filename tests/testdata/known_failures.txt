@@ -11,9 +11,6 @@ testdata/create_am.sql:115	expected parse rejection (unsupported PostgreSQL synt
 testdata/create_am.sql:118	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/create_am.sql:121	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/create_am.sql:356	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/create_operator.sql:26	restore round-trip gap
-testdata/create_operator.sql:27	restore round-trip gap
-testdata/create_operator.sql:28	restore round-trip gap
 testdata/create_operator.sql:36	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/create_operator.sql:51	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/create_table.sql:315	expected parse rejection (unsupported PostgreSQL syntax)
@@ -62,19 +59,9 @@ testdata/errors.sql:59	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/errors.sql:71	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/event_trigger.sql:77	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/foreign_data.sql:184	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/foreign_data.sql:188	restore round-trip gap
 testdata/foreign_data.sql:297	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/foreign_data.sql:389	restore instability
-testdata/foreign_data.sql:436	restore instability
 testdata/foreign_data.sql:75	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/foreign_data.sql:757	restore round-trip gap
 testdata/foreign_key.sql:470	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/insert_conflict.sql:240	restore round-trip gap
-testdata/insert_conflict.sql:243	restore round-trip gap
-testdata/insert_conflict.sql:246	restore round-trip gap
-testdata/int4.sql:101	restore instability
-testdata/int4.sql:99	restore instability
-testdata/limit.sql:201	restore instability
 testdata/merge.sql:45	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/merge.sql:63	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/merge.sql:69	expected parse rejection (unsupported PostgreSQL syntax)
@@ -100,13 +87,6 @@ testdata/numerology.sql:64	expected parse rejection (unsupported PostgreSQL synt
 testdata/numerology.sql:65	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/numerology.sql:66	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/numerology.sql:94	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/partition_join.sql:104	restore round-trip gap
-testdata/partition_join.sql:418	restore round-trip gap
-testdata/plpgsql.sql:1542	restore round-trip gap
-testdata/plpgsql.sql:1543	restore round-trip gap
-testdata/plpgsql.sql:1558	restore round-trip gap
-testdata/plpgsql.sql:1559	restore round-trip gap
-testdata/privileges.sql:241	restore round-trip gap
 testdata/psql.sql:1098	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/psql.sql:1099	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/psql.sql:1113	expected parse rejection (unsupported PostgreSQL syntax)
@@ -117,31 +97,6 @@ testdata/psql.sql:143	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/publication.sql:198	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/publication.sql:894	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/publication.sql:958	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/rangefuncs.sql:148	restore round-trip gap
-testdata/rangefuncs.sql:149	restore round-trip gap
-testdata/rangefuncs.sql:153	restore round-trip gap
-testdata/rangefuncs.sql:162	restore round-trip gap
-testdata/rangefuncs.sql:163	restore round-trip gap
-testdata/rangefuncs.sql:167	restore round-trip gap
-testdata/rangefuncs.sql:197	restore round-trip gap
-testdata/rangefuncs.sql:202	restore round-trip gap
-testdata/rangefuncs.sql:208	restore round-trip gap
-testdata/rangefuncs.sql:25	restore round-trip gap
-testdata/rangefuncs.sql:253	restore round-trip gap
-testdata/rangefuncs.sql:26	restore round-trip gap
-testdata/rangefuncs.sql:292	restore round-trip gap
-testdata/rangefuncs.sql:294	restore round-trip gap
-testdata/rangefuncs.sql:296	restore round-trip gap
-testdata/rangefuncs.sql:299	restore round-trip gap
-testdata/rangefuncs.sql:34	restore round-trip gap
-testdata/rangefuncs.sql:35	restore round-trip gap
-testdata/rangefuncs.sql:40	restore round-trip gap
-testdata/rangefuncs.sql:44	restore round-trip gap
-testdata/rangefuncs.sql:51	restore round-trip gap
-testdata/rangefuncs.sql:675	restore round-trip gap
-testdata/rangefuncs.sql:676	restore round-trip gap
-testdata/rangefuncs.sql:679	restore round-trip gap
-testdata/rangefuncs.sql:827	restore round-trip gap
 testdata/rowsecurity.sql:96	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/sqljson.sql:176	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/sqljson.sql:2	expected parse rejection (unsupported PostgreSQL syntax)
@@ -151,12 +106,6 @@ testdata/sqljson.sql:74	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/sqljson_jsontable.sql:16	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/sqljson_jsontable.sql:4	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/sqljson_jsontable.sql:537	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/stats_ext.sql:1647	restore round-trip gap
-testdata/stats_ext.sql:1662	restore round-trip gap
-testdata/stats_ext.sql:1675	restore round-trip gap
-testdata/stats_ext.sql:1688	restore round-trip gap
-testdata/stats_ext.sql:1700	restore round-trip gap
-testdata/stats_ext.sql:1713	restore round-trip gap
 testdata/stats_ext.sql:32	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/stats_ext.sql:33	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/stats_ext.sql:34	expected parse rejection (unsupported PostgreSQL syntax)
@@ -188,11 +137,6 @@ testdata/strings.sql:796	expected parse rejection (unsupported PostgreSQL syntax
 testdata/subscription.sql:12	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/subscription.sql:15	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/tablesample.sql:102	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/tablesample.sql:7	restore round-trip gap
-testdata/tablespace.sql:14	restore round-trip gap
-testdata/tablespace.sql:15	restore round-trip gap
-testdata/tablespace.sql:5	restore round-trip gap
-testdata/test_setup.sql:28	restore round-trip gap
 testdata/triggers.sql:2854	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/triggers.sql:456	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/vacuum.sql:251	expected parse rejection (unsupported PostgreSQL syntax)

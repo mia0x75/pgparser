@@ -336,6 +336,17 @@ func (n *CommentStmt) Restore(ctx *format.RestoreCtx) error {
 	case "large object":
 		ctx.WriteKeyWord("LARGE OBJECT ")
 		ctx.WritePlain(strings.Join(n.ObjectName, "."))
+	case "operator":
+		if len(n.ObjectName) == 0 {
+			return errors.New("operator comment has no name")
+		}
+		ctx.WriteKeyWord("OPERATOR ")
+		if len(n.ObjectName) > 1 {
+			writeNameParts(ctx, n.ObjectName[:len(n.ObjectName)-1])
+			ctx.WritePlain(".")
+		}
+		ctx.WritePlain(n.ObjectName[len(n.ObjectName)-1])
+		ctx.WritePlain(n.Suffix)
 	default:
 		ctx.WriteKeyWord(strings.ToUpper(n.ObjectType) + " ")
 		writeNameParts(ctx, n.ObjectName)
@@ -742,6 +753,7 @@ const (
 	ColumnOptionCompression
 	ColumnOptionVisible
 	ColumnOptionInvisible
+	ColumnOptionForeignOptions
 )
 
 var (
@@ -772,6 +784,7 @@ type ColumnOption struct {
 	GeneratedWhen byte
 	// SequenceOptions holds the parenthesized identity sequence options.
 	SequenceOptions *List
+	Options         *List
 }
 
 // Restore implements Node interface.
@@ -881,6 +894,8 @@ func (n *ColumnOption) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("VISIBLE")
 	case ColumnOptionInvisible:
 		ctx.WriteKeyWord("INVISIBLE")
+	case ColumnOptionForeignOptions:
+		return restoreAlterOptions(ctx, n.Options)
 	default:
 		return errors.New("An error occurred while splicing ColumnOption")
 	}
@@ -907,6 +922,13 @@ func (n *ColumnOption) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		n.Refer = child.(*ReferenceDef)
+	}
+	if n.Options != nil {
+		child, ok := n.Options.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Options = child.(*List)
 	}
 	return v.Leave(n)
 }

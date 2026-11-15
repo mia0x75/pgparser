@@ -141,9 +141,6 @@ func limitClause(l *SelectLimit, current *ast.Limit) *ast.Limit {
 
 // limitValueClause returns the select limit of a limit value.
 func limitValueClause(count ast.ExprNode) *SelectLimit {
-	if v, ok := count.(ast.ValueExpr); ok && v.GetValue() == nil {
-		count = nil
-	}
 	return &SelectLimit{
 		LimitCount:  count,
 		LimitOption: ast.LIMIT_OPTION_COUNT,

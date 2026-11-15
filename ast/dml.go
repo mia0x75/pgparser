@@ -446,6 +446,7 @@ type TableSource struct {
 	// ColumnAliases holds the explicit output column names from a derived
 	// table alias list, e.g. (SELECT ...) AS t(a, b) or f() AS t(a, b).
 	ColumnAliases []model.CIStr
+	ColDefs       []*ColumnDef
 
 	// Lateral is true when the table source was introduced with LATERAL.
 	Lateral bool
@@ -462,7 +463,8 @@ type TableSample struct {
 	node
 
 	// Method is the sampling method, e.g. system or bernoulli.
-	Method string
+	Method      string
+	MethodParts []string
 	// Args are the arguments of the sampling method.
 	Args []ExprNode
 	// Repeatable is the optional REPEATABLE clause.
@@ -472,7 +474,7 @@ type TableSample struct {
 // Restore implements Node interface.
 func (n *TableSample) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("TABLESAMPLE ")
-	ctx.WriteKeyWord(n.Method)
+	writeFuncName(ctx, n.MethodParts, n.Method)
 	ctx.WritePlain("(")
 	for i, arg := range n.Args {
 		if i != 0 {
@@ -534,6 +536,9 @@ func (n *TableFunction) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore TableFunction.Expr")
 	}
+	if n.WithOrdinality {
+		ctx.WriteKeyWord(" WITH ORDINALITY")
+	}
 	if len(n.ColDefs) > 0 {
 		ctx.WriteKeyWord(" AS (")
 		for i, col := range n.ColDefs {
@@ -545,9 +550,6 @@ func (n *TableFunction) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 		ctx.WritePlain(")")
-	}
-	if n.WithOrdinality {
-		ctx.WriteKeyWord(" WITH ORDINALITY")
 	}
 	return ctx.Err()
 }
@@ -564,6 +566,13 @@ func (n *TableFunction) Accept(v Visitor) (Node, bool) {
 		return n, false
 	}
 	n.Expr = node.(ExprNode)
+	for i, col := range n.ColDefs {
+		node, ok := col.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ColDefs[i] = node.(*ColumnDef)
+	}
 	return v.Leave(n)
 }
 
@@ -583,33 +592,30 @@ func (n *TableSource) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Source.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore TableSource.Source")
 	}
-	if n.TableSample != nil {
-		ctx.WriteKeyWord(" TABLESAMPLE ")
-		ctx.WriteName(n.TableSample.Method)
-		ctx.WritePlain("(")
-		for i, arg := range n.TableSample.Args {
-			if i > 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := arg.Restore(ctx); err != nil {
-				return err
-			}
-		}
-		ctx.WritePlain(")")
-		if n.TableSample.Repeatable != nil {
-			ctx.WriteKeyWord(" REPEATABLE (")
-			if err := n.TableSample.Repeatable.Restore(ctx); err != nil {
-				return err
-			}
-			ctx.WritePlain(")")
-		}
-	}
 	if needParen {
 		ctx.WritePlain(")")
 	}
 	if asName := n.AsName.String(); asName != "" {
 		ctx.WriteKeyWord(" AS ")
 		ctx.WriteName(asName)
+	}
+	if len(n.ColDefs) > 0 {
+		if len(n.ColumnAliases) > 0 {
+			return errors.New("table source has both column aliases and definitions")
+		}
+		if n.AsName.O == "" {
+			ctx.WriteKeyWord(" AS ")
+		}
+		ctx.WritePlain("(")
+		for i, col := range n.ColDefs {
+			if i > 0 {
+				ctx.WritePlain(", ")
+			}
+			if err := col.Restore(ctx); err != nil {
+				return err
+			}
+		}
+		ctx.WritePlain(")")
 	}
 	if len(n.ColumnAliases) > 0 {
 		ctx.WritePlain("(")
@@ -622,6 +628,12 @@ func (n *TableSource) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(")")
 	}
 
+	if n.TableSample != nil {
+		ctx.WritePlain(" ")
+		if err := n.TableSample.Restore(ctx); err != nil {
+			return err
+		}
+	}
 	return ctx.Err()
 }
 
@@ -637,21 +649,19 @@ func (n *TableSource) Accept(v Visitor) (Node, bool) {
 		return n, false
 	}
 	n.Source = node.(ResultSetNode)
+	for i, col := range n.ColDefs {
+		child, ok := col.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.ColDefs[i] = child.(*ColumnDef)
+	}
 	if n.TableSample != nil {
-		for i, arg := range n.TableSample.Args {
-			node, ok := arg.Accept(v)
-			if !ok {
-				return n, false
-			}
-			n.TableSample.Args[i] = node.(ExprNode)
+		child, ok := n.TableSample.Accept(v)
+		if !ok {
+			return n, false
 		}
-		if n.TableSample.Repeatable != nil {
-			node, ok := n.TableSample.Repeatable.Accept(v)
-			if !ok {
-				return n, false
-			}
-			n.TableSample.Repeatable = node.(ExprNode)
-		}
+		n.TableSample = child.(*TableSample)
 	}
 	return v.Leave(n)
 }

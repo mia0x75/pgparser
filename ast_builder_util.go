@@ -504,8 +504,15 @@ func commentArgsSuffix(n ast.Node) string {
 	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)
 	ctx.WritePlain("(")
 	if obj.Objargs != nil {
-		if err := obj.Objargs.Restore(ctx); err != nil {
-			return ""
+		for i, arg := range obj.Objargs.Items {
+			if i > 0 {
+				ctx.WritePlain(", ")
+			}
+			if arg == nil {
+				ctx.WriteKeyWord("NONE")
+			} else if err := arg.Restore(ctx); err != nil {
+				return ""
+			}
 		}
 	}
 	ctx.WritePlain(")")
@@ -1077,17 +1084,6 @@ func aliasColumnNames(n ast.Node) []model.CIStr {
 	case *ast.Alias:
 		return columnNameStrings(v.Colnames)
 	case *ast.List:
-		if len(v.Items) > 1 {
-			if cols, ok := v.Items[1].(*ast.List); ok {
-				var names []model.CIStr
-				for _, item := range cols.Items {
-					if def, ok := item.(*ast.ColumnDef); ok && def.Name != nil {
-						names = append(names, def.Name.Name)
-					}
-				}
-				return names
-			}
-		}
 		if len(v.Items) > 0 {
 			if alias, ok := v.Items[0].(*ast.Alias); ok {
 				return columnNameStrings(alias.Colnames)
@@ -1095,6 +1091,16 @@ func aliasColumnNames(n ast.Node) []model.CIStr {
 		}
 	}
 	return nil
+}
+
+func applyFunctionAlias(ts *ast.TableSource, alias ast.Node) {
+	ts.AsName = model.NewCIStr(aliasName(alias))
+	ts.ColumnAliases = aliasColumnNames(alias)
+	if list, ok := alias.(*ast.List); ok && len(list.Items) > 1 {
+		if defs, ok := list.Items[1].(*ast.List); ok {
+			ts.ColDefs = tableFuncElementDefs(defs)
+		}
+	}
 }
 
 // setLocalStatement returns the local set statement of a set clause.
@@ -1558,11 +1564,11 @@ func rowsFromFunctions(l *ast.List) []*ast.TableFunction {
 	}
 	var result []*ast.TableFunction
 	for _, item := range l.Items {
-		expr, ok := item.(ast.ExprNode)
+		fn, ok := item.(*ast.TableFunction)
 		if !ok {
 			continue
 		}
-		result = append(result, &ast.TableFunction{Expr: expr})
+		result = append(result, fn)
 	}
 	return result
 }

@@ -3,6 +3,7 @@ package parser_test
 import (
 	"errors"
 	"io"
+	"math"
 	"strings"
 	"testing"
 
@@ -107,6 +108,8 @@ func TestRestoreWriterErrors(t *testing.T) {
 		{"first_write", failingWriter{err: writeErr}, writeErr},
 		{"partial_output", failingWriter{err: writeErr, remaining: 12}, writeErr},
 		{"short_write", failingWriter{short: true, remaining: 12}, io.ErrShortWrite},
+		{"final_write", failingWriter{err: writeErr, remaining: math.MaxInt}, writeErr},
+		{"final_short_write", failingWriter{short: true, remaining: math.MaxInt}, io.ErrShortWrite},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -115,13 +118,21 @@ func TestRestoreWriterErrors(t *testing.T) {
 				`SELECT sum(a) OVER ()`, `SELECT "a.b"(1) FILTER (WHERE TRUE)`,
 				`CREATE TABLE t (a integer)`, `COMMENT ON AGGREGATE agg(*) IS 'MOCK_COMMENT'`,
 				`BEGIN`, `NOTIFY c, 'MOCK_PAYLOAD'`, `EXPLAIN SELECT 1`,
+				`SELECT * FROM ROWS FROM(f() AS (a integer))`,
+				`SELECT * FROM f() AS r(a integer)`,
+				`SELECT * FROM t AS r TABLESAMPLE SYSTEM(1)`,
+				`ALTER FOREIGN TABLE t ADD COLUMN a integer OPTIONS (p 'MOCK_VALUE')`,
+				`IMPORT FOREIGN SCHEMA s EXCEPT (t) FROM SERVER srv INTO d OPTIONS (p 'MOCK_VALUE')`,
+				`COMMENT ON OPERATOR ### (NONE, integer) IS 'MOCK_COMMENT'`,
+				`CREATE SERVER s FOREIGN DATA WRAPPER mock_fdw OPTIONS ("Option Name" 'MOCK_VALUE')`,
+				`CREATE TABLESPACE ts LOCATION ''`,
 			} {
 				t.Run(sql, func(t *testing.T) {
 					w := tc.w
-					if w.remaining != 0 {
-						w.remaining = 1
-					}
 					n := mustParseOne(t, sql)
+					if w.remaining != 0 {
+						w.remaining = min(w.remaining, len(restoreString(t, n))-1)
+					}
 					err := n.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &w))
 					if !errors.Is(err, tc.want) {
 						t.Fatalf("restore error = %v, want %v", err, tc.want)

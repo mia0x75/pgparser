@@ -22,7 +22,7 @@ type ServerOption struct {
 
 // Restore implements Node interface.
 func (n *ServerOption) Restore(ctx *format.RestoreCtx) error {
-	ctx.WritePlain(n.Name)
+	ctx.WriteName(n.Name)
 	ctx.WritePlain(" ")
 	ctx.WriteString(n.Value)
 	return ctx.Err()
