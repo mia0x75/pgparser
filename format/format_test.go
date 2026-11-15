@@ -2,6 +2,7 @@ package format
 
 import (
 	"bytes"
+	"errors"
 	"io"
 
 	"strings"
@@ -73,5 +74,40 @@ func TestRestoreCtx(t *testing.T) {
 		if sb.String() != testCase.expect {
 			t.Fatalf("got %#v, want %#v (case: %#v)", sb.String(), testCase.expect, testCase)
 		}
+		if err := ctx.Err(); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+type errorWriter struct {
+	err   error
+	calls int
+}
+
+func (w *errorWriter) Write([]byte) (int, error) {
+	w.calls++
+	return 0, w.err
+}
+
+func TestRestoreCtxFirstError(t *testing.T) {
+	writeErr := errors.New("mock write error")
+	w := &errorWriter{err: writeErr}
+	ctx := NewRestoreCtx(DefaultRestoreFlags, w)
+	ctx.WriteName("name")
+	ctx.WriteKeyWord("SELECT")
+	ctx.WriteString("value")
+	ctx.WritePlain("plain")
+	ctx.WritePlainf("%d", 1)
+	if !errors.Is(ctx.Err(), writeErr) || w.calls != 1 {
+		t.Fatalf("error = %v, writer calls = %d", ctx.Err(), w.calls)
+	}
+}
+
+func TestRestoreCtxNilWriter(t *testing.T) {
+	ctx := NewRestoreCtx(DefaultRestoreFlags, nil)
+	ctx.WritePlain("SELECT")
+	if ctx.Err() == nil {
+		t.Fatal("nil writer accepted")
 	}
 }

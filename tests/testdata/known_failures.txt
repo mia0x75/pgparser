@@ -1,15 +1,12 @@
-# Known corpus failures for TestParseTestdataSQL (ISSUES #12 gate).
+# Known corpus failures for TestParseTestdataSQL.
 # Format: <file.sql>:<line>	<reason>
 # "expected parse rejection" = the original SQL is not accepted by the parser.
 # "restore round-trip gap" / "restore instability" = Restore output does not re-parse.
 # Regenerate: PGPARSER_REGENERATE=1 go test -run TestParseTestdataSQL ./tests
-testdata/arrays.sql:407	restore instability
 testdata/constraints.sql:43	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/constraints.sql:47	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/copyselect.sql:44	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/copyselect.sql:48	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/create_aggregate.sql:41	restore round-trip gap
-testdata/create_aggregate.sql:42	restore round-trip gap
 testdata/create_am.sql:115	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/create_am.sql:118	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/create_am.sql:121	expected parse rejection (unsupported PostgreSQL syntax)
@@ -103,7 +100,6 @@ testdata/numerology.sql:64	expected parse rejection (unsupported PostgreSQL synt
 testdata/numerology.sql:65	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/numerology.sql:66	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/numerology.sql:94	expected parse rejection (unsupported PostgreSQL syntax)
-testdata/numerology.sql:98	expected parse rejection (unsupported PostgreSQL syntax)
 testdata/partition_join.sql:104	restore round-trip gap
 testdata/partition_join.sql:418	restore round-trip gap
 testdata/plpgsql.sql:1542	restore round-trip gap

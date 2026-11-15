@@ -54,7 +54,7 @@ DELETE FROM sessions WHERE expires_at < NOW();`
 	}
 }
 
-// ISSUES.md V-12: line numbers must stay correct (and cheap) on long inputs.
+// Line numbers must stay correct (and cheap) on long inputs.
 func TestErrorLineNumberOnLongInput(t *testing.T) {
 	sql := strings.Repeat("SELECT 1;\n", 1000) + "SELECT FROM;"
 	_, err := pgparser.New().Parse(sql)

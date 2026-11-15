@@ -25,7 +25,7 @@ func (n *BeginAtomicStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WriteKeyWord("END")
-	return nil
+	return ctx.Err()
 }
 
 func (n *BeginAtomicStmt) Accept(v Visitor) (Node, bool) {

@@ -64,7 +64,7 @@ func (n *CreateFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 			return fmt.Errorf("routine body: %w", err)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func (n *CreateFunctionStmt) Accept(v Visitor) (Node, bool) {
@@ -173,7 +173,7 @@ func restoreRoutineOptions(ctx *format.RestoreCtx, options []*DefElem) error {
 			return fmt.Errorf("routine option %q: %w", option.Defname, err)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreRoutineOption(ctx *format.RestoreCtx, option *DefElem) error {
@@ -271,7 +271,7 @@ func restoreRoutineOption(ctx *format.RestoreCtx, option *DefElem) error {
 	default:
 		return fmt.Errorf("%w: routine option %q", ErrUnsupportedRestore, option.Defname)
 	}
-	return nil
+	return ctx.Err()
 }
 
 type ReturnStmt struct {

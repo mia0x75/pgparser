@@ -10,10 +10,10 @@ import (
 	"github.com/mia0x75/pgparser/format"
 )
 
-// These tests pin the restore fixes from ISSUES.md V-1 to V-6: restored SQL
+// These tests pin the restore fixes: restored SQL
 // must re-parse to the same statement and keep its semantics.
 
-func TestVRestoreIndirection(t *testing.T) {
+func TestRestoreIndirectionForms(t *testing.T) {
 	for _, tc := range []struct{ sql, want string }{
 		{`SELECT (t.a).b FROM t`, `SELECT ("t"."a")."b" FROM "t"`},
 		{`SELECT (a).* FROM t`, `SELECT ("a").* FROM "t"`},
@@ -29,7 +29,7 @@ func TestVRestoreIndirection(t *testing.T) {
 	}
 }
 
-func TestVRestoreFunctionNameFidelity(t *testing.T) {
+func TestRestoreFunctionIdentifierFidelity(t *testing.T) {
 	// Names that fold away case or quoting must be preserved.
 	for _, tc := range []struct{ sql, want string }{
 		{`SELECT "MyFunc"(a) FROM t`, `SELECT "MyFunc"("a") FROM "t"`},
@@ -52,10 +52,9 @@ func TestVRestoreFunctionNameFidelity(t *testing.T) {
 	}
 }
 
-// No quoted name may panic Restore. (Names that collide with a reserved keyword
-// form, e.g. "extract", are documented in ISSUES.md V-3 as restoring to the
-// keyword form; they must at least not crash.)
-func TestVRestoreQuotedNamesDoNotPanic(t *testing.T) {
+// No quoted name may panic Restore; a quoted identifier that looks like a
+// keyword must at least not crash.
+func TestRestoreQuotedFunctionCalls(t *testing.T) {
 	for _, sql := range []string{
 		`SELECT "extract"(a) FROM t`,
 		`SELECT "extract"() FROM t`,
@@ -73,7 +72,7 @@ func TestVRestoreQuotedNamesDoNotPanic(t *testing.T) {
 	}
 }
 
-func TestVRestoreDistinctFromSpacing(t *testing.T) {
+func TestRestoreWordOperatorSpacing(t *testing.T) {
 	for _, tc := range []struct{ sql, want string }{
 		{`SELECT 1 WHERE a IS DISTINCT FROM 1`, `SELECT 1 WHERE "a" IS DISTINCT FROM 1`},
 		{`SELECT 1 WHERE a IS NOT DISTINCT FROM NULL`, `SELECT 1 WHERE "a" IS NOT DISTINCT FROM NULL`},
@@ -86,7 +85,7 @@ func TestVRestoreDistinctFromSpacing(t *testing.T) {
 	}
 }
 
-func TestVRestoreNamedWindow(t *testing.T) {
+func TestRestoreNamedWindowReference(t *testing.T) {
 	sql := `SELECT rank() OVER w FROM t WINDOW w AS (PARTITION BY a)`
 	want := `SELECT RANK() OVER "w" FROM "t" WINDOW "w" AS (PARTITION BY "a")`
 	got := restoreString(t, mustParseOne(t, sql))
@@ -95,7 +94,7 @@ func TestVRestoreNamedWindow(t *testing.T) {
 	}
 }
 
-func TestVRestoreStatementTemplates(t *testing.T) {
+func TestRestoreUtilityStatementForms(t *testing.T) {
 	for _, tc := range []struct{ sql, want string }{
 		{`EXPLAIN SELECT 1`, `EXPLAIN SELECT 1`},
 		{`EXPLAIN ANALYZE SELECT 1`, `EXPLAIN (ANALYZE) SELECT 1`},
@@ -116,8 +115,8 @@ func TestVRestoreStatementTemplates(t *testing.T) {
 	}
 }
 
-// ISSUES.md V-18: ExprNode.Format must not drop grouping-set expressions.
-func TestVFormatGroupingSets(t *testing.T) {
+// ExprNode.Format must not drop grouping-set expressions.
+func TestFormatGroupingSetExpressions(t *testing.T) {
 	for _, tc := range []struct{ sql, want string }{
 		{`SELECT a FROM t GROUP BY ROLLUP (a, b)`, "ROLLUP (`a`, `b`)"},
 		{`SELECT a FROM t GROUP BY CUBE (a, b)`, "CUBE (`a`, `b`)"},
@@ -135,9 +134,9 @@ func TestVFormatGroupingSets(t *testing.T) {
 	}
 }
 
-// ISSUES.md V-13: a boolean COPY option must restore to one stable form whether
+// A boolean COPY option must restore to one stable form whether
 // it was written with or without a value.
-func TestVRestoreCopyBooleans(t *testing.T) {
+func TestRestoreCopyBooleanOptions(t *testing.T) {
 	for _, tc := range []struct{ sql, want string }{
 		{`COPY t FROM STDIN WITH (HEADER)`, `COPY "t" FROM STDIN WITH (HEADER)`},
 		{`COPY t FROM STDIN WITH (HEADER true)`, `COPY "t" FROM STDIN WITH (HEADER TRUE)`},
@@ -156,7 +155,7 @@ func TestVRestoreCopyBooleans(t *testing.T) {
 // The function-name quote table must stay in sync with the keyword table. A word
 // that the parser rejects as a bare 2-argument function name must be quoted on
 // restore, or the restored SQL reads it back as a keyword.
-func TestVFuncNameQuoteTableMatchesKeywords(t *testing.T) {
+func TestFunctionQuoteTableMatchesKeywords(t *testing.T) {
 	parses := func(sql string) bool {
 		_, err := pgparser.New().Parse(sql)
 		return err == nil

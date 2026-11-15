@@ -287,7 +287,7 @@ func TestParseSQLDDLShapes(t *testing.T) {
 }
 
 // TestRestorePreservesSemantics re-parses restored SQL and compares the fields
-// that changed meaning silently in the past (IV-2, IV-3 and IV-4).
+// that changed meaning silently in the past.
 func TestRestorePreservesSemantics(t *testing.T) {
 	t.Run("comment object name parts", func(t *testing.T) {
 		for _, sql := range []string{

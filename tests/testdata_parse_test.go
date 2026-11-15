@@ -39,8 +39,13 @@ func TestParseTestdataSQL(t *testing.T) {
 	}
 
 	regenerate := os.Getenv("PGPARSER_REGENERATE") != ""
+	// These upstream negative fixtures must be rejected, not hidden as parser gaps.
+	invalidNumerics := map[string]bool{
+		"SELECT 100_": true, "SELECT 100__000": true, "SELECT 1_000_.5": true,
+		"SELECT 1_000._5": true, "SELECT 1_000.5_": true, "SELECT 1_000.5e_1": true,
+	}
 	var failures []corpusFailure
-	total, skipped, failed, unsupported, knownHits := 0, 0, 0, 0, 0
+	total, skipped, failed, unsupported, knownHits, rejected := 0, 0, 0, 0, 0, 0
 	for _, file := range files {
 		data, err := os.ReadFile(file)
 		if err != nil {
@@ -56,6 +61,13 @@ func TestParseTestdataSQL(t *testing.T) {
 			total++
 			key := fmt.Sprintf("%s:%d", file, stmt.line)
 			parseErr, restoreErr := parseTestdataStatement(stmt.sql)
+			if file == filepath.Join("testdata", "numerology.sql") && invalidNumerics[stmt.sql] {
+				if parseErr == nil {
+					t.Errorf("%s: invalid numeric fixture accepted: %s", key, stmt.sql)
+				}
+				rejected++
+				continue
+			}
 			if errors.Is(restoreErr, ast.ErrUnsupportedRestore) {
 				unsupported++
 				continue
@@ -84,6 +96,9 @@ func TestParseTestdataSQL(t *testing.T) {
 			t.Logf("%s: %d/%d statements failed", file, fileFailed, len(stmts))
 		}
 	}
+	if rejected != len(invalidNumerics) {
+		t.Errorf("expected %d negative numeric fixtures, found %d", len(invalidNumerics), rejected)
+	}
 	if regenerate {
 		if err := writeKnownFailures(filepath.Join("testdata", "known_failures.txt"), failures); err != nil {
 			t.Fatalf("write known failures: %v", err)
@@ -92,8 +107,8 @@ func TestParseTestdataSQL(t *testing.T) {
 		return
 	}
 	stale := len(known) - knownHits
-	t.Logf("%d statements; %d explicitly unsupported restores; %d psql-dependent skipped; %d known failures matched (%d stale list entries, %d unexpected failures)",
-		total, unsupported, skipped, knownHits, stale, failed)
+	t.Logf("%d statements; %d explicitly unsupported restores; %d psql-dependent skipped; %d expected lexical rejections; %d known failures matched (%d stale list entries, %d unexpected failures)",
+		total, unsupported, skipped, rejected, knownHits, stale, failed)
 
 	if failed > 0 {
 		t.Errorf("%d SQL statements failed without a known_failures.txt entry (%d skipped); add each to the list or fix the parser/restore", failed, skipped)
@@ -124,7 +139,7 @@ func failureReason(parseErr, restoreErr error) string {
 func writeKnownFailures(path string, failures []corpusFailure) error {
 	sort.Slice(failures, func(i, j int) bool { return failures[i].key < failures[j].key })
 	var b strings.Builder
-	b.WriteString("# Known corpus failures for TestParseTestdataSQL (ISSUES #12 gate).\n")
+	b.WriteString("# Known corpus failures for TestParseTestdataSQL.\n")
 	b.WriteString("# Format: <file.sql>:<line>\t<reason>\n")
 	b.WriteString("# \"expected parse rejection\" = the original SQL is not accepted by the parser.\n")
 	b.WriteString("# \"restore round-trip gap\" / \"restore instability\" = Restore output does not re-parse.\n")

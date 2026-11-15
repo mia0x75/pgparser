@@ -78,6 +78,10 @@ type Lexer struct {
 	pos   int    // Current position in input (byte offset)
 	start int    // Start position of current token
 
+	// Reuse the scanned boundary when SQL rules split an operator's suffix.
+	operatorEnd     int
+	operatorBodyEnd int
+
 	state              LexerState // Current lexer state
 	stateBeforeStrStop LexerState // State before entering xqs
 
@@ -120,6 +124,8 @@ func NewLexer(input string) *Lexer {
 	if pos := strings.IndexByte(input, 0); pos >= 0 {
 		l.pos = pos
 		l.Err = fmt.Errorf("invalid NUL byte in SQL")
+	} else if !utf8.ValidString(input) {
+		l.Err = fmt.Errorf("invalid UTF-8 in SQL")
 	}
 	return l
 }
@@ -792,36 +798,28 @@ func (l *Lexer) lexParam() Token {
 // lexOperator handles operator tokens.
 func (l *Lexer) lexOperator() Token {
 	start := l.pos
-
-	for l.pos < len(l.input) && isOpChar(l.input[l.pos]) {
-		l.pos++
+	if start >= l.operatorEnd {
+		end := start
+		special := false
+		for end < len(l.input) && isOpChar(l.input[end]) {
+			ch := l.input[end]
+			if end+1 < len(l.input) && ((ch == '/' && l.input[end+1] == '*') ||
+				(ch == '-' && l.input[end+1] == '-')) {
+				break
+			}
+			special = special || strings.ContainsRune("~!@#^&|`?%", rune(ch))
+			end++
+		}
+		l.operatorEnd = end
+		if !special {
+			for end > start+1 && (l.input[end-1] == '+' || l.input[end-1] == '-') {
+				end--
+			}
+		}
+		l.operatorBodyEnd = end
 	}
-
+	l.pos = max(start+1, l.operatorBodyEnd)
 	op := l.input[start:l.pos]
-	if idx := strings.Index(op, "//"); idx > 0 {
-		l.pos = start + idx
-		op = op[:idx]
-	}
-
-	// Check for embedded comment start
-	if idx := strings.Index(op, "/*"); idx > 0 {
-		l.pos = start + idx
-		op = op[:idx]
-	}
-	if idx := strings.Index(op, "--"); idx > 0 && (idx < len(op)-1 || !strings.Contains(op, "/*")) {
-		if !strings.Contains(op, "/*") || idx < strings.Index(op, "/*") {
-			l.pos = start + idx
-			op = op[:idx]
-		}
-	}
-
-	// For SQL compatibility, strip trailing + or - unless preceded by special chars
-	if !strings.ContainsAny(op, "~!@#^&|`?%") {
-		for len(op) > 1 && (op[len(op)-1] == '+' || op[len(op)-1] == '-') {
-			op = op[:len(op)-1]
-			l.pos--
-		}
-	}
 
 	// Single-char ops that should be returned as their char value
 	if len(op) == 1 && isSelf(op[0]) {
@@ -860,18 +858,21 @@ func (l *Lexer) lexNumber() Token {
 	if l.input[l.pos] == '0' && l.pos+1 < len(l.input) {
 		next := l.input[l.pos+1]
 		if next == 'x' || next == 'X' {
-			return l.lexHexNumber()
+			return l.lexBaseNumber(16)
 		}
 		if next == 'o' || next == 'O' {
-			return l.lexOctalNumber()
+			return l.lexBaseNumber(8)
 		}
 		if next == 'b' || next == 'B' {
-			return l.lexBinaryNumber()
+			return l.lexBaseNumber(2)
 		}
 	}
 
 	// Decimal integer or numeric
-	l.scanDecDigits()
+	if !l.scanNumberDigits(10) {
+		l.Err = fmt.Errorf("invalid numeric separator")
+		return Token{Type: lex_EOF, Loc: l.start}
+	}
 
 	isFloat := false
 
@@ -883,7 +884,10 @@ func (l *Lexer) lexNumber() Token {
 			goto done
 		}
 		l.pos++
-		l.scanDecDigits()
+		if !l.scanNumberDigits(10) {
+			l.Err = fmt.Errorf("invalid numeric separator")
+			return Token{Type: lex_EOF, Loc: l.start}
+		}
 		isFloat = true
 	}
 
@@ -897,7 +901,10 @@ func (l *Lexer) lexNumber() Token {
 			l.Err = fmt.Errorf("trailing junk after numeric literal")
 			return Token{Type: lex_EOF, Loc: l.start}
 		}
-		l.scanDecDigits()
+		if !l.scanNumberDigits(10) {
+			l.Err = fmt.Errorf("invalid numeric separator")
+			return Token{Type: lex_EOF, Loc: l.start}
+		}
 		isFloat = true
 	}
 
@@ -926,33 +933,40 @@ done:
 	return Token{Type: lex_ICONST, Ival: val, Str: numStr, Loc: l.start}
 }
 
-// scanDecDigits scans decimal digits with optional underscores.
-func (l *Lexer) scanDecDigits() {
+func (l *Lexer) scanNumberDigits(base int) bool {
+	start := l.pos
 	for l.pos < len(l.input) {
 		ch := l.input[l.pos]
-		if isDigit(ch) || ch == '_' {
+		switch {
+		case isHexDigit(ch) && hexValue(ch) < base:
 			l.pos++
-		} else {
-			break
+		case ch == '_':
+			if l.pos == start || l.pos+1 >= len(l.input) ||
+				!isHexDigit(l.input[l.pos+1]) || hexValue(l.input[l.pos+1]) >= base {
+				return false
+			}
+			l.pos++
+		default:
+			return true
 		}
 	}
+	return true
 }
 
-// lexHexNumber handles 0x... hex integers.
-func (l *Lexer) lexHexNumber() Token {
+func (l *Lexer) lexBaseNumber(base int) Token {
 	start := l.pos
-	l.pos += 2 // skip 0x
-
-	if l.pos >= len(l.input) || (!isHexDigit(l.input[l.pos]) && l.input[l.pos] != '_') {
-		l.Err = fmt.Errorf("invalid hexadecimal integer")
+	l.pos += 2
+	// PostgreSQL permits one separator immediately after a base prefix.
+	if l.pos < len(l.input) && l.input[l.pos] == '_' {
+		l.pos++
+	}
+	if l.pos >= len(l.input) || !isHexDigit(l.input[l.pos]) || hexValue(l.input[l.pos]) >= base ||
+		!l.scanNumberDigits(base) {
+		l.Err = fmt.Errorf("invalid base-%d integer", base)
 		return Token{Type: lex_EOF, Loc: l.start}
 	}
 
-	for l.pos < len(l.input) && (isHexDigit(l.input[l.pos]) || l.input[l.pos] == '_') {
-		l.pos++
-	}
-
-	if l.pos < len(l.input) && isIdentStart(l.input[l.pos]) {
+	if l.pos < len(l.input) && isIdentCont(l.input[l.pos]) {
 		l.Err = fmt.Errorf("trailing junk after numeric literal")
 		return Token{Type: lex_EOF, Loc: l.start}
 	}
@@ -960,67 +974,7 @@ func (l *Lexer) lexHexNumber() Token {
 	numStr := l.input[start:l.pos]
 	numStr = strings.ReplaceAll(numStr, "_", "")
 
-	val, err := strconv.ParseInt(numStr[2:], 16, 64)
-	if err != nil {
-		return Token{Type: lex_FCONST, Str: numStr, Loc: l.start}
-	}
-
-	return Token{Type: lex_ICONST, Ival: val, Str: numStr, Loc: l.start}
-}
-
-// lexOctalNumber handles 0o... octal integers.
-func (l *Lexer) lexOctalNumber() Token {
-	start := l.pos
-	l.pos += 2 // skip 0o
-
-	if l.pos >= len(l.input) || (!isOctalDigit(l.input[l.pos]) && l.input[l.pos] != '_') {
-		l.Err = fmt.Errorf("invalid octal integer")
-		return Token{Type: lex_EOF, Loc: l.start}
-	}
-
-	for l.pos < len(l.input) && (isOctalDigit(l.input[l.pos]) || l.input[l.pos] == '_') {
-		l.pos++
-	}
-
-	if l.pos < len(l.input) && isIdentStart(l.input[l.pos]) {
-		l.Err = fmt.Errorf("trailing junk after numeric literal")
-		return Token{Type: lex_EOF, Loc: l.start}
-	}
-
-	numStr := l.input[start:l.pos]
-	numStr = strings.ReplaceAll(numStr, "_", "")
-
-	val, err := strconv.ParseInt(numStr[2:], 8, 64)
-	if err != nil {
-		return Token{Type: lex_FCONST, Str: numStr, Loc: l.start}
-	}
-
-	return Token{Type: lex_ICONST, Ival: val, Str: numStr, Loc: l.start}
-}
-
-// lexBinaryNumber handles 0b... binary integers.
-func (l *Lexer) lexBinaryNumber() Token {
-	start := l.pos
-	l.pos += 2 // skip 0b
-
-	if l.pos >= len(l.input) || (!isBinaryDigit(l.input[l.pos]) && l.input[l.pos] != '_') {
-		l.Err = fmt.Errorf("invalid binary integer")
-		return Token{Type: lex_EOF, Loc: l.start}
-	}
-
-	for l.pos < len(l.input) && (isBinaryDigit(l.input[l.pos]) || l.input[l.pos] == '_') {
-		l.pos++
-	}
-
-	if l.pos < len(l.input) && isIdentStart(l.input[l.pos]) {
-		l.Err = fmt.Errorf("trailing junk after numeric literal")
-		return Token{Type: lex_EOF, Loc: l.start}
-	}
-
-	numStr := l.input[start:l.pos]
-	numStr = strings.ReplaceAll(numStr, "_", "")
-
-	val, err := strconv.ParseInt(numStr[2:], 2, 64)
+	val, err := strconv.ParseInt(numStr[2:], base, 64)
 	if err != nil {
 		return Token{Type: lex_FCONST, Str: numStr, Loc: l.start}
 	}
@@ -1060,7 +1014,18 @@ func truncateIdentifier(ident string) string {
 
 // downcase converts an identifier to lowercase.
 func (l *Lexer) downcase(s string) string {
-	return strings.ToLower(s)
+	for i := 0; i < len(s); i++ {
+		if s[i] >= 'A' && s[i] <= 'Z' {
+			buf := []byte(s)
+			for j := i; j < len(buf); j++ {
+				if buf[j] >= 'A' && buf[j] <= 'Z' {
+					buf[j] += 'a' - 'A'
+				}
+			}
+			return string(buf)
+		}
+	}
+	return s
 }
 
 // Character classification functions
@@ -1071,14 +1036,6 @@ func isDigit(ch byte) bool {
 
 func isHexDigit(ch byte) bool {
 	return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')
-}
-
-func isOctalDigit(ch byte) bool {
-	return ch >= '0' && ch <= '7'
-}
-
-func isBinaryDigit(ch byte) bool {
-	return ch == '0' || ch == '1'
 }
 
 func hexValue(ch byte) int {
@@ -1174,7 +1131,7 @@ func (l *Lexer) skipWhitespaceAndComments() error {
 			continue
 		}
 
-		if (ch == '-' || ch == '/') && l.pos+1 < len(l.input) && l.input[l.pos+1] == ch {
+		if ch == '-' && l.pos+1 < len(l.input) && l.input[l.pos+1] == '-' {
 			l.skipLineComment()
 			continue
 		}

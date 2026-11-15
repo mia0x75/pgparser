@@ -524,12 +524,14 @@ func appendBinaryNumber(buf []byte, x json.Number) (TypeCode, []byte, error) {
 		typeCode = TypeCodeInt64
 		i64, err := x.Int64()
 		if err != nil {
-			typeCode = TypeCodeFloat64
-			f64, err := x.Float64()
-			if err != nil {
-				return typeCode, nil, errors.Trace(err)
+			// Fall back to uint64 to keep full precision; reject values that
+			// overflow both int64 and uint64 instead of degrading to float64.
+			u64, uerr := strconv.ParseUint(string(x), 10, 64)
+			if uerr != nil {
+				return typeCode, nil, errors.Errorf("%s is out of range for int64/uint64", x)
 			}
-			buf = appendBinaryFloat64(buf, f64)
+			typeCode = TypeCodeUint64
+			buf = appendBinaryUint64(buf, u64)
 		} else {
 			buf = appendBinaryUint64(buf, uint64(i64))
 		}
@@ -621,6 +623,11 @@ func appendBinaryObject(buf []byte, x map[string]any) ([]byte, error) {
 		return fields[i].key < fields[j].key
 	})
 	for i, field := range fields {
+		// Reject keys too long for the uint16 key-length field, which would
+		// otherwise be silently truncated to an empty key.
+		if uint64(len(field.key)) > math.MaxUint16 {
+			return nil, errors.Errorf("key length %d exceeds the binary format's maximum of 65535 bytes", len(field.key))
+		}
 		keyEntryOff := keyEntryBegin + i*keyEntrySize
 		keyOff := len(buf) - docOff
 		keyLen := uint32(len(field.key))

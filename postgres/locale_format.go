@@ -22,8 +22,15 @@ func precisionToInt(precision string) (int, error) {
 }
 
 func formatENUS(number string, precision string) (string, error) {
+	// Short inputs have no digits for the indexed formatting path.
+	if number == "" {
+		return "", errors.New("number must not be empty")
+	}
+	if len(number) == 1 && number[0] == '-' {
+		return "", errors.New("number must not be a lone minus sign")
+	}
 	var buffer bytes.Buffer
-	if unicode.IsDigit(rune(precision[0])) {
+	if precision != "" && unicode.IsDigit(rune(precision[0])) {
 		for i, v := range precision {
 			if unicode.IsDigit(v) {
 				continue
@@ -34,13 +41,13 @@ func formatENUS(number string, precision string) (string, error) {
 	} else {
 		precision = "0"
 	}
-	if number[0] == '-' && number[1] == '.' {
+	if number[0] == '-' && len(number) > 1 && number[1] == '.' {
 		number = strings.Replace(number, "-", "-0", 1)
 	} else if number[0] == '.' {
 		number = strings.Replace(number, ".", "0.", 1)
 	}
 
-	if (number[:1] == "-" && !unicode.IsDigit(rune(number[1]))) ||
+	if (len(number) > 1 && number[:1] == "-" && !unicode.IsDigit(rune(number[1]))) ||
 		(!unicode.IsDigit(rune(number[0])) && number[:1] != "-") {
 		buffer.Write([]byte{'0'})
 		n, err := precisionToInt(precision)

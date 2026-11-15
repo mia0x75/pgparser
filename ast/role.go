@@ -24,7 +24,7 @@ func restoreRoleStatement(ctx *format.RestoreCtx, role, alter bool, target *Role
 		return err
 	}
 	if options == nil {
-		return nil
+		return ctx.Err()
 	}
 	for _, item := range options.Items {
 		option, ok := item.(*DefElem)
@@ -36,7 +36,7 @@ func restoreRoleStatement(ctx *format.RestoreCtx, role, alter bool, target *Role
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreRoleOption(ctx *format.RestoreCtx, option *DefElem) error {
@@ -68,7 +68,7 @@ func restoreRoleOption(ctx *format.RestoreCtx, option *DefElem) error {
 		}
 		if option.Arg == nil {
 			ctx.WriteKeyWord("NULL")
-			return nil
+			return ctx.Err()
 		}
 		return option.Arg.Restore(ctx)
 	case "rolemembers", "adminmembers", "addroleto":
@@ -99,5 +99,5 @@ func restoreRoleOption(ctx *format.RestoreCtx, option *DefElem) error {
 	default:
 		return fmt.Errorf("unsupported role option %s", name)
 	}
-	return nil
+	return ctx.Err()
 }

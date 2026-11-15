@@ -25,7 +25,7 @@ func (n *ServerOption) Restore(ctx *format.RestoreCtx) error {
 	ctx.WritePlain(n.Name)
 	ctx.WritePlain(" ")
 	ctx.WriteString(n.Value)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -77,7 +77,7 @@ func (n *CreateServerStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -127,7 +127,7 @@ func (n *AlterServerStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -162,7 +162,7 @@ func (n *DropServerStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("IF EXISTS ")
 	}
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

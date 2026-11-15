@@ -24,6 +24,7 @@ func FuzzParseRestore(f *testing.F) {
 		`SELECT $1[1]`,
 		`SELECT a[1:2] FROM t`,
 		`SELECT "MyFunc"(a) FROM t`,
+		`SELECT "0"()`,
 		`SELECT "cast"(a) FROM t`,
 		`SELECT "exists"(a) FROM t`,
 		`SELECT rank() OVER w FROM t WINDOW w AS (PARTITION BY a)`,
@@ -32,6 +33,8 @@ func FuzzParseRestore(f *testing.F) {
 		`MERGE INTO t USING s ON t.id = s.id WHEN NOT MATCHED THEN INSERT DEFAULT VALUES`,
 		`TRUNCATE ONLY t`,
 		`DO $$ BEGIN NULL; END $$ LANGUAGE plpgsql`,
+		`DO LANGUAGE a`,
+		"DO $$\xdf$$",
 		`EXPLAIN SELECT 1`,
 		`ALTER SERVER s VERSION '1.0'`,
 		`SELECT lower(a) FROM t`,
@@ -43,10 +46,6 @@ func FuzzParseRestore(f *testing.F) {
 		f.Add([]byte(s))
 	}
 	f.Fuzz(func(t *testing.T, data []byte) {
-		// Reject inputs with a NUL byte up front; the lexer stops at NUL.
-		if strings.Contains(string(data), "\x00") {
-			return
-		}
 		stmts, err := pgparser.New().Parse(string(data))
 		if err != nil {
 			return
@@ -58,13 +57,24 @@ func FuzzParseRestore(f *testing.F) {
 				// (a panic recovered here, a real error on a supported
 				// restore) is a failure.
 				if !errors.Is(err, ast.ErrUnsupportedRestore) {
-					t.Logf("restore error for %q: %v", data, err)
+					t.Fatalf("restore error for %q: %v", data, err)
 				}
 				continue
 			}
-			// Re-parse the restored SQL; it must not crash.
-			if _, err := pgparser.New().Parse(sb.String()); err != nil {
-				return
+			restored := sb.String()
+			next, err := pgparser.New().Parse(restored)
+			if err != nil {
+				t.Fatalf("restored SQL is not parseable: %q: %v", restored, err)
+			}
+			if len(next) != 1 {
+				t.Fatalf("restore changed statement count: %q", restored)
+			}
+			var again strings.Builder
+			if err := next[0].Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &again)); err != nil {
+				t.Fatalf("second restore failed: %q: %v", restored, err)
+			}
+			if again.String() != restored {
+				t.Fatalf("unstable restore: %q -> %q", restored, again.String())
 			}
 		}
 	})

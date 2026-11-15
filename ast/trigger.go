@@ -132,5 +132,5 @@ func restoreTrigger(ctx *format.RestoreCtx, n *CreateTrigStmt) error {
 		}
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }

@@ -81,7 +81,7 @@ func (n *DropSequenceStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while splicing DropSequenceStmt Names[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

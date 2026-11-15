@@ -8810,7 +8810,7 @@ c_expr:
 	| case_expr { $$ = $1 }
 	| ARRAY select_with_parens
 		{
-			$$ = &ast.SubqueryExpr{Query: $2.(ast.ResultSetNode)}
+			$$ = &ast.SubqueryExpr{Query: $2.(ast.ResultSetNode), Array: true}
 		}
 	| ARRAY array_expr
 		{
@@ -8841,6 +8841,7 @@ func_expr:
 				$$ = windowFuncExpr(fn, $4.(*ast.WindowSpec))
 			} else if fn.WithinGroup != nil || fn.Filter != nil || isAggregateName(fn.FnName.O) {
 				$$ = &ast.AggregateFuncExpr{
+					FnNameParts: fn.FnNameParts,
 					F:           fn.FnName.O,
 					Args:        fn.Args,
 					Filter:      fn.Filter,
@@ -9560,7 +9561,7 @@ substr_list:
 trim_list:
 	a_expr FROM expr_list
 		{
-			$$ = append([]ast.ExprNode{$1}, $3...)
+			$$ = append($3, $1)
 		}
 	| FROM expr_list
 		{
@@ -10168,16 +10169,13 @@ qualified_name:
 		{
 			$$ = makeList(&ast.String{Str: $1})
 		}
-	| ColId '.' attr_name
+	| ColId indirection
 		{
-			l := makeList(&ast.String{Str: $1})
-			$$ = appendList(l, &ast.String{Str: $3})
-		}
-	| ColId '.' attr_name '.' attr_name
-		{
-			l := makeList(&ast.String{Str: $1})
-			l = appendList(l, &ast.String{Str: $3})
-			$$ = appendList(l, &ast.String{Str: $5})
+			$$ = prependList(&ast.String{Str: $1}, $2)
+			if len($$.Items) > 3 { yylex.Error("too many dotted names in relation") }
+			for _, item := range $2.Items {
+				if _, ok := item.(*ast.String); !ok { yylex.Error("invalid indirection in relation name") }
+			}
 		}
 	;
 
@@ -12348,6 +12346,7 @@ CallStmt:
 DoStmt:
 	DO dostmt_opt_list
 		{
+			if len(doExprs($2)) == 0 { yylex.Error("DO statement has no code") }
 			$$ = &ast.DoStmt{
 				Exprs:    doExprs($2),
 				Language: doLanguage($2),
@@ -16674,7 +16673,7 @@ func extractAggrArgTypes(args *ast.List) *ast.List {
 	// First element is the args list (may be nil for agg(*))
 	argsList, ok := args.Items[0].(*ast.List)
 	if !ok || argsList == nil {
-		return nil
+		return makeList(&ast.A_Star{})
 	}
 	result := &ast.List{}
 	for _, item := range argsList.Items {

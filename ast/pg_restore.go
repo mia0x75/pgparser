@@ -35,7 +35,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 			return err
 		}
 		if n.Indirection == nil {
-			return nil
+			return ctx.Err()
 		}
 		for _, item := range n.Indirection.Items {
 			switch v := item.(type) {
@@ -304,7 +304,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		if err := n.Rel.Restore(ctx); err != nil {
 			return err
 		}
-		return nil
+		return ctx.Err()
 	case *SQLValueFunction:
 		return restoreSQLValue(ctx, n)
 	case *JsonScalarExpr:
@@ -350,7 +350,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 	default:
 		return fmt.Errorf("%w for %T", ErrUnsupportedRestore, node)
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreLocking(ctx *format.RestoreCtx, locks *List) error {
@@ -364,7 +364,7 @@ func restoreLocking(ctx *format.RestoreCtx, locks *List) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreRelOptions(ctx *format.RestoreCtx, options *List) error {
@@ -376,7 +376,7 @@ func restoreRelOptions(ctx *format.RestoreCtx, options *List) error {
 		return err
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 func restoreAlterOptions(ctx *format.RestoreCtx, options *List) error {
@@ -415,7 +415,7 @@ func restoreAlterOptions(ctx *format.RestoreCtx, options *List) error {
 		}
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 func restoreNameList(ctx *format.RestoreCtx, names *List) error {
@@ -432,14 +432,14 @@ func restoreNameList(ctx *format.RestoreCtx, names *List) error {
 		}
 		ctx.WriteName(name.Str)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // restoreSeqOptions writes a sequence option list back in keyword form,
 // because the grammar only accepts `INCREMENT`, `AS`, `OWNED BY`, ...
 func restoreSeqOptions(ctx *format.RestoreCtx, options *List) error {
 	if options == nil {
-		return nil
+		return ctx.Err()
 	}
 	for _, item := range options.Items {
 		option, ok := item.(*DefElem)
@@ -526,13 +526,13 @@ func restoreSeqOptions(ctx *format.RestoreCtx, options *List) error {
 			return fmt.Errorf("%w: sequence option %q", ErrUnsupportedRestore, option.Defname)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreVariableSet(ctx *format.RestoreCtx, n *VariableSetStmt) error {
 	if n.Kind == VAR_RESET_ALL {
 		ctx.WriteKeyWord("RESET ALL")
-		return nil
+		return ctx.Err()
 	}
 	if n.Name == "" {
 		return fmt.Errorf("SET has no parameter name")
@@ -541,7 +541,7 @@ func restoreVariableSet(ctx *format.RestoreCtx, n *VariableSetStmt) error {
 	case VAR_RESET:
 		ctx.WriteKeyWord("RESET ")
 		ctx.WriteName(n.Name)
-		return nil
+		return ctx.Err()
 	case VAR_SET_VALUE, VAR_SET_DEFAULT, VAR_SET_CURRENT:
 		ctx.WriteKeyWord("SET ")
 		if n.IsLocal {
@@ -586,7 +586,7 @@ func restoreVariableSet(ctx *format.RestoreCtx, n *VariableSetStmt) error {
 		ctx.WriteKeyWord(" TO ")
 		return n.Args.Restore(ctx)
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreTransactionModes(ctx *format.RestoreCtx, modes *List) error {
@@ -632,7 +632,7 @@ func restoreTransactionModes(ctx *format.RestoreCtx, modes *List) error {
 			return fmt.Errorf("invalid transaction mode %q", option.Defname)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreSQLValue(ctx *format.RestoreCtx, n *SQLValueFunction) error {
@@ -667,7 +667,7 @@ func restoreSQLValue(ctx *format.RestoreCtx, n *SQLValueFunction) error {
 	if n.Typmod >= 0 {
 		ctx.WritePlainf("(%d)", n.Typmod)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // restoreIndices writes one array subscript, `[x]`, `[x:y]`, `[:y]` or `[x:]`.
@@ -691,7 +691,7 @@ func restoreIndices(ctx *format.RestoreCtx, n *A_Indices) error {
 		}
 	}
 	ctx.WritePlain("]")
-	return nil
+	return ctx.Err()
 }
 
 func restoreXML(ctx *format.RestoreCtx, n *XmlExpr) error {
@@ -713,5 +713,5 @@ func restoreXML(ctx *format.RestoreCtx, n *XmlExpr) error {
 		ctx.WriteKeyWord(" STRIP WHITESPACE")
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }

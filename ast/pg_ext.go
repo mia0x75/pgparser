@@ -23,7 +23,7 @@ func (n *CollateExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyWord(" COLLATE ")
 	ctx.WriteName(n.Collation)
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -101,7 +101,7 @@ func (n *GroupingSet) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -134,7 +134,7 @@ func restoreExprList(ctx *format.RestoreCtx, exprs []ExprNode) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // XMLTableExpr is a table function of an XMLTABLE call.
@@ -188,7 +188,7 @@ func (n *XMLTableExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -278,7 +278,7 @@ func (n *XMLTableColumn) Restore(ctx *format.RestoreCtx) error {
 	if n.IsNotNull {
 		ctx.WriteKeyWord(" NOT NULL")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -329,7 +329,7 @@ func (n *XMLTableNamespace) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" AS ")
 		ctx.WriteName(n.Name)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -401,7 +401,7 @@ func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" ON ERROR")
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -474,7 +474,7 @@ func (n *JSONTablePathSpec) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" AS ")
 		ctx.WriteName(n.Name)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -539,12 +539,12 @@ func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 		ctx.WritePlain(")")
-		return nil
+		return ctx.Err()
 	}
 	ctx.WriteName(n.Name)
 	if n.ColType == "ordinality" {
 		ctx.WriteKeyWord(" FOR ORDINALITY")
-		return nil
+		return ctx.Err()
 	}
 	if n.ColType == "formatted" || n.Format != nil {
 		return fmt.Errorf("%w: JSON_TABLE FORMAT", ErrUnsupportedRestore)
@@ -589,7 +589,7 @@ func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WriteKeyWord(" ON ERROR")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -664,7 +664,7 @@ func (n *RowsFromExpr) Restore(ctx *format.RestoreCtx) error {
 	if n.WithOrdinality {
 		ctx.WriteKeyWord(" WITH ORDINALITY")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -702,7 +702,7 @@ func (n *PrivilegeTarget) Restore(ctx *format.RestoreCtx) error {
 	if err := writeGrantTargets(ctx, n.Objects, nil, n.TargetNodes); err != nil {
 		return err
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

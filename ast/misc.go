@@ -98,7 +98,7 @@ func (n *AuthOption) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WriteString(n.HashString)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // ExplainForStmt is a statement to provite information about how is SQL statement executeing
@@ -120,7 +120,7 @@ func (n *ExplainForStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("FOR ")
 	ctx.WriteKeyWord("CONNECTION ")
 	ctx.WritePlain(strconv.FormatUint(n.ConnectionID, 10))
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -157,7 +157,7 @@ func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 				return errors.Annotate(err, "An error occurred while restore ExplainStmt.ShowStmt.Column")
 			}
 		}
-		return nil
+		return ctx.Err()
 	}
 	ctx.WriteKeyWord("EXPLAIN ")
 	// `EXPLAIN ANALYZE` sets both the flag and the option; write it once.
@@ -189,7 +189,7 @@ func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Stmt.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore ExplainStmt.Stmt")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -243,13 +243,13 @@ func (n *PrepareStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	if n.SQLText != "" {
 		ctx.WriteString(n.SQLText)
-		return nil
+		return ctx.Err()
 	}
 	if n.SQLVar != nil {
 		if err := n.SQLVar.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore PrepareStmt.SQLVar")
 		}
-		return nil
+		return ctx.Err()
 	}
 	return errors.New("An error occurred while restore PrepareStmt")
 }
@@ -291,10 +291,10 @@ func (n *DeallocateStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("DEALLOCATE PREPARE ")
 	if n.All {
 		ctx.WriteKeyWord("ALL")
-		return nil
+		return ctx.Err()
 	}
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -352,7 +352,7 @@ func (n *ExecuteStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -409,7 +409,7 @@ func (n *BeginStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(" NOT DEFERRABLE")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -433,7 +433,7 @@ type BinlogStmt struct {
 func (n *BinlogStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("BINLOG ")
 	ctx.WriteString(n.Str)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -454,7 +454,7 @@ type CommitStmt struct {
 // Restore implements Node interface.
 func (n *CommitStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("COMMIT")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -483,7 +483,7 @@ func (n *RollbackStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" TO SAVEPOINT ")
 		ctx.WriteName(n.SavepointName)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -507,7 +507,7 @@ type SavepointStmt struct {
 func (n *SavepointStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("SAVEPOINT ")
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -531,7 +531,7 @@ type ReleaseSavepointStmt struct {
 func (n *ReleaseSavepointStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("RELEASE SAVEPOINT ")
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -569,7 +569,7 @@ func (n *XAStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteKeyWord(n.Extra)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -593,7 +593,7 @@ type UseStmt struct {
 func (n *UseStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("USE ")
 	ctx.WriteName(n.DBName)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -655,7 +655,7 @@ func (n *VariableAssignment) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore VariableAssignment.ExtendValue")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node interface.
@@ -723,7 +723,7 @@ func (n *FlushStmt) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.New("Unsupported type of FlushTables")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -754,7 +754,7 @@ func (n *KillStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" QUERY")
 	}
 	ctx.WritePlainf(" %d", n.ConnectionID)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -785,7 +785,7 @@ func (n *SetStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore SetStmt.Variables[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -844,7 +844,7 @@ func (n *SetPwdStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain("=")
 	ctx.WriteString(n.Password)
-	return nil
+	return ctx.Err()
 }
 
 // SecureText implements SensitiveStatement interface.
@@ -905,7 +905,7 @@ func (n *SetRoleStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain(",")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -958,7 +958,7 @@ func (n *SetDefaultRoleStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain(",")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -996,7 +996,7 @@ func (n *UserSpec) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore UserSpec.AuthOpt")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // SecurityString formats the UserSpec without password information.
@@ -1050,7 +1050,7 @@ func (t *TslOption) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.Errorf("Unsupported TslOption.Type %d", t.Type)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // TODO:
@@ -1082,7 +1082,7 @@ func (r *ResourceOption) Restore(ctx *format.RestoreCtx) error {
 		return errors.Errorf("Unsupported ResourceOption.Type %d", r.Type)
 	}
 	ctx.WritePlainf("%d", r.Count)
-	return nil
+	return ctx.Err()
 }
 
 // TODO:
@@ -1121,7 +1121,7 @@ func (p *PasswordOrLockOption) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.Errorf("Unsupported PasswordOrLockOption.Type %d", p.Type)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // CreateUserStmt creates user account.
@@ -1193,7 +1193,7 @@ func (n *CreateUserStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore CreateUserStmt.PasswordOrLockOptions[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1271,7 +1271,7 @@ func (n *AlterUserStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore AlterUserStmt.Specs[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // SecureText implements SensitiveStatement interface.
@@ -1336,7 +1336,7 @@ func (n *DropUserStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore DropUserStmt.UserList[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1372,7 +1372,7 @@ func (n *DoStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" LANGUAGE ")
 		ctx.WriteName(n.Language)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1485,7 +1485,7 @@ func (n *PrivElem) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1579,7 +1579,7 @@ func (n ObjectTypeType) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.New("Unsupported object type")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // GrantLevelType is the type for grant level.
@@ -1622,7 +1622,7 @@ func (n *GrantLevel) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WriteName(n.TableName)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // RevokeStmt is the struct for REVOKE statement.
@@ -1687,7 +1687,7 @@ func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 	case DROP_RESTRICT:
 		ctx.WriteKeyWord(" RESTRICT")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1781,7 +1781,7 @@ func (n *RevokeRoleStmt) Restore(ctx *format.RestoreCtx) error {
 	case DROP_RESTRICT:
 		ctx.WriteKeyWord(" RESTRICT")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1829,10 +1829,10 @@ func writeGrantTargets(ctx *format.RestoreCtx, objects []*TableName, level *Gran
 				return err
 			}
 		}
-		return nil
+		return ctx.Err()
 	}
 	if level == nil {
-		return nil
+		return ctx.Err()
 	}
 	return level.Restore(ctx)
 }
@@ -1898,7 +1898,7 @@ func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // SecureText implements SensitiveStatement interface.
@@ -2047,7 +2047,7 @@ func (n *GrantRoleStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // SecureText implements SensitiveStatement interface.
@@ -2068,7 +2068,7 @@ type LockTableStmt struct {
 
 // Restore implements Node interface.
 func (n *LockTableStmt) Restore(ctx *format.RestoreCtx) error {
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2088,7 +2088,7 @@ type UnlockTableStmt struct {
 
 // Restore implements Node interface.
 func (n *UnlockTableStmt) Restore(ctx *format.RestoreCtx) error {
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2176,7 +2176,7 @@ func (n *TableOptimizerHint) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

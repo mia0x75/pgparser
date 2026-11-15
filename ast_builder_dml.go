@@ -9,8 +9,8 @@ import (
 func makeSetOp(op ast.SetOprType, all bool, larg, rarg ast.Node) ast.Node {
 	selects := make([]ast.Node, 0, 2)
 	if set, ok := larg.(*ast.SetOprStmt); ok && set.SelectList != nil && !set.IsInBraces && set.With == nil && set.OrderBy == nil && set.Limit == nil && set.Locking == nil {
-		// A chain of set operations is a flat list of selects.
-		selects = append(selects, set.SelectList.Selects...)
+		// The parser owns the left chain, so appending can reuse its capacity instead of copying every prefix.
+		selects = set.SelectList.Selects
 	} else if larg != nil {
 		selects = append(selects, larg)
 	}
@@ -111,7 +111,7 @@ func applySelectClauses(n *ast.SelectStmt, from []ast.ResultSetNode, where ast.E
 		n.Where = where
 	}
 	if group != nil && group.List != nil {
-		n.GroupBy = &ast.GroupByClause{Items: byItemsFromList(group.List)}
+		n.GroupBy = &ast.GroupByClause{Items: byItemsFromList(group.List), Distinct: group.Distinct}
 	}
 	if having != nil {
 		n.Having = &ast.HavingClause{Expr: having}
@@ -205,30 +205,7 @@ func applyLocking(n *ast.SelectStmt, locking ast.Node) {
 
 // makeTableSource returns the table source of a qualified name.
 func makeTableSource(names *ast.List) *ast.TableSource {
-	name := &ast.TableName{}
-	if names != nil {
-		switch len(names.Items) {
-		case 1:
-			if s, ok := names.Items[0].(*ast.String); ok {
-				name.Name = model.NewCIStr(s.Str)
-			}
-		case 2:
-			if s, ok := names.Items[0].(*ast.String); ok {
-				name.Schema = model.NewCIStr(s.Str)
-			}
-			if s, ok := names.Items[1].(*ast.String); ok {
-				name.Name = model.NewCIStr(s.Str)
-			}
-		case 3:
-			if s, ok := names.Items[0].(*ast.String); ok {
-				name.Schema = model.NewCIStr(s.Str)
-			}
-			if s, ok := names.Items[1].(*ast.String); ok {
-				name.Name = model.NewCIStr(s.Str)
-			}
-		}
-	}
-	return &ast.TableSource{Source: name}
+	return &ast.TableSource{Source: tableNameFromList(names)}
 }
 
 // fromClauseOfNodes returns the table references clause of a from list.

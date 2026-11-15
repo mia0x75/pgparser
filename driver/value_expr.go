@@ -110,14 +110,14 @@ func (n *ValueExpr) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(n.Type.Charset)
 		}
 		ctx.WriteString(s)
-		return nil
+		return ctx.Err()
 	}
 	if n.Kind() == types.KindBytes {
 		ctx.WriteString(s)
-		return nil
+		return ctx.Err()
 	}
 	ctx.WritePlain(s)
-	return nil
+	return ctx.Err()
 }
 
 // GetDatumString implements the ast.ValueExpr interface.
@@ -186,7 +186,7 @@ func (n *ParamMarkerExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.New("invalid PostgreSQL parameter number")
 	}
 	ctx.WritePlainf("$%d", n.Offset+1)
-	return nil
+	return ctx.Err()
 }
 
 func newParamMarkerExpr(offset int) ast.ParamMarkerExpr {

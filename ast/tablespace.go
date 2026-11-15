@@ -44,7 +44,7 @@ func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -100,7 +100,7 @@ func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" RENAME TO ")
 		ctx.WriteName(n.RenameTo)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -135,7 +135,7 @@ func (n *DropTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("IF EXISTS ")
 	}
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

@@ -23,7 +23,7 @@ func restoreStmtList(ctx *format.RestoreCtx, list []StmtNode) error {
 		}
 		ctx.WritePlain(";")
 	}
-	return nil
+	return ctx.Err()
 }
 
 func acceptStmtList(v Visitor, list []StmtNode) ([]StmtNode, bool) {
@@ -71,7 +71,7 @@ func (n *BeginEndStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -117,7 +117,7 @@ func (n *DeclareStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore DeclareStmt.Default")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -173,7 +173,7 @@ func (c *HandlerCondition) Restore(ctx *format.RestoreCtx) error {
 	case HandlerConditionSQLException:
 		ctx.WriteKeyWord("SQLEXCEPTION")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // NewErrnoHandlerCondition preserves numeric handler conditions for compatibility.
@@ -357,7 +357,7 @@ func (n *IfStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WriteKeyWord(" END IF")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -430,7 +430,7 @@ func (n *CaseStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WriteKeyWord(" END CASE")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -500,7 +500,7 @@ func (n *WhileStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -554,7 +554,7 @@ func (n *RepeatStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -603,7 +603,7 @@ func (n *LoopStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -632,7 +632,7 @@ type LeaveStmt struct {
 func (n *LeaveStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("LEAVE ")
 	ctx.WriteName(n.Label)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -655,7 +655,7 @@ type IterateStmt struct {
 func (n *IterateStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("ITERATE ")
 	ctx.WriteName(n.Label)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -678,7 +678,7 @@ type OpenStmt struct {
 func (n *OpenStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("OPEN ")
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -701,7 +701,7 @@ type CloseStmt struct {
 func (n *CloseStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("CLOSE ")
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -736,7 +736,7 @@ func (n *FetchStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteName(v)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -781,7 +781,7 @@ func (n *SignalStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -831,7 +831,7 @@ func (n *ResignalStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

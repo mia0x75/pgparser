@@ -14,7 +14,7 @@ type NumericLiteral struct {
 
 func (n *NumericLiteral) Restore(ctx *format.RestoreCtx) error {
 	ctx.WritePlain(n.Value)
-	return nil
+	return ctx.Err()
 }
 
 func (n *NumericLiteral) Format(w io.Writer) {

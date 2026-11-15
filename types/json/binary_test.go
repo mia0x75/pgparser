@@ -1,6 +1,8 @@
 package json
 
 import (
+	"math"
+	"strings"
 	"testing"
 )
 
@@ -86,14 +88,49 @@ func TestBinaryJSONType(t *testing.T) {
 			t.Fatalf("got %#v, want %#v", bj.Type(), tt.Out)
 		}
 	}
-	// we can't parse '9223372036854775808' to JSON::Uint64 now,
-	// because go builtin JSON parser treats that as DOUBLE.
 	bj, err := CreateBinary(uint64(1 << 63))
 	if err != nil {
 		t.Fatalf("CreateBinary failed: %v", err)
 	}
 	if bj.Type() != "UNSIGNED INTEGER" {
 		t.Fatalf("got %#v, want %#v", bj.Type(), "UNSIGNED INTEGER")
+	}
+}
+
+func TestBinaryJSONIntegerBoundaries(t *testing.T) {
+	var okCases = []struct {
+		in   string
+		want string
+	}{
+		{"9223372036854775808", "9223372036854775808"}, // maxInt64+1
+		{"9223372036854775809", "9223372036854775809"},
+		{"18446744073709551615", "18446744073709551615"}, // maxUint64
+		{"-9223372036854775808", "-9223372036854775808"}, // minInt64
+	}
+	for _, tc := range okCases {
+		t.Run(tc.in, func(t *testing.T) {
+			bj := mustParseBinaryFromString(t, tc.in)
+			if got, want := bj.String(), tc.want; got != want {
+				t.Fatalf("got %q, want %q", got, want)
+			}
+			out, err := bj.MarshalJSON()
+			if err != nil {
+				t.Fatalf("MarshalJSON(%s) failed: %v", tc.in, err)
+			}
+			if got, want := string(out), tc.want; got != want {
+				t.Fatalf("MarshalJSON = %q, want %q", got, want)
+			}
+		})
+	}
+	for _, bad := range []string{
+		"18446744073709551616", // > maxUint64
+		"-9223372036854775809", // < minInt64
+	} {
+		t.Run(bad, func(t *testing.T) {
+			if _, err := ParseBinaryFromString(bad); err == nil {
+				t.Fatalf("ParseBinaryFromString(%s) accepted an out-of-range integer", bad)
+			}
+		})
 	}
 }
 
@@ -290,6 +327,26 @@ func TestBinaryJSONMerge(t *testing.T) {
 		if cmp != 0 {
 			t.Fatalf("got %#v, want %#v", cmp, 0)
 		}
+	}
+}
+
+func TestBinaryJSONKeyLengthLimit(t *testing.T) {
+	bj, err := CreateBinary(map[string]any{strings.Repeat("k", math.MaxUint16): "v"})
+	if err != nil {
+		t.Fatalf("CreateBinary with %d-byte key: %v", math.MaxUint16, err)
+	}
+	if want := `{"` + strings.Repeat("k", math.MaxUint16) + `": "v"}`; bj.String() != want {
+		t.Fatalf("got %q, want %q", bj.String(), want)
+	}
+	if _, err := CreateBinary(map[string]any{strings.Repeat("k", math.MaxUint16+1): "v"}); err == nil {
+		t.Fatal("CreateBinary accepted a 65536-byte key")
+	}
+	// The binary length counts bytes, not runes.
+	if _, err := CreateBinary(map[string]any{strings.Repeat("é", 32768): "v"}); err == nil {
+		t.Fatal("CreateBinary accepted a 65536-byte multibyte key")
+	}
+	if _, err := CreateBinary(map[string]any{strings.Repeat("é", 32767): "v"}); err != nil {
+		t.Fatalf("CreateBinary rejected a 65534-byte multibyte key: %v", err)
 	}
 }
 

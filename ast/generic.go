@@ -21,7 +21,7 @@ func (n *GenericStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WritePlain(n.Raw)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -47,7 +47,7 @@ type RawStmt struct {
 // Restore implements Node interface.
 func (n *RawStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WritePlain(n.SQL)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

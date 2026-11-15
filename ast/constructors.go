@@ -86,7 +86,7 @@ func (n *ArrayExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WritePlain("]")
-	return nil
+	return ctx.Err()
 }
 
 // Format implements ExprNode interface.

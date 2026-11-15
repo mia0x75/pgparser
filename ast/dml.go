@@ -144,7 +144,7 @@ func (n *Join) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(")")
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -189,8 +189,9 @@ func (n *Join) Accept(v Visitor) (Node, bool) {
 type TableName struct {
 	node
 
-	Schema model.CIStr
-	Name   model.CIStr
+	Catalog model.CIStr
+	Schema  model.CIStr
+	Name    model.CIStr
 	// Relpersistence is the persistence of a temporary table ('t' or 'u').
 	Relpersistence byte
 
@@ -203,6 +204,10 @@ type TableName struct {
 
 // Restore implements Node interface.
 func (n *TableName) Restore(ctx *format.RestoreCtx) error {
+	if n.Catalog.O != "" {
+		ctx.WriteName(n.Catalog.O)
+		ctx.WritePlain(".")
+	}
 	if n.Schema.String() != "" {
 		ctx.WriteName(n.Schema.String())
 		ctx.WritePlain(".")
@@ -226,7 +231,7 @@ func (n *TableName) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // IndexHintType is the type for index hint use, ignore or force.
@@ -295,7 +300,7 @@ func (n *IndexHint) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -324,7 +329,7 @@ func (n *DeleteTableList) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore DeleteTableList.Tables[%v]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -384,7 +389,7 @@ func (n *OnCondition) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(" AS ")
 			ctx.WriteName(n.JoinUsingAlias.Aliasname)
 		}
-		return nil
+		return ctx.Err()
 	}
 	if n.Expr == nil {
 		return errors.New("join condition has no expression")
@@ -393,7 +398,7 @@ func (n *OnCondition) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore OnCondition.Expr")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -485,7 +490,7 @@ func (n *TableSample) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -544,7 +549,7 @@ func (n *TableFunction) Restore(ctx *format.RestoreCtx) error {
 	if n.WithOrdinality {
 		ctx.WriteKeyWord(" WITH ORDINALITY")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -617,7 +622,7 @@ func (n *TableSource) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(")")
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -707,12 +712,17 @@ type SelectLockInfo struct {
 type WildCardField struct {
 	exprNode
 
-	Table  model.CIStr
-	Schema model.CIStr
+	Catalog model.CIStr
+	Table   model.CIStr
+	Schema  model.CIStr
 }
 
 // Restore implements Node interface.
 func (n *WildCardField) Restore(ctx *format.RestoreCtx) error {
+	if n.Catalog.O != "" {
+		ctx.WriteName(n.Catalog.O)
+		ctx.WritePlain(".")
+	}
 	if schema := n.Schema.String(); schema != "" {
 		ctx.WriteName(schema)
 		ctx.WritePlain(".")
@@ -722,11 +732,14 @@ func (n *WildCardField) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(".")
 	}
 	ctx.WritePlain("*")
-	return nil
+	return ctx.Err()
 }
 
 // Format implements ExprNode interface.
 func (n *WildCardField) Format(w io.Writer) {
+	if n.Catalog.O != "" {
+		_, _ = fmt.Fprintf(w, "%s.", n.Catalog.O)
+	}
 	if schema := n.Schema.String(); schema != "" {
 		_, _ = fmt.Fprintf(w, "%s.", schema)
 	}
@@ -782,7 +795,7 @@ func (n *SelectField) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" AS ")
 		ctx.WriteName(asName)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -819,7 +832,7 @@ func (n *FieldList) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore FieldList.Fields[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -851,7 +864,7 @@ func (n *TableRefsClause) Restore(ctx *format.RestoreCtx) error {
 	if err := n.TableRefs.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore TableRefsClause.TableRefs")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -906,7 +919,7 @@ func (n *ByItem) Restore(ctx *format.RestoreCtx) error {
 			}
 			ctx.WritePlain(")")
 		}
-		return nil
+		return ctx.Err()
 	}
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore ByItem.Expr")
@@ -920,7 +933,7 @@ func (n *ByItem) Restore(ctx *format.RestoreCtx) error {
 	case 2:
 		ctx.WriteKeyWord(" NULLS LAST")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the ByItem into a Writer.
@@ -1001,7 +1014,8 @@ func (n *ByItem) Accept(v Visitor) (Node, bool) {
 // GroupByClause represents group by clause.
 type GroupByClause struct {
 	node
-	Items []*ByItem
+	Items    []*ByItem
+	Distinct bool
 	// WithRollup indicates whether `WITH ROLLUP` is specified.
 	WithRollup bool
 	// WithCube indicates whether `WITH CUBE` is specified.
@@ -1017,6 +1031,9 @@ type GroupByClause struct {
 // Restore implements Node interface.
 func (n *GroupByClause) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("GROUP BY ")
+	if n.Distinct {
+		ctx.WriteKeyWord("DISTINCT ")
+	}
 	for i, v := range n.Items {
 		if i != 0 {
 			ctx.WritePlain(",")
@@ -1038,12 +1055,15 @@ func (n *GroupByClause) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(" WITH CASCADED CHECK OPTION")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the GroupByClause into a Writer.
 func (n *GroupByClause) Format(w io.Writer) {
 	_, _ = fmt.Fprint(w, "GROUP BY ")
+	if n.Distinct {
+		_, _ = fmt.Fprint(w, "DISTINCT ")
+	}
 	for i, v := range n.Items {
 		if i != 0 {
 			_, _ = fmt.Fprint(w, ", ")
@@ -1094,7 +1114,7 @@ func (n *HavingClause) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore HavingClause.Expr")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the HavingClause into a Writer.
@@ -1138,7 +1158,7 @@ func (n *OrderByClause) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore OrderByClause.Items[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the OrderByClause into a Writer.
@@ -1404,7 +1424,7 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore SelectStmt.Into")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1548,7 +1568,7 @@ func (n *ValuesStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1583,7 +1603,7 @@ func (n *TableStmt) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Table.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while splicing TableStmt Table")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1623,7 +1643,7 @@ func (n *WithClause) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore WithClause.CTEs[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1671,7 +1691,7 @@ func (n *CommonTableExpression) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore CommonTableExpression.Query")
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1792,7 +1812,7 @@ func (n *SetOprSelectList) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore SetOprSelectList.Limit")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1885,7 +1905,7 @@ func (n *SetOprStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IsInBraces {
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1978,7 +1998,7 @@ func (n *Assignment) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore Assignment.Expr")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2101,7 +2121,7 @@ func (n *LoadDataStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2177,7 +2197,7 @@ func (n *FieldsClause) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // LinesClause represents lines references clause in load data statement.
@@ -2199,7 +2219,7 @@ func (n *LinesClause) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteString(n.Terminated)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // SelectIntoType is the type of a SELECT ... INTO clause.
@@ -2261,7 +2281,7 @@ func (n *SelectIntoStatement) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("INTO DUMPFILE ")
 		ctx.WriteString(n.FileName)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2340,7 +2360,7 @@ func (n *OnConflictClause) Restore(ctx *format.RestoreCtx) error {
 	}
 	if n.DoNothing {
 		ctx.WriteKeyWord(" DO NOTHING")
-		return nil
+		return ctx.Err()
 	}
 	ctx.WriteKeyWord(" DO UPDATE SET ")
 	for i, a := range n.UpdateList {
@@ -2357,7 +2377,7 @@ func (n *OnConflictClause) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore OnConflictClause.UpdateWhere")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2502,7 +2522,7 @@ func (n *InsertStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2634,7 +2654,7 @@ func (n *MergeStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore MergeStmt.Returning")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2752,7 +2772,7 @@ func (n *MergeWhenClause) Restore(ctx *format.RestoreCtx) error {
 	default:
 		ctx.WriteKeyWord("DO NOTHING")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2908,7 +2928,7 @@ func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -3078,7 +3098,7 @@ func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -3171,7 +3191,7 @@ func (n *Limit) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore Limit.Offset")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -3423,7 +3443,7 @@ func (n *ShowStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -3494,7 +3514,7 @@ func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
 	if name := n.Name.String(); name != "" {
 		ctx.WriteName(name)
 		if n.OnlyAlias {
-			return nil
+			return ctx.Err()
 		}
 		ctx.WriteKeyWord(" AS ")
 	}
@@ -3526,7 +3546,7 @@ func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the WindowSpec into a Writer.
@@ -3612,7 +3632,7 @@ func (n *PartitionByClause) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore PartitionByClause.Items[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the PartitionByClause into a Writer.
@@ -3694,7 +3714,7 @@ func (n *FrameClause) Restore(ctx *format.RestoreCtx) error {
 		return errors.New("invalid window frame exclusion")
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the FrameClause into a Writer.
@@ -3803,7 +3823,7 @@ func (n *FrameBound) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(" FOLLOWING")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the FrameBound into a Writer.
@@ -3873,5 +3893,5 @@ func restoreExprSets(ctx *format.RestoreCtx, sets [][]ExprNode) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }

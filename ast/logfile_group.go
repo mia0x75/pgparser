@@ -62,7 +62,7 @@ func (n *LogfileGroupOption) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.New("An error occurred while splicing LogfileGroupOption")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -82,7 +82,7 @@ func restoreLogfileGroupOptions(ctx *format.RestoreCtx, options []*LogfileGroupO
 			return errors.Annotate(err, "An error occurred while splicing LogfileGroupOptions")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // CreateLogfileGroupStmt is a statement to create a logfile group.

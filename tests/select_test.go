@@ -276,9 +276,8 @@ ORDER BY total_revenue DESC LIMIT 5;`)
 	}
 }
 
-// Ported from parser_ir_select_test.go: double-slash comments are ignored.
-func TestParseSQLSelectDoubleSlashComment(t *testing.T) {
-	st := mustParseSelect(t, "SELECT id FROM users // extra metadata\n;")
+func TestParseSQLSelectLineComment(t *testing.T) {
+	st := mustParseSelect(t, "SELECT id FROM users -- extra metadata\n;")
 	if st.Fields == nil || len(st.Fields.Fields) != 1 {
 		t.Fatalf("fields = %#v, want 1", st.Fields)
 	}

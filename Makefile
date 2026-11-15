@@ -13,7 +13,7 @@ generate:
 
 generate-check:
 	$(MAKE) generate
-	git diff --exit-code -- parser.go ast/*_generated.go
+	git diff --exit-code -- parser.go ast/pg_ext.go ast/*_generated.go
 
 test:
 	go test -race -count=1 -cover ./...

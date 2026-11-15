@@ -276,11 +276,17 @@ type RestoreCtx struct {
 	Flags     RestoreFlags
 	In        io.Writer
 	JoinLevel int
+	err       error
 }
 
 // NewRestoreCtx returns a new `RestoreCtx`.
 func NewRestoreCtx(flags RestoreFlags, in io.Writer) *RestoreCtx {
-	return &RestoreCtx{flags, in, 0}
+	return &RestoreCtx{Flags: flags, In: in}
+}
+
+// Err preserves the first output failure so successful restore paths can return it.
+func (ctx *RestoreCtx) Err() error {
+	return ctx.err
 }
 
 // WriteKeyWord writes the `keyWord` into writer.
@@ -292,7 +298,7 @@ func (ctx *RestoreCtx) WriteKeyWord(keyWord string) {
 	case ctx.Flags.HasKeyWordLowercaseFlag():
 		keyWord = strings.ToLower(keyWord)
 	}
-	_, _ = fmt.Fprint(ctx.In, keyWord)
+	ctx.WritePlain(keyWord)
 }
 
 // WriteString writes the string into writer
@@ -310,7 +316,9 @@ func (ctx *RestoreCtx) WriteString(str string) {
 		str = strings.ReplaceAll(str, `"`, `""`)
 		quotes = `"`
 	}
-	_, _ = fmt.Fprint(ctx.In, quotes, str, quotes)
+	ctx.WritePlain(quotes)
+	ctx.WritePlain(str)
+	ctx.WritePlain(quotes)
 }
 
 // WriteName writes the name into writer
@@ -331,15 +339,32 @@ func (ctx *RestoreCtx) WriteName(name string) {
 		name = strings.ReplaceAll(name, "`", "``")
 		quotes = "`"
 	}
-	_, _ = fmt.Fprint(ctx.In, quotes, name, quotes)
+	ctx.WritePlain(quotes)
+	ctx.WritePlain(name)
+	ctx.WritePlain(quotes)
 }
 
 // WritePlain writes the plain text into writer without any handling.
 func (ctx *RestoreCtx) WritePlain(plainText string) {
-	_, _ = fmt.Fprint(ctx.In, plainText)
+	if ctx.err != nil || plainText == "" {
+		return
+	}
+	if ctx.In == nil {
+		ctx.err = fmt.Errorf("restore writer is nil")
+		return
+	}
+	n, err := io.WriteString(ctx.In, plainText)
+	if err == nil && n != len(plainText) {
+		err = io.ErrShortWrite
+	}
+	if err != nil {
+		ctx.err = fmt.Errorf("write restored SQL: %w", err)
+	}
 }
 
 // WritePlainf write the plain text into writer without any handling.
 func (ctx *RestoreCtx) WritePlainf(format string, a ...any) {
-	_, _ = fmt.Fprintf(ctx.In, format, a...)
+	if ctx.err == nil {
+		ctx.WritePlain(fmt.Sprintf(format, a...))
+	}
 }

@@ -265,7 +265,7 @@ func TestTruncateOverflowPostgreSQLTime(t *testing.T) {
 	}
 }
 
-// ISSUES.md V-8: a large Fsp (from a `timestamp(7)` typmod) must not panic the
+// A large Fsp (from a `timestamp(7)` typmod) must not panic the
 // string/number formatters; it is clamped to the 6-digit fractional buffer.
 func TestTimeLargeFspDoesNotPanic(t *testing.T) {
 	inner := types.FromDate(2020, 1, 2, 3, 4, 5, 123456)

@@ -60,9 +60,12 @@ func tableNameFromList(l *ast.List) *ast.TableName {
 		}
 	case 3:
 		if s, ok := l.Items[0].(*ast.String); ok {
-			name.Schema = model.NewCIStr(s.Str)
+			name.Catalog = model.NewCIStr(s.Str)
 		}
 		if s, ok := l.Items[1].(*ast.String); ok {
+			name.Schema = model.NewCIStr(s.Str)
+		}
+		if s, ok := l.Items[2].(*ast.String); ok {
 			name.Name = model.NewCIStr(s.Str)
 		}
 	}
@@ -183,6 +186,7 @@ func relationName(n ast.Node) *ast.TableName {
 		}
 	case *ast.RangeVar:
 		return &ast.TableName{
+			Catalog:        model.NewCIStr(v.Catalogname),
 			Schema:         model.NewCIStr(v.Schemaname),
 			Name:           model.NewCIStr(v.Relname),
 			Relpersistence: v.Relpersistence,

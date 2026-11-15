@@ -239,7 +239,7 @@ func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
 				ctx.WritePlainf("[%d]", bound)
 			}
 		}
-		return nil
+		return ctx.Err()
 	}
 	ctx.WriteKeyWord(TypeToStr(ft.Tp, ft.Charset))
 
@@ -292,7 +292,7 @@ func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // RestoreAsCastType is used for write AST back to string.

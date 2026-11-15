@@ -85,7 +85,7 @@ func (n *BetweenExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Right.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore BetweenExpr.Right ")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -174,7 +174,7 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.R")
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -248,7 +248,7 @@ func (n *WhenClause) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Result.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore WhenClauses.Result")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -307,7 +307,7 @@ func (n *CaseExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyWord(" END")
 
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -373,20 +373,27 @@ type SubqueryExpr struct {
 	Correlated bool
 	MultiRows  bool
 	Exists     bool
+	Array      bool
 }
 
 // Restore implements Node interface.
 func (n *SubqueryExpr) Restore(ctx *format.RestoreCtx) error {
+	if n.Array {
+		ctx.WriteKeyWord("ARRAY")
+	}
 	ctx.WritePlain("(")
 	if err := n.Query.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore SubqueryExpr.Query")
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
 func (n *SubqueryExpr) Format(w io.Writer) {
+	if n.Array {
+		_, _ = fmt.Fprint(w, "ARRAY")
+	}
 	_, _ = fmt.Fprint(w, "(SELECT ...)")
 }
 
@@ -434,7 +441,7 @@ func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.R.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore CompareSubqueryExpr.R")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -471,13 +478,18 @@ func (n *CompareSubqueryExpr) Accept(v Visitor) (Node, bool) {
 // ColumnName represents column name.
 type ColumnName struct {
 	node
-	Schema model.CIStr
-	Table  model.CIStr
-	Name   model.CIStr
+	Catalog model.CIStr
+	Schema  model.CIStr
+	Table   model.CIStr
+	Name    model.CIStr
 }
 
 // Restore implements Node interface.
 func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
+	if n.Catalog.O != "" {
+		ctx.WriteName(n.Catalog.O)
+		ctx.WritePlain(".")
+	}
 	if n.Schema.O != "" {
 		ctx.WriteName(n.Schema.O)
 		ctx.WritePlain(".")
@@ -488,14 +500,17 @@ func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
 	}
 	if n.Name.O == "*" {
 		ctx.WritePlain("*")
-		return nil
+		return ctx.Err()
 	}
 	ctx.WriteName(n.Name.O)
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the ColumnName into a Writer.
 func (n *ColumnName) Format(w io.Writer) {
+	if n.Catalog.O != "" {
+		_, _ = fmt.Fprint(w, n.Catalog.O, ".")
+	}
 	if n.Schema.O != "" {
 		_, _ = fmt.Fprint(w, n.Schema.O)
 		_, _ = fmt.Fprint(w, ".")
@@ -530,6 +545,9 @@ func (n *ColumnName) String() string {
 	if n.Schema.L != "" {
 		result = n.Schema.L + "." + result
 	}
+	if n.Catalog.L != "" {
+		result = n.Catalog.L + "." + result
+	}
 	return result
 }
 
@@ -544,6 +562,9 @@ func (n *ColumnName) OrigColName() (ret string) {
 		return
 	}
 	ret = n.Schema.O + "." + ret
+	if n.Catalog.O != "" {
+		ret = n.Catalog.O + "." + ret
+	}
 	return
 }
 
@@ -564,7 +585,7 @@ func (n *ColumnNameExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Name.Restore(ctx); err != nil {
 		return errors.Trace(err)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -605,7 +626,7 @@ func (n *DefaultExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -653,7 +674,7 @@ func (n *ExistsSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Sel.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore ExistsSubqueryExpr.Sel")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -722,7 +743,7 @@ func (n *PatternInExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -790,7 +811,7 @@ func (n *IsNullExpr) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WriteKeyWord(" IS NULL")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -844,7 +865,7 @@ func (n *IsTruthExpr) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WriteKeyWord(" FALSE")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -923,7 +944,7 @@ func (n *PatternLikeExpr) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "LIKE escape")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -998,7 +1019,7 @@ func (n *ParenthesesExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred when restore ParenthesesExpr.Expr")
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -1038,7 +1059,7 @@ type PositionExpr struct {
 // Restore implements Node interface.
 func (n *PositionExpr) Restore(ctx *format.RestoreCtx) error {
 	ctx.WritePlainf("%d", n.N)
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -1104,7 +1125,7 @@ func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -1169,7 +1190,7 @@ func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -1222,7 +1243,7 @@ func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.V.Restore(ctx); err != nil {
 		return errors.Trace(err)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -1266,7 +1287,7 @@ func (n *ValuesExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -1332,7 +1353,7 @@ func (n *VariableExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -1383,7 +1404,7 @@ type MaxValueExpr struct {
 // Restore implements Node interface.
 func (n *MaxValueExpr) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("MAXVALUE")
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.

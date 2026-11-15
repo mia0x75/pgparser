@@ -154,9 +154,7 @@ type FuncCallExpr struct {
 // function name: SELECT "<kw>"(1, 2) parses but SELECT <KW>(1, 2) does not, so
 // if such a word appears as a function-name part it must stay quoted, or the
 // restored SQL would read it back as the keyword.
-// shortcut: the table is maintained by hand with a two-argument call shape;
-// TestVFuncNameQuoteTableMatchesKeywords fails when a required entry is missing. extract and position are excluded because the
-// grammar gives them keyword restore forms (EXTRACT/POSITION) that must stay bare.
+// shortcut: the table is maintained by hand; regenerate it if keyword categories change.
 var mustQuoteFuncNames = map[string]struct{}{
 	"analyse":           {},
 	"analyze":           {},
@@ -258,6 +256,7 @@ var mustQuoteFuncNames = map[string]struct{}{
 	"trailing":          {},
 	"treat":             {},
 	"true":              {},
+	"trim":              {},
 	"union":             {},
 	"unique":            {},
 	"user":              {},
@@ -317,7 +316,7 @@ func NeedsQuotedFuncName(part string) bool {
 // simpleLowerIdent reports whether s is a bare lowercase identifier that is safe
 // to fold.
 func simpleLowerIdent(s string) bool {
-	if s == "" {
+	if s == "" || (s[0] != '_' && (s[0] < 'a' || s[0] > 'z')) {
 		return false
 	}
 	for i := 0; i < len(s); i++ {
@@ -382,13 +381,16 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // keywordFormName reports whether the call has the argument shape of one of the
 // grammar's keyword forms. A quoted user function like "extract"(a) does not
 // match, so it keeps its quoted name instead of becoming the EXTRACT keyword.
 func (n *FuncCallExpr) keywordFormName() bool {
+	if len(n.FnNameParts) != 0 {
+		return false
+	}
 	switch n.FnName.L {
 	case "extract":
 		if len(n.Args) != 2 {
@@ -456,7 +458,7 @@ func (n *FuncCallExpr) restoreKeywordForm(ctx *format.RestoreCtx) error {
 			return n.Args[0].Restore(ctx)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -563,7 +565,7 @@ func (n *FuncCastExpr) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore FuncCastExpr.Expr")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -660,6 +662,7 @@ const (
 // AggregateFuncExpr represents aggregate function expression.
 type AggregateFuncExpr struct {
 	funcNode
+	FnNameParts []string
 	// F is the function name.
 	F string
 	// Args is the function args.
@@ -678,7 +681,7 @@ type AggregateFuncExpr struct {
 
 // Restore implements Node interface.
 func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
-	writeFuncName(ctx, nil, n.F)
+	writeFuncName(ctx, n.FnNameParts, n.F)
 	ctx.WritePlain("(")
 	if n.Distinct {
 		ctx.WriteKeyWord("DISTINCT ")
@@ -715,7 +718,7 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
@@ -817,6 +820,7 @@ const (
 // WindowFuncExpr represents window function expression.
 type WindowFuncExpr struct {
 	funcNode
+	FnNameParts []string
 
 	// F is the function name.
 	F string
@@ -839,7 +843,7 @@ type WindowFuncExpr struct {
 
 // Restore implements Node interface.
 func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
-	writeFuncName(ctx, nil, n.F)
+	writeFuncName(ctx, n.FnNameParts, n.F)
 	ctx.WritePlain("(")
 	if n.Star {
 		ctx.WritePlain("*")
@@ -886,7 +890,7 @@ func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore WindowFuncExpr.Spec")
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Format formats the window function expression into a Writer.

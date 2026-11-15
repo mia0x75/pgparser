@@ -97,19 +97,20 @@ func columnRefWithIndirection(name string, ind *ast.List) ast.ExprNode {
 		return ast.NewColumnNameExpr("", "", name)
 	}
 	names := []string{name}
-	var indices []ast.Node
 	wildcard := false
-	for _, item := range ind.Items {
+	for i, item := range ind.Items {
 		switch v := item.(type) {
 		case *ast.String:
 			names = append(names, v.Str)
 		case *ast.A_Indices:
-			indices = append(indices, v)
+			// Preserve the ordered suffix after the first subscript instead of flattening fields into the base name.
+			base := columnRefWithIndirection(name, &ast.List{Items: ind.Items[:i]})
+			return withIndirection(base, &ast.List{Items: ind.Items[i:]})
 		case *ast.A_Star:
 			wildcard = true
 		}
 	}
-	if wildcard && len(indices) == 0 {
+	if wildcard {
 		wildcardField := &ast.WildCardField{}
 		switch len(names) {
 		case 1:
@@ -117,17 +118,14 @@ func columnRefWithIndirection(name string, ind *ast.List) ast.ExprNode {
 		case 2:
 			wildcardField.Schema = model.NewCIStr(names[0])
 			wildcardField.Table = model.NewCIStr(names[1])
+		case 3:
+			wildcardField.Catalog = model.NewCIStr(names[0])
+			wildcardField.Schema = model.NewCIStr(names[1])
+			wildcardField.Table = model.NewCIStr(names[2])
 		default:
-			wildcardField.Schema = model.NewCIStr(names[len(names)-2])
-			wildcardField.Table = model.NewCIStr(names[len(names)-1])
+			return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name), Indirection: ind}
 		}
 		return wildcardField
-	}
-	if len(indices) > 0 {
-		return &ast.A_Indirection{
-			Arg:         ast.NewColumnNameExpr("", "", name),
-			Indirection: &ast.List{Items: indices},
-		}
 	}
 	schema, table, col := "", "", names[0]
 	switch len(names) {
@@ -135,10 +133,16 @@ func columnRefWithIndirection(name string, ind *ast.List) ast.ExprNode {
 	case 2:
 		table = names[0]
 		col = names[1]
-	default:
+	case 3:
 		schema = names[0]
 		table = names[1]
 		col = names[2]
+	case 4:
+		expr := ast.NewColumnNameExpr(names[1], names[2], names[3])
+		expr.Name.Catalog = model.NewCIStr(names[0])
+		return expr
+	default:
+		return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name), Indirection: ind}
 	}
 	return ast.NewColumnNameExpr(schema, table, col)
 }
@@ -295,7 +299,8 @@ func groupingSetExprs(e ast.ExprNode) []ast.ExprNode {
 // windowFuncExpr returns the window expression of a function call.
 func windowFuncExpr(fn *ast.FuncCallExpr, spec *ast.WindowSpec) ast.ExprNode {
 	wf := &ast.WindowFuncExpr{F: fn.FnName.O, Args: fn.Args, Star: fn.Star,
-		Distinct: fn.Distinct, OrderBy: fn.OrderBy, Filter: fn.Filter, WithinGroup: fn.WithinGroup}
+		FnNameParts: fn.FnNameParts, Distinct: fn.Distinct, OrderBy: fn.OrderBy,
+		Filter: fn.Filter, WithinGroup: fn.WithinGroup}
 	if spec != nil {
 		wf.Spec = *spec
 	}

@@ -33,7 +33,7 @@ func (n *ResourceGroupVCPU) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WritePlainf("%d-%d", n.From, n.To)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -56,7 +56,7 @@ func restoreVCPUList(ctx *format.RestoreCtx, vcpu []*ResourceGroupVCPU) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreResourceGroupOptional(ctx *format.RestoreCtx, tp *int, state int) {
@@ -99,7 +99,7 @@ func (n *CreateResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	restoreResourceGroupOptional(ctx, n.ThreadPriority, n.State)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -139,7 +139,7 @@ func (n *AlterResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	restoreResourceGroupOptional(ctx, n.ThreadPriority, n.State)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -174,7 +174,7 @@ func (n *DropResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Force {
 		ctx.WriteKeyWord(" FORCE")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.

@@ -717,7 +717,7 @@ func Str2Priority(val string) PriorityEnum {
 func (n *PriorityEnum) Restore(ctx *format.RestoreCtx) error {
 	switch *n {
 	case NoPriority:
-		return nil
+		return ctx.Err()
 	case LowPriority:
 		ctx.WriteKeyWord("LOW_PRIORITY")
 	case HighPriority:
@@ -727,7 +727,7 @@ func (n *PriorityEnum) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return fmt.Errorf("undefined PriorityEnum Type[%d]", *n)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // PrimaryKeyName defines primary key name.

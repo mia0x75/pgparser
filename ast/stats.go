@@ -19,7 +19,7 @@ func (n *AnalyzeTableStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		return n.Relations.Restore(ctx)
 	}
-	return nil
+	return ctx.Err()
 }
 
 func (n *AnalyzeTableStmt) Accept(v Visitor) (Node, bool) {

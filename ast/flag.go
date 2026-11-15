@@ -30,6 +30,16 @@ func (f *flagSetter) Leave(in Node) (Node, bool) {
 		x.SetFlag(FlagHasParamMarker)
 	}
 	switch x := in.(type) {
+	case *A_Indirection:
+		flag := expressionFlags(x.Arg)
+		if x.Indirection != nil {
+			for _, item := range x.Indirection.Items {
+				if index, ok := item.(*A_Indices); ok {
+					flag |= expressionFlags(index.Lidx, index.Uidx)
+				}
+			}
+		}
+		x.SetFlag(flag)
 	case *AggregateFuncExpr:
 		f.aggregateFunc(x)
 	case *WindowFuncExpr:
@@ -158,7 +168,28 @@ func (f *flagSetter) windowFunc(x *WindowFuncExpr) {
 	for _, val := range x.Args {
 		flag |= val.GetFlag()
 	}
+	if x.Spec.PartitionBy != nil {
+		for _, item := range x.Spec.PartitionBy.Items {
+			flag |= item.Expr.GetFlag()
+		}
+	}
+	flag |= functionOptionFlags(nil, x.Spec.OrderBy, nil)
+	if x.Spec.Frame != nil {
+		for _, bound := range []*FrameBound{&x.Spec.Frame.Extent.Start, &x.Spec.Frame.Extent.End} {
+			flag |= expressionFlags(bound.Expr, bound.Unit)
+		}
+	}
 	x.SetFlag(flag | functionOptionFlags(x.Filter, x.OrderBy, x.WithinGroup))
+}
+
+func expressionFlags(nodes ...Node) uint64 {
+	var flag uint64
+	for _, n := range nodes {
+		if expr, ok := n.(ExprNode); ok && expr != nil {
+			flag |= expr.GetFlag()
+		}
+	}
+	return flag
 }
 
 func functionOptionFlags(filter ExprNode, orderBy, withinGroup *OrderByClause) uint64 {

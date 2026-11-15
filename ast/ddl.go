@@ -128,7 +128,7 @@ func (n *DatabaseOption) Restore(ctx *format.RestoreCtx) error {
 	default:
 		ctx.WriteString(n.Value)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // CreateSchemaStmt is a statement to create a schema.
@@ -157,7 +157,7 @@ func (n *CreateSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("AUTHORIZATION ")
 		return n.Authorization.Restore(ctx)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -207,7 +207,7 @@ func (n *CreateDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -264,7 +264,7 @@ func (n *AlterDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" SET TABLESPACE ")
 		ctx.WriteName(n.Tablespace)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -347,7 +347,7 @@ func (n *CommentStmt) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WriteString(*n.Comment)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // writeNameParts writes a dotted name, quoting every part on its own.
@@ -383,7 +383,7 @@ func (n *DropDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("IF EXISTS ")
 	}
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -464,7 +464,7 @@ func (n *IndexColName) Restore(ctx *format.RestoreCtx) error {
 	case 2:
 		ctx.WriteKeyWord(" NULLS LAST")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -556,7 +556,7 @@ func (n *ReferenceDef) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while splicing OnUpdate")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -666,7 +666,7 @@ func (n *OnDeleteOpt) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -704,7 +704,7 @@ func (n *OnUpdateOpt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("ON UPDATE ")
 		ctx.WriteKeyWord(n.ReferOpt.String())
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -789,7 +789,7 @@ func (n *ColumnOption) Restore(ctx *format.RestoreCtx) error {
 		case "initially immediate":
 			ctx.WriteKeyWord("INITIALLY IMMEDIATE")
 		default:
-			return nil
+			return ctx.Err()
 		}
 	case ColumnOptionPrimaryKey:
 		ctx.WriteKeyWord("PRIMARY KEY")
@@ -884,7 +884,7 @@ func (n *ColumnOption) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.New("An error occurred while splicing ColumnOption")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -950,7 +950,7 @@ func (n *IndexOption) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("COMMENT ")
 		ctx.WriteString(n.Comment)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1112,7 +1112,7 @@ func (n *Constraint) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" NO INHERIT")
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1179,7 +1179,7 @@ func (n *ColumnDef) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while splicing ColumnDef ColumnOption: [%v]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1383,7 +1383,7 @@ func (n *CreateTableStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1494,7 +1494,7 @@ func (n *DropTableStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1538,7 +1538,7 @@ func (n *DropFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore DropFunctionStmt.Name")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // droppedNames returns all dropped function names.
@@ -1591,7 +1591,7 @@ func (n *DropProcedureStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore DropProcedureStmt.Name")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // droppedNames returns all dropped procedure names.
@@ -1645,7 +1645,7 @@ func (n *DropTriggerStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore DropTriggerStmt.Table")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1686,7 +1686,7 @@ func (n *RenameTableStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "An error occurred while restore RenameTableStmt.TableToTables")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1734,7 +1734,7 @@ func (n *TableToTable) Restore(ctx *format.RestoreCtx) error {
 	if err := n.NewTable.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore TableToTable.NewTable")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1811,7 +1811,7 @@ func (n *CreateViewStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(n.CheckOption.String())
 		ctx.WriteKeyWord(" CHECK OPTION")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -1944,7 +1944,7 @@ func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2017,7 +2017,7 @@ func (n *DropIndexStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord("IF EXISTS ")
 	}
 	ctx.WriteName(n.IndexName)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2213,7 +2213,7 @@ func (n *TableOption) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.Errorf("invalid TableOption: %d", n.Tp)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // ColumnPositionType is the type for ColumnPosition.
@@ -2250,7 +2250,7 @@ func (n *ColumnPosition) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.Errorf("invalid ColumnPositionType: %d", n.Tp)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2461,7 +2461,7 @@ func (n *PartitionBoundSpec) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.New("invalid partition bound type")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2828,7 +2828,7 @@ func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 	if n.Behavior == DROP_CASCADE {
 		ctx.WriteKeyWord(" CASCADE")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -2963,7 +2963,7 @@ func (n *AlterTableStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore AlterTableStmt.Specs[%d]", i)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -3030,7 +3030,7 @@ func (n *TruncateTableStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteKeyWord(n.Behavior)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -3078,7 +3078,7 @@ func (n *PartitionDefinition) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain("= ")
 		ctx.WriteString(n.Comment)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // PartitionOptions specifies the partition options.
@@ -3142,5 +3142,5 @@ func (n *PartitionOptions) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(")")
 	}
 
-	return nil
+	return ctx.Err()
 }

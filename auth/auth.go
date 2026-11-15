@@ -26,7 +26,7 @@ func (user *UserIdentity) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteName(user.Hostname)
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // String converts UserIdentity to the format user@host.
@@ -55,7 +55,7 @@ func (role *RoleIdentity) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain("@")
 		ctx.WriteName(role.Hostname)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // String converts UserIdentity to the format user@host.

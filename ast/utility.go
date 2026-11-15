@@ -47,7 +47,7 @@ func (n *VacuumStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		return n.Relations.Restore(ctx)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -97,7 +97,7 @@ func (n *ReindexStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Name)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -137,7 +137,7 @@ func (n *ClusterStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -190,7 +190,7 @@ func (n *RefreshMatViewStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WriteKeyWord(" WITH DATA")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -214,7 +214,7 @@ type CheckpointStmt struct{ stmtNode }
 // Restore implements Node interface.
 func (n *CheckpointStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("CHECKPOINT")
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -237,7 +237,7 @@ type DiscardStmt struct {
 func (n *DiscardStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("DISCARD ")
 	ctx.WriteKeyWord(n.Mode)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -260,7 +260,7 @@ type LoadStmt struct {
 func (n *LoadStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("LOAD ")
 	ctx.WriteString(n.Path)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -295,7 +295,7 @@ func (n *SecurityLabelStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteName(n.ObjectName)
 	ctx.WriteKeyWord(" IS ")
 	ctx.WriteString(n.Label)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -329,7 +329,7 @@ func (n *ImportForeignSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 		ctx.WriteKeyWord(opt)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -355,7 +355,7 @@ func (n *ReassignOwnedStmt) Restore(ctx *format.RestoreCtx) error {
 	restoreRoleList(ctx, n.Roles)
 	ctx.WriteKeyWord(" TO ")
 	ctx.WriteName(n.NewRole.Username)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -382,7 +382,7 @@ func (n *DropOwnedStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Cascade {
 		ctx.WriteKeyWord(" CASCADE")
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -407,7 +407,7 @@ func (n *CallStmt) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Proc.Restore(ctx); err != nil {
 		return err
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -467,7 +467,7 @@ func (n *FetchCursorStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyWord("FROM ")
 	ctx.WriteName(n.Name)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -495,7 +495,7 @@ func (n *CloseCursorStmt) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WriteName(n.Name)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -518,7 +518,7 @@ type ListenStmt struct {
 func (n *ListenStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("LISTEN ")
 	ctx.WriteName(n.Channel)
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -546,7 +546,7 @@ func (n *NotifyStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(", ")
 		ctx.WriteString(n.Payload)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -574,7 +574,7 @@ func (n *UnlistenStmt) Restore(ctx *format.RestoreCtx) error {
 	} else {
 		ctx.WriteName(n.Channel)
 	}
-	return nil
+	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
@@ -682,12 +682,12 @@ func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotate(err, "COPY filter")
 		}
 	}
-	return nil
+	return ctx.Err()
 }
 
 func restoreUtilityOptions(ctx *format.RestoreCtx, options *List) error {
 	if options == nil {
-		return nil
+		return ctx.Err()
 	}
 	ctx.WritePlain(" (")
 	for i, item := range options.Items {
@@ -703,7 +703,7 @@ func restoreUtilityOptions(ctx *format.RestoreCtx, options *List) error {
 		}
 	}
 	ctx.WritePlain(")")
-	return nil
+	return ctx.Err()
 }
 
 // writeBoolKeyword writes TRUE or FALSE.
@@ -761,7 +761,7 @@ func restoreUtilityOption(ctx *format.RestoreCtx, option *DefElem) error {
 		ctx.WriteName(option.Defname)
 	}
 	if option.Arg == nil {
-		return nil
+		return ctx.Err()
 	}
 	ctx.WritePlain(" ")
 	if boolean, ok := option.Arg.(*Boolean); ok {
@@ -769,11 +769,11 @@ func restoreUtilityOption(ctx *format.RestoreCtx, option *DefElem) error {
 		// Boolean, while an explicit `HEADER true` arrives as a String. Always
 		// write the TRUE/FALSE form so both restore to the same text.
 		writeBoolKeyword(ctx, boolean.Boolval)
-		return nil
+		return ctx.Err()
 	}
 	if str, ok := option.Arg.(*String); ok && isBooleanOption(option.Defname) && isBoolLiteral(str.Str) {
 		writeBoolKeyword(ctx, boolLiteralValue(str.Str))
-		return nil
+		return ctx.Err()
 	}
 	if list, ok := option.Arg.(*List); ok {
 		ctx.WritePlain("(")
@@ -791,7 +791,7 @@ func restoreUtilityOption(ctx *format.RestoreCtx, option *DefElem) error {
 			}
 		}
 		ctx.WritePlain(")")
-		return nil
+		return ctx.Err()
 	}
 	return option.Arg.Restore(ctx)
 }
