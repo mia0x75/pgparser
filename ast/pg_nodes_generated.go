@@ -103,38 +103,6 @@ func (n *List) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-type IntList struct {
-	node
-	Items []int
-}
-
-func (n *IntList) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
-
-func (n *IntList) Accept(v Visitor) (Node, bool) {
-	node, skip := v.Enter(n)
-	if skip {
-		return v.Leave(node)
-	}
-	n = node.(*IntList)
-	return v.Leave(n)
-}
-
-type OidList struct {
-	node
-	Items []Oid
-}
-
-func (n *OidList) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
-
-func (n *OidList) Accept(v Visitor) (Node, bool) {
-	node, skip := v.Enter(n)
-	if skip {
-		return v.Leave(node)
-	}
-	n = node.(*OidList)
-	return v.Leave(n)
-}
-
 type String struct {
 	node
 	Str string
@@ -214,8 +182,6 @@ func (n *BitString) Accept(v Visitor) (Node, bool) {
 	n = node.(*BitString)
 	return v.Leave(n)
 }
-
-type NodeTag int
 
 type CreateStmt struct {
 	stmtNode
@@ -3831,39 +3797,6 @@ func (n *AlterExtensionContentsStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-type CreateTableSpaceStmt struct {
-	stmtNode
-	Tablespacename string
-	Owner          *RoleSpec
-	Location       string
-	Options        *List
-}
-
-func (n *CreateTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
-
-func (n *CreateTableSpaceStmt) Accept(v Visitor) (Node, bool) {
-	node, skip := v.Enter(n)
-	if skip {
-		return v.Leave(node)
-	}
-	n = node.(*CreateTableSpaceStmt)
-	if n.Owner != nil {
-		updated, ok := n.Owner.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Owner = updated.(*RoleSpec)
-	}
-	if n.Options != nil {
-		updated, ok := n.Options.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Options = updated.(*List)
-	}
-	return v.Leave(n)
-}
-
 type DropTableSpaceStmt struct {
 	stmtNode
 	Tablespacename string
@@ -3878,33 +3811,6 @@ func (n *DropTableSpaceStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(node)
 	}
 	n = node.(*DropTableSpaceStmt)
-	return v.Leave(n)
-}
-
-type AlterTableSpaceOptionsStmt struct {
-	stmtNode
-	Tablespacename string
-	Options        *List
-	IsReset        bool
-}
-
-func (n *AlterTableSpaceOptionsStmt) Restore(ctx *format.RestoreCtx) error {
-	return restorePGNode(ctx, n)
-}
-
-func (n *AlterTableSpaceOptionsStmt) Accept(v Visitor) (Node, bool) {
-	node, skip := v.Enter(n)
-	if skip {
-		return v.Leave(node)
-	}
-	n = node.(*AlterTableSpaceOptionsStmt)
-	if n.Options != nil {
-		updated, ok := n.Options.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Options = updated.(*List)
-	}
 	return v.Leave(n)
 }
 

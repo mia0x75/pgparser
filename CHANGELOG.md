@@ -19,4 +19,4 @@
 - 支持 `JSON_OBJECTAGG`、`JSON_ARRAYAGG` 等 JSON 聚合函数。
 - 支持 `TABLESAMPLE`、`REINDEX ... SYSTEM`、`MOVE FORWARD ALL`、`CREATE OR REPLACE RECURSIVE VIEW`。
 - 支持 `WHEN NOT MATCHED BY SOURCE THEN UPDATE`。
-- 新增基于 PostgreSQL 官方回归语料的解析诊断测试（默认跳过）。
+- 新增基于 PostgreSQL 官方回归语料的解析门禁（默认执行，已知缺口见 `tests/testdata/known_failures.txt`）。

@@ -1,15 +1,6 @@
 package postgres
 
-import (
-	"errors"
-	"fmt"
-)
-
-// Portable analogs of some common call errors.
-var (
-	ErrBadConn       = errors.New("connection was bad")
-	ErrMalformPacket = errors.New("malform packet error")
-)
+import "fmt"
 
 // SQLError records an error information, from executing SQL.
 type SQLError struct {

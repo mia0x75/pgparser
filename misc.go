@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/postgres"
 	"github.com/mia0x75/pgparser/types"
 )
@@ -66,13 +67,20 @@ func newDataType(name string, flen, decimal int) *types.FieldType {
 	return tp
 }
 
-// explainFormat returns the format name from EXPLAIN options.
-func explainFormat(options []string) string {
+// explainFormat returns the format name from EXPLAIN options. PostgreSQL
+// rejects a repeated FORMAT instead of silently keeping one of the values.
+func explainFormat(options []string) (string, error) {
+	format := "text"
+	seen := false
 	for _, opt := range options {
 		fields := strings.Fields(opt)
 		if len(fields) == 2 && strings.EqualFold(fields[0], "format") {
-			return fields[1]
+			if seen {
+				return "", errors.New("conflicting or redundant options")
+			}
+			seen = true
+			format = fields[1]
 		}
 	}
-	return "text"
+	return format, nil
 }

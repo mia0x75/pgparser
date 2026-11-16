@@ -23157,10 +23157,15 @@ yydefault:
 	case 709:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
+			options := explainOptionList(yyDollar[3].list)
+			format, err := explainFormat(options)
+			if err != nil {
+				yylex.Error(err.Error())
+			}
 			yyVAL.node = &ast.ExplainStmt{
 				Stmt:    yyDollar[5].node.(ast.StmtNode),
-				Options: explainOptionList(yyDollar[3].list),
-				Format:  explainFormat(explainOptionList(yyDollar[3].list)),
+				Options: options,
+				Format:  format,
 			}
 		}
 	case 710:

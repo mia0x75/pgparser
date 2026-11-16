@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mia0x75/pgparser/errors"
+	"github.com/mia0x75/pgparser/postgres"
 )
 
 func TestErrCode(t *testing.T) {
@@ -226,5 +227,19 @@ func TestErrorEqual(t *testing.T) {
 	}
 	if ErrorEqual(te3, te4) {
 		t.Fatal("ErrorEqual(te3, te4) is true")
+	}
+}
+
+func TestErrorConversionIsSilentWhenClassUnknown(t *testing.T) {
+	err := ClassParser.New(CodeUnknown, "unregistered class")
+	sqlErr := err.ToSQLError()
+	if sqlErr == nil {
+		t.Fatal("ToSQLError returned nil")
+	}
+	if sqlErr.State != postgres.DefaultPgState {
+		t.Fatalf("state = %q, want %q", sqlErr.State, postgres.DefaultPgState)
+	}
+	if sqlErr.Message != "unregistered class" {
+		t.Fatalf("message = %q, want %q", sqlErr.Message, "unregistered class")
 	}
 }

@@ -5170,10 +5170,15 @@ ExplainStmt:
 		}
 	| EXPLAIN '(' utility_option_list ')' ExplainableStmt
 		{
+			options := explainOptionList($3)
+			format, err := explainFormat(options)
+			if err != nil {
+				yylex.Error(err.Error())
+			}
 			$$ = &ast.ExplainStmt{
 				Stmt:    $5.(ast.StmtNode),
-				Options: explainOptionList($3),
-				Format:  explainFormat(explainOptionList($3)),
+				Options: options,
+				Format:  format,
 			}
 		}
 	;

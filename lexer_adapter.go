@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mia0x75/pgparser/ast"
 )
@@ -109,6 +110,15 @@ func (s *Scanner) applyLookahead(curToken, nextToken int) int {
 func (s *Scanner) Error(msg string) {
 	line := s.lexer.lineAt(s.lexer.pos)
 	near := s.lexer.contextAt(s.lexer.pos)
+	// Lexer and grammar-action errors arrive here already worded; keep that
+	// wording but add the same position detail as a syntax error.
+	if !strings.HasPrefix(msg, "syntax error") {
+		s.errs = append(s.errs, &ParseError{
+			Message:  fmt.Sprintf("%s at line %d near %q", msg, line, near),
+			Position: s.lexer.pos,
+		})
+		return
+	}
 	s.errs = append(s.errs, &ParseError{
 		Message:  fmt.Sprintf("syntax error at line %d near %q", line, near),
 		Position: s.lexer.pos,

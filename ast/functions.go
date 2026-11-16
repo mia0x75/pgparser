@@ -289,16 +289,11 @@ func writeFuncName(ctx *format.RestoreCtx, parts []string, dotted string) {
 		}
 		parts = strings.Split(dotted, ".")
 	}
-	for i, p := range parts {
-		if i > 0 {
-			ctx.WritePlain(".")
-		}
-		if len(parts) == 1 && !NeedsQuotedFuncName(p) {
-			ctx.WriteKeyWord(p)
-		} else {
-			ctx.WriteName(p)
-		}
+	if len(parts) == 1 && !NeedsQuotedFuncName(parts[0]) {
+		ctx.WriteKeyWord(parts[0])
+		return
 	}
+	writeNameParts(ctx, parts)
 }
 
 // NeedsQuotedFuncName reports whether a function-name part must be quoted on

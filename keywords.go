@@ -22,8 +22,8 @@ type Keyword struct {
 	Category KeywordCategory
 }
 
-// Keywords is the list of all PostgreSQL keywords.
-// The list is sorted by keyword name for binary search.
+// Keywords is the list of all PostgreSQL keywords, sorted by name. Lookups go
+// through keywordMap; the order is kept for readable diffs against kwlist.h.
 var Keywords = []Keyword{
 	{"abort", ABORT_P, UnreservedKeyword},
 	{"absent", ABSENT, UnreservedKeyword},

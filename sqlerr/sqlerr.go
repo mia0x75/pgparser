@@ -259,17 +259,16 @@ func (e *Error) ToSQLError() *postgres.SQLError {
 var defaultPgErrCode uint16
 
 func (e *Error) getPgErrCode() uint16 {
+	// Conversion must stay silent: callers convert errors on hot paths and
+	// cannot silence a library-owned logger.
 	codeMap, ok := ErrClassToPgCodes[e.class]
 	if !ok {
-		slog.Warn(fmt.Sprintf("Unknown error class: %v", e.class))
 		return defaultPgErrCode
 	}
-	code, ok := codeMap[e.code]
-	if !ok {
-		slog.Debug(fmt.Sprintf("Unknown error class: %v code: %v", e.class, e.code))
-		return defaultPgErrCode
+	if code, ok := codeMap[e.code]; ok {
+		return code
 	}
-	return code
+	return defaultPgErrCode
 }
 
 var (

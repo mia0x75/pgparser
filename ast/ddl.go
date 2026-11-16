@@ -341,11 +341,14 @@ func (n *CommentStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.New("operator comment has no name")
 		}
 		ctx.WriteKeyWord("OPERATOR ")
-		if len(n.ObjectName) > 1 {
-			writeNameParts(ctx, n.ObjectName[:len(n.ObjectName)-1])
+		// A schema qualifies the operator; the operator itself is a symbol and
+		// must stay unquoted, so it cannot go through a name writer.
+		last := len(n.ObjectName) - 1
+		if last > 0 {
+			writeNameParts(ctx, n.ObjectName[:last])
 			ctx.WritePlain(".")
 		}
-		ctx.WritePlain(n.ObjectName[len(n.ObjectName)-1])
+		ctx.WritePlain(n.ObjectName[last])
 		ctx.WritePlain(n.Suffix)
 	default:
 		ctx.WriteKeyWord(strings.ToUpper(n.ObjectType) + " ")
