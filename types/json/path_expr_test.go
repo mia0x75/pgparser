@@ -9,10 +9,10 @@ func TestContainsAnyAsterisk(t *testing.T) {
 		exprString        string
 		containsAsterisks bool
 	}{
-		{"$.a[b]", false},
+		{"$.a[0]", false},
 		{"$.a[*]", true},
-		{"$.*[b]", true},
-		{"$**.a[b]", true},
+		{"$.*[0]", true},
+		{"$**.a[0]", true},
 	}
 	for _, tt := range tests {
 		pe, err := ParseJSONPathExpr(tt.exprString)
@@ -22,6 +22,34 @@ func TestContainsAnyAsterisk(t *testing.T) {
 		if pe.flags.containsAnyAsterisk() != tt.containsAsterisks {
 			t.Fatalf("got %#v, want %#v", pe.flags.containsAnyAsterisk(), tt.containsAsterisks)
 		}
+	}
+}
+
+func TestPathRejectsMalformedSuffixesAndUnicode(t *testing.T) {
+	for _, path := range []string{
+		`$.a!`, `$.a[`, `$.a]junk`, `$.a[b]`, `$.*[b]`,
+		`$."\u123"`, `$."\u"`, `$."\u12xz"`, `$."\uD800"`, `$."\uDC00"`,
+		`$."\uD800\u0041"`, `$."\uD800\uDC0"`,
+	} {
+		t.Run(path, func(t *testing.T) {
+			if _, err := ParseJSONPathExpr(path); err == nil {
+				t.Fatalf("accepted malformed path %q", path)
+			}
+		})
+	}
+	for _, tc := range []struct{ path, key string }{
+		{`$."\uD83D\uDE00"`, "😀"},
+		{`$."a\uD83D\uDE00b\u0041"`, "a😀bA"},
+		{`$."\uFFFF"`, "\uFFFF"},
+		{`$."\q"`, "q"},
+		{`$.a  `, "a"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			pe, err := ParseJSONPathExpr(tc.path)
+			if err != nil || len(pe.legs) != 1 || pe.legs[0].dotKey != tc.key {
+				t.Fatalf("decoded path = %#v, %v", pe, err)
+			}
+		})
 	}
 }
 
@@ -56,4 +84,27 @@ func TestValidatePathExpr(t *testing.T) {
 			t.Fatal("got nil, want error")
 		}
 	}
+}
+
+func FuzzJSONPathExpression(f *testing.F) {
+	for _, path := range []string{`$.a!`, `$."\u123"`, `$."\uD800"`, `$."\uD83D\uDE00"`, `$."*"`, `$.*`} {
+		f.Add(path)
+	}
+	f.Fuzz(func(t *testing.T, path string) {
+		pe, err := ParseJSONPathExpr(path)
+		if err != nil {
+			return
+		}
+		if len(pe.legs) > 0 {
+			_, pe = pe.popOneLeg()
+			var wildcard bool
+			for _, leg := range pe.legs {
+				wildcard = wildcard || leg.typ == pathLegKeyAsterisk || leg.typ == pathLegDoubleAsterisk ||
+					(leg.typ == pathLegIndex && leg.arrayIndex == arrayIndexAsterisk)
+			}
+			if pe.ContainsAnyAsterisk() != wildcard {
+				t.Fatal("wildcard flag does not match remaining path")
+			}
+		}
+	})
 }

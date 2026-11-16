@@ -2,6 +2,7 @@ package types
 
 import (
 	"io"
+	"math"
 	"testing"
 
 	"github.com/mia0x75/pgparser/postgres"
@@ -132,6 +133,33 @@ func TestRoundFloat(t *testing.T) {
 		if f != tt.Expect {
 			t.Fatalf("got %#v, want %#v", f, tt.Expect)
 		}
+	}
+}
+
+func TestRoundFloatBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		input, want float64
+	}{
+		{"below_half", math.Nextafter(0.5, 0), 0},
+		{"positive_half", 0.5, 1},
+		{"negative_half", -0.5, -1},
+		{"negative_near_half", math.Nextafter(-0.5, 0), math.Copysign(0, -1)},
+		{"negative_zero", math.Copysign(0, -1), math.Copysign(0, -1)},
+		{"large_odd", 4503599627370497, 4503599627370497},
+		{"large_negative_odd", -4503599627370497, -4503599627370497},
+		{"large_even", 4503599627370498, 4503599627370498},
+		{"infinity", math.Inf(1), math.Inf(1)},
+		{"negative_infinity", math.Inf(-1), math.Inf(-1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := RoundFloat(tc.input); got != tc.want || math.Signbit(got) != math.Signbit(tc.want) {
+				t.Fatalf("RoundFloat(%v) = %v, want %v", tc.input, got, tc.want)
+			}
+		})
+	}
+	if !math.IsNaN(RoundFloat(math.NaN())) {
+		t.Fatal("NaN did not stay NaN")
 	}
 }
 

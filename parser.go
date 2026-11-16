@@ -21897,40 +21897,22 @@ yydefault:
 	case 539:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.node = &ast.DropStmt{
-				Objects:    tableNamesFromNameList(yyDollar[3].list),
-				RemoveType: int(ast.OBJECT_FUNCTION),
-				Behavior:   int(yyDollar[4].ival),
-			}
+			yyVAL.node = dropObjectStmt(int(ast.OBJECT_FUNCTION), tableNamesFromNameList(yyDollar[3].list), false, int(yyDollar[4].ival))
 		}
 	case 540:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.node = &ast.DropStmt{
-				Objects:    tableNamesFromNameList(yyDollar[5].list),
-				RemoveType: int(ast.OBJECT_FUNCTION),
-				Behavior:   int(yyDollar[6].ival),
-				Missing_ok: true,
-			}
+			yyVAL.node = dropObjectStmt(int(ast.OBJECT_FUNCTION), tableNamesFromNameList(yyDollar[5].list), true, int(yyDollar[6].ival))
 		}
 	case 541:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.node = &ast.DropStmt{
-				Objects:    tableNamesFromNameList(yyDollar[3].list),
-				RemoveType: int(ast.OBJECT_PROCEDURE),
-				Behavior:   int(yyDollar[4].ival),
-			}
+			yyVAL.node = dropObjectStmt(int(ast.OBJECT_PROCEDURE), tableNamesFromNameList(yyDollar[3].list), false, int(yyDollar[4].ival))
 		}
 	case 542:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.node = &ast.DropStmt{
-				Objects:    tableNamesFromNameList(yyDollar[5].list),
-				RemoveType: int(ast.OBJECT_PROCEDURE),
-				Behavior:   int(yyDollar[6].ival),
-				Missing_ok: true,
-			}
+			yyVAL.node = dropObjectStmt(int(ast.OBJECT_PROCEDURE), tableNamesFromNameList(yyDollar[5].list), true, int(yyDollar[6].ival))
 		}
 	case 543:
 		yyDollar = yyS[yypt-4 : yypt+1]
@@ -22471,7 +22453,7 @@ yydefault:
 			sel := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
 				Fields: &ast.FieldList{Fields: []*ast.SelectField{
-					{Expr: &ast.ColumnNameExpr{Name: &ast.ColumnName{Name: model.NewCIStr("*")}}},
+					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
 					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
@@ -22505,7 +22487,7 @@ yydefault:
 			sel := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
 				Fields: &ast.FieldList{Fields: []*ast.SelectField{
-					{Expr: &ast.ColumnNameExpr{Name: &ast.ColumnName{Name: model.NewCIStr("*")}}},
+					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
 					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
@@ -25467,7 +25449,7 @@ yydefault:
 	case 1072:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.list = yyDollar[3].list
+			yyVAL.list = makeList(&ast.String{Str: qualifiedOperatorName(yyDollar[3].list)})
 		}
 	case 1073:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -25477,7 +25459,7 @@ yydefault:
 	case 1074:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.list = yyDollar[3].list
+			yyVAL.list = makeList(&ast.String{Str: qualifiedOperatorName(yyDollar[3].list)})
 		}
 	case 1075:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -26407,7 +26389,14 @@ yydefault:
 	case 1226:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.node = &ast.ByItem{Expr: yyDollar[1].expr}
+			item := &ast.ByItem{Expr: yyDollar[1].expr, UseOp: operatorName(yyDollar[3].list)}
+			switch yyDollar[4].ival {
+			case int64(ast.SORTBY_NULLS_FIRST):
+				item.NullOrder = 1
+			case int64(ast.SORTBY_NULLS_LAST):
+				item.NullOrder = 2
+			}
+			yyVAL.node = item
 		}
 	case 1227:
 		yyDollar = yyS[yypt-3 : yypt+1]
@@ -26940,12 +26929,12 @@ yydefault:
 	case 1325:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.expr = &ast.BetweenExpr{Expr: yyDollar[1].expr, Left: yyDollar[4].expr, Right: yyDollar[6].expr}
+			yyVAL.expr = &ast.BetweenExpr{Expr: yyDollar[1].expr, Left: yyDollar[4].expr, Right: yyDollar[6].expr, Symmetric: true}
 		}
 	case 1326:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		{
-			yyVAL.expr = &ast.BetweenExpr{Expr: yyDollar[1].expr, Left: yyDollar[5].expr, Right: yyDollar[7].expr, Not: true}
+			yyVAL.expr = &ast.BetweenExpr{Expr: yyDollar[1].expr, Left: yyDollar[5].expr, Right: yyDollar[7].expr, Not: true, Symmetric: true}
 		}
 	case 1327:
 		yyDollar = yyS[yypt-5 : yypt+1]
@@ -26970,11 +26959,13 @@ yydefault:
 	case 1331:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
+			name := operatorName(yyDollar[2].list)
 			yyVAL.expr = &ast.CompareSubqueryExpr{
-				L:   yyDollar[1].expr,
-				Op:  compareOpcode(operatorName(yyDollar[2].list)),
-				R:   &ast.SubqueryExpr{Query: yyDollar[4].node.(ast.ResultSetNode)},
-				All: yyDollar[3].ival == int64(ast.ALL_SUBLINK),
+				L:      yyDollar[1].expr,
+				Op:     compareOpcode(name),
+				OpName: name,
+				R:      &ast.SubqueryExpr{Query: yyDollar[4].node.(ast.ResultSetNode)},
+				All:    yyDollar[3].ival == int64(ast.ALL_SUBLINK),
 			}
 		}
 	case 1332:
@@ -27074,7 +27065,7 @@ yydefault:
 	case 1349:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.list = yyDollar[3].list
+			yyVAL.list = makeList(&ast.String{Str: qualifiedOperatorName(yyDollar[3].list)})
 		}
 	case 1350:
 		yyDollar = yyS[yypt-1 : yypt+1]
@@ -31536,22 +31527,22 @@ yydefault:
 	case 2057:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.node = dropFunctionStmt(false, yyDollar[3].list)
+			yyVAL.node = dropFunctionStmt(false, yyDollar[3].list, int(yyDollar[4].ival))
 		}
 	case 2058:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.node = dropFunctionStmt(true, yyDollar[5].list)
+			yyVAL.node = dropFunctionStmt(true, yyDollar[5].list, int(yyDollar[6].ival))
 		}
 	case 2059:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.node = dropProcedureStmt(false, yyDollar[3].list)
+			yyVAL.node = dropProcedureStmt(false, yyDollar[3].list, int(yyDollar[4].ival))
 		}
 	case 2060:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.node = dropProcedureStmt(true, yyDollar[5].list)
+			yyVAL.node = dropProcedureStmt(true, yyDollar[5].list, int(yyDollar[6].ival))
 		}
 	case 2061:
 		yyDollar = yyS[yypt-4 : yypt+1]

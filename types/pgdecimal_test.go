@@ -2,7 +2,9 @@ package types
 
 import (
 	"bytes"
+	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"testing"
 )
@@ -119,6 +121,46 @@ func TestPgDecimal_FromFloat(t *testing.T) {
 		if string(str) != tt.s {
 			t.Errorf("got %#v, want %#v", string(str), tt.s)
 		}
+	}
+}
+
+func TestPgDecimalReuse(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		load func(*testing.T, *PgDecimal)
+		want string
+	}{
+		{"string", func(t *testing.T, d *PgDecimal) {
+			if err := d.FromString([]byte("5")); err != nil {
+				t.Fatal(err)
+			}
+		}, "5"},
+		{"int", func(_ *testing.T, d *PgDecimal) { d.FromInt(7) }, "7"},
+		{"min_int", func(_ *testing.T, d *PgDecimal) { d.FromInt(math.MinInt64) }, "-9223372036854775808"},
+		{"uint", func(_ *testing.T, d *PgDecimal) { d.FromUint(math.MaxUint64) }, "18446744073709551615"},
+		{"float", func(t *testing.T, d *PgDecimal) {
+			if err := d.FromFloat64(2.5); err != nil {
+				t.Fatal(err)
+			}
+		}, "2.5"},
+		{"zero", func(_ *testing.T, d *PgDecimal) { d.FromInt(0) }, "0"},
+		{"fraction", func(t *testing.T, d *PgDecimal) {
+			if err := d.FromString([]byte("0.25")); err != nil {
+				t.Fatal(err)
+			}
+		}, "0.25"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reused := NewDecFromStringForTest("-123456789123456789123456789.123456789123456789")
+			tc.load(t, reused)
+			fresh := NewDecFromStringForTest(tc.want)
+			key, err := reused.ToHashKey()
+			wantKey, wantErr := fresh.ToHashKey()
+			if reused.String() != tc.want || reused.Compare(fresh) != 0 || reused.IsZero() != fresh.IsZero() ||
+				err != nil || wantErr != nil || !bytes.Equal(key, wantKey) {
+				t.Fatalf("reused got %s, want %s; hash errors %v, %v", reused, tc.want, err, wantErr)
+			}
+		})
 	}
 }
 
@@ -606,6 +648,10 @@ func TestPgDecimal_ToBinFromBin(t *testing.T) {
 		{"000000000.01", 7, 3, "0.010", nil},
 		{"123.4", 10, 2, "123.40", nil},
 		{"1000", 3, 0, "0", ErrOverflow},
+		{".99", 1, 1, "0.9", ErrTruncated},
+		{"-.9999", 3, 3, "-0.999", ErrTruncated},
+		{".999999", 5, 5, "0.99999", ErrTruncated},
+		{"-.99999999", 7, 7, "-0.9999999", ErrTruncated},
 	}
 	for _, ca := range tests {
 		var dec PgDecimal
@@ -643,6 +689,145 @@ func TestPgDecimal_ToBinFromBin(t *testing.T) {
 		if !ErrBadNumber.Equal(err) {
 			t.Fatalf("got error %v, want ErrBadNumber", err)
 		}
+	}
+}
+
+func TestPgDecimalBinaryParameters(t *testing.T) {
+	for _, tc := range []struct{ precision, frac int }{
+		{-1, 0}, {10, -1}, {1, 2}, {82, 0}, {81, 1}, {81, 80},
+		{math.MaxInt, 0}, {1, math.MaxInt}, {math.MaxInt, math.MaxInt}, {math.MinInt, 0}, {1, math.MinInt},
+	} {
+		t.Run(fmt.Sprintf("precision=%d/frac=%d", tc.precision, tc.frac), func(t *testing.T) {
+			dec := NewDecFromInt(-1)
+			if bin, err := dec.ToBin(tc.precision, tc.frac); err != ErrBadNumber || bin != nil {
+				t.Fatalf("ToBin got %x, %v", bin, err)
+			}
+			if _, err := dec.FromBin([]byte{0x81}, tc.precision, tc.frac); err != ErrBadNumber || !dec.IsZero() {
+				t.Fatalf("FromBin got %s, %v", dec, err)
+			}
+		})
+	}
+	dec := NewDecFromInt(-1)
+	if _, err := dec.FromBin([]byte{0x80}, 0, 0); err != ErrBadNumber || !dec.IsZero() {
+		t.Fatalf("FromBin inferred unknown precision: %s, %v", dec, err)
+	}
+}
+
+func TestPgDecimalBinaryRoundTrip(t *testing.T) {
+	var reused PgDecimal
+	for _, tc := range []struct {
+		name, value     string
+		precision, frac int
+	}{
+		{"negative", "-1234567890.1234", 14, 4},
+		{"positive", "5.00", 12, 2},
+		{"fraction", ".12345678", 8, 8},
+		{"max_integer", strings.Repeat("9", 81), 81, 0},
+		{"max_fraction", "." + strings.Repeat("9", 81), 81, 81},
+		{"split_capacity", strings.Repeat("9", 72) + ".123456789", 81, 9},
+		{"partial_capacity", strings.Repeat("9", 72) + ".12345678", 80, 8},
+		{"zero", "0", 10, 0},
+		{"zero_fraction", "-0.000", 3, 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dec := NewDecFromStringForTest(tc.value)
+			bin, err := dec.ToBin(tc.precision, tc.frac)
+			if err != nil {
+				t.Fatal(err)
+			}
+			original := bytes.Clone(bin)
+			n, err := reused.FromBin(append(bytes.Clone(bin), 0xde, 0xad), tc.precision, tc.frac)
+			if err != nil || n != len(bin) || reused.Compare(dec) != 0 || reused.IsNegative() != dec.IsNegative() {
+				t.Fatalf("decode got %s, size=%d, error=%v; want %s", &reused, n, err, dec)
+			}
+			out, err := reused.ToBin(tc.precision, tc.frac)
+			if err != nil || !bytes.Equal(out, original) {
+				t.Fatalf("re-encode got %x, %v", out, err)
+			}
+			inferred, err := dec.ToBin(0, 0)
+			precision, frac := dec.PrecisionAndFrac()
+			want, wantErr := dec.ToBin(precision, frac)
+			if err != nil || wantErr != nil || !bytes.Equal(inferred, want) {
+				t.Fatal("inferred encoding differs")
+			}
+			for size := 0; size < len(bin); size++ {
+				reused.FromInt(-123)
+				if _, err := reused.FromBin(bin[:size], tc.precision, tc.frac); err != ErrBadNumber || !reused.IsZero() {
+					t.Fatalf("truncation at %d got %s, %v", size, &reused, err)
+				}
+			}
+			if !bytes.Equal(bin, original) {
+				t.Fatal("input modified")
+			}
+		})
+	}
+}
+
+func TestPgDecimalBinaryInvalidDigits(t *testing.T) {
+	t.Run("fraction_scaling_overflow", func(t *testing.T) {
+		dec := NewDecFromInt(-123)
+		if _, err := dec.FromBin([]byte{0x80 | 43}, 1, 1); err != ErrBadNumber || !dec.IsZero() {
+			t.Fatalf("overflowing fraction got %s, %v", dec, err)
+		}
+	})
+	for digits := 1; digits <= digitsPerWord; digits++ {
+		for _, frac := range []int{0, digits} {
+			for _, negative := range []bool{false, true} {
+				t.Run(fmt.Sprintf("digits=%d/frac=%d/negative=%v", digits, frac, negative), func(t *testing.T) {
+					bin := make([]byte, decimalBinSize(digits, frac))
+					word := powers10[digits]
+					if negative {
+						word = ^word
+					}
+					writeWord(bin, word, len(bin))
+					bin[0] ^= 0x80
+					dec := NewDecFromInt(-123)
+					if _, err := dec.FromBin(bin, digits, frac); err != ErrBadNumber || !dec.IsZero() || dec.IsNegative() {
+						t.Fatalf("invalid digits got %s, %v", dec, err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestPgDecimalBinaryCompatibility(t *testing.T) {
+	t.Run("negative_zero", func(t *testing.T) {
+		dec := NewDecFromInt(-123)
+		if _, err := dec.FromBin([]byte{0x7f}, 1, 1); err != nil || !dec.IsZero() || dec.IsNegative() {
+			t.Fatalf("negative zero got %s, %v", dec, err)
+		}
+		if key, err := dec.ToHashKey(); err != nil || !bytes.Equal(key, []byte{0x80}) {
+			t.Fatalf("negative zero hash got %x, %v", key, err)
+		}
+	})
+	for _, tc := range []struct {
+		value string
+		bin   []byte
+	}{
+		{"1234567890.1234", []byte{0x81, 0x0d, 0xfb, 0x38, 0xd2, 0x04, 0xd2}},
+		{"-1234567890.1234", []byte{0x7e, 0xf2, 0x04, 0xc7, 0x2d, 0xfb, 0x2d}},
+	} {
+		t.Run(tc.value, func(t *testing.T) {
+			dec := NewDecFromStringForTest(tc.value)
+			bin, err := dec.ToBin(14, 4)
+			if err != nil || !bytes.Equal(bin, tc.bin) {
+				t.Fatalf("encoding = %x, %v", bin, err)
+			}
+			if _, err := dec.FromBin(tc.bin, 14, 4); err != nil || dec.String() != tc.value {
+				t.Fatalf("decoding = %s, %v", dec, err)
+			}
+		})
+	}
+	for _, prefix := range []string{"", "-"} {
+		t.Run("high_scale_"+prefix, func(t *testing.T) {
+			value := prefix + "." + strings.Repeat("123456789", 4)
+			key, err := NewDecFromStringForTest(value).ToHashKey()
+			other, otherErr := NewDecFromStringForTest(value + strings.Repeat("0", 36)).ToHashKey()
+			if err != nil || otherErr != nil || !bytes.Equal(key, other) {
+				t.Fatalf("hash errors %v, %v", err, otherErr)
+			}
+		})
 	}
 }
 

@@ -987,6 +987,18 @@ func dropObjectStmt(removeType int, objects []*ast.TableName, ifExists bool, beh
 				IndexName: objects[0].Name.O,
 			}
 		}
+	case ast.OBJECT_FUNCTION:
+		stmt := &ast.DropFunctionStmt{IfExists: ifExists, Names: objects, Behavior: ast.DropBehavior(behavior)}
+		if len(objects) > 0 {
+			stmt.Name = objects[0]
+		}
+		return stmt
+	case ast.OBJECT_PROCEDURE:
+		stmt := &ast.DropProcedureStmt{IfExists: ifExists, Names: objects, Behavior: ast.DropBehavior(behavior)}
+		if len(objects) > 0 {
+			stmt.Name = objects[0]
+		}
+		return stmt
 	}
 	return &ast.DropStmt{
 		Objects:    objects,
@@ -1160,29 +1172,52 @@ func tableNameFromSource(n ast.Node) *ast.TableName {
 }
 
 // dropFunctionStmt returns the drop function statement of a function list.
-func dropFunctionStmt(ifExists bool, l *ast.List) ast.Node {
+func dropFunctionStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
 	names := objectWithArgsNames(l)
 	if len(names) == 0 {
 		return &ast.DropFunctionStmt{IfExists: ifExists}
 	}
 	return &ast.DropFunctionStmt{
-		IfExists: ifExists,
-		Name:     names[0],
-		Names:    names,
+		IfExists:  ifExists,
+		Name:      names[0],
+		Names:     names,
+		Arguments: routineArguments(l),
+		Behavior:  ast.DropBehavior(behavior),
 	}
 }
 
 // dropProcedureStmt returns the drop procedure statement of a function list.
-func dropProcedureStmt(ifExists bool, l *ast.List) ast.Node {
+func dropProcedureStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
 	names := objectWithArgsNames(l)
 	if len(names) == 0 {
 		return &ast.DropProcedureStmt{IfExists: ifExists}
 	}
 	return &ast.DropProcedureStmt{
-		IfExists: ifExists,
-		Name:     names[0],
-		Names:    names,
+		IfExists:  ifExists,
+		Name:      names[0],
+		Names:     names,
+		Arguments: routineArguments(l),
+		Behavior:  ast.DropBehavior(behavior),
 	}
+}
+
+func routineArguments(l *ast.List) []*ast.List {
+	args := make([]*ast.List, 0, len(l.Items))
+	for _, item := range l.Items {
+		obj, ok := item.(*ast.ObjectWithArgs)
+		if !ok {
+			continue
+		}
+		var signature *ast.List
+		if !obj.ArgsUnspecified {
+			signature = obj.Objargs
+			if signature == nil {
+				signature = &ast.List{}
+			}
+		}
+		args = append(args, signature)
+	}
+	return args
 }
 
 // objectWithArgsNames returns the names of an object list.
@@ -1209,6 +1244,12 @@ func objectWithArgsNames(l *ast.List) []*ast.TableName {
 			continue
 		case 1:
 			names = append(names, &ast.TableName{Name: model.NewCIStr(parts[0])})
+		case 3:
+			names = append(names, &ast.TableName{
+				Catalog: model.NewCIStr(parts[0]),
+				Schema:  model.NewCIStr(parts[1]),
+				Name:    model.NewCIStr(parts[2]),
+			})
 		default:
 			names = append(names, &ast.TableName{
 				Schema: model.NewCIStr(parts[0]),

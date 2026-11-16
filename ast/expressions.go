@@ -66,7 +66,8 @@ type BetweenExpr struct {
 	// Right is the expression for maximum value in the range.
 	Right ExprNode
 	// Not is true, the expression is "not between and".
-	Not bool
+	Not       bool
+	Symmetric bool
 }
 
 // Restore implements Node interface.
@@ -78,6 +79,9 @@ func (n *BetweenExpr) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyWord(" NOT BETWEEN ")
 	} else {
 		ctx.WriteKeyWord(" BETWEEN ")
+	}
+	if n.Symmetric {
+		ctx.WriteKeyWord("SYMMETRIC ")
 	}
 	if err := n.Left.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore BetweenExpr.Left")
@@ -96,6 +100,9 @@ func (n *BetweenExpr) Format(w io.Writer) {
 		_, _ = fmt.Fprint(w, " NOT BETWEEN ")
 	} else {
 		_, _ = fmt.Fprint(w, " BETWEEN ")
+	}
+	if n.Symmetric {
+		_, _ = fmt.Fprint(w, "SYMMETRIC ")
 	}
 	n.Left.Format(w)
 	_, _ = fmt.Fprint(w, " AND ")
@@ -461,7 +468,8 @@ type CompareSubqueryExpr struct {
 	// L is the left expression
 	L ExprNode
 	// Op is the comparison opcode.
-	Op opcode.Op
+	Op     opcode.Op
+	OpName string
 	// R is the subquery for right expression, may be rewritten to other type of expression.
 	R ExprNode
 	// All is true, we should compare all records in subquery.
@@ -473,8 +481,17 @@ func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.L.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore CompareSubqueryExpr.L")
 	}
-	if err := n.Op.Restore(ctx); err != nil {
+	pad := ctx.Flags.HasSpacesAroundBinaryOperationFlag() || wordOperator(n.OpName) || endsWithStar(n.L)
+	if pad {
+		ctx.WritePlain(" ")
+	}
+	if n.OpName != "" {
+		ctx.WritePlain(n.OpName)
+	} else if err := n.Op.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore CompareSubqueryExpr.Op")
+	}
+	if pad {
+		ctx.WritePlain(" ")
 	}
 	if n.All {
 		ctx.WriteKeyWord("ALL ")
@@ -490,6 +507,12 @@ func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 // Format the ExprNode into a Writer.
 func (n *CompareSubqueryExpr) Format(w io.Writer) {
 	n.L.Format(w)
+	_, _ = fmt.Fprint(w, " ")
+	if n.OpName != "" {
+		_, _ = fmt.Fprint(w, n.OpName)
+	} else {
+		n.Op.Format(w)
+	}
 	if n.All {
 		_, _ = fmt.Fprint(w, " ALL ")
 	} else {
@@ -540,10 +563,6 @@ func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
 	if n.Table.O != "" {
 		ctx.WriteName(n.Table.O)
 		ctx.WritePlain(".")
-	}
-	if n.Name.O == "*" {
-		ctx.WritePlain("*")
-		return ctx.Err()
 	}
 	ctx.WriteName(n.Name.O)
 	return ctx.Err()

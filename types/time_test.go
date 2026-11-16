@@ -209,6 +209,32 @@ func TestConvertTimeZone(t *testing.T) {
 	}
 }
 
+func TestFromGoTimeRounding(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		input time.Time
+		want  types.PgTime
+	}{
+		{"day_carry", time.Date(2026, 1, 1, 23, 59, 59, 999999500, time.UTC), types.FromDate(2026, 1, 2, 0, 0, 0, 0)},
+		{"below_carry", time.Date(2026, 1, 1, 23, 59, 59, 999999499, time.UTC), types.FromDate(2026, 1, 1, 23, 59, 59, 999999)},
+		{"month_carry", time.Date(2026, 1, 31, 23, 59, 59, 999999500, time.UTC), types.FromDate(2026, 2, 1, 0, 0, 0, 0)},
+		{"year_carry", time.Date(2026, 12, 31, 23, 59, 59, 999999500, time.UTC), types.FromDate(2027, 1, 1, 0, 0, 0, 0)},
+		{"half_microsecond", time.Date(2026, 6, 15, 10, 30, 5, 499999500, time.UTC), types.FromDate(2026, 6, 15, 10, 30, 5, 500000)},
+		{"fraction_up", time.Date(2026, 6, 15, 10, 30, 5, 123456700, time.UTC), types.FromDate(2026, 6, 15, 10, 30, 5, 123457)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := types.FromGoTime(tc.input)
+			if got != tc.want {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+			out, err := got.GoTime(time.UTC)
+			if err != nil || !out.Equal(tc.input.Round(time.Microsecond)) {
+				t.Fatalf("roundtrip got %v, %v", out, err)
+			}
+		})
+	}
+}
+
 func TestTruncateOverflowPostgreSQLTime(t *testing.T) {
 	v := types.MaxTime + 1
 	res, err := types.TruncateOverflowPostgreSQLTime(v)

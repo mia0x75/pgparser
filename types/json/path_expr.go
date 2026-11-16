@@ -34,6 +34,8 @@ const (
 	pathLegIndex pathLegType = 0x02
 	// pathLegDoubleAsterisk indicates the path leg with form '**'.
 	pathLegDoubleAsterisk pathLegType = 0x03
+	// Quoted "*" must remain a key rather than selecting every member.
+	pathLegKeyAsterisk pathLegType = 0x04
 )
 
 // pathLeg is only used by PathExpression.
@@ -77,7 +79,7 @@ func (pe PathExpression) popOneLeg() (pathLeg, PathExpression) {
 		switch {
 		case leg.typ == pathLegIndex && leg.arrayIndex == -1:
 			newPe.flags |= pathExpressionContainsAsterisk
-		case leg.typ == pathLegKey && leg.dotKey == "*":
+		case leg.typ == pathLegKeyAsterisk:
 			newPe.flags |= pathExpressionContainsAsterisk
 		case leg.typ == pathLegDoubleAsterisk:
 			newPe.flags |= pathExpressionContainsDoubleAsterisk
@@ -121,6 +123,10 @@ func ParseJSONPathExpr(pathExpr string) (pe PathExpression, err error) {
 		err = ErrInvalidJSONPath.GenWithStackByArgs(pathExpr)
 		return
 	}
+	if len(indices) > 0 && strings.TrimFunc(pathExprSuffix[indices[len(indices)-1][1]:], isBlank) != "" {
+		err = ErrInvalidJSONPath.GenWithStackByArgs(pathExpr)
+		return
+	}
 
 	pe.legs = make([]pathLeg, 0, len(indices))
 	pe.flags = pathExpressionFlag(0)
@@ -159,6 +165,8 @@ func ParseJSONPathExpr(pathExpr string) (pe PathExpression, err error) {
 			var key = strings.TrimFunc(pathExprSuffix[start+1:end], isBlank)
 			if len(key) == 1 && key[0] == '*' {
 				pe.flags |= pathExpressionContainsAsterisk
+				pe.legs = append(pe.legs, pathLeg{typ: pathLegKeyAsterisk})
+				continue
 			} else if key[0] == '"' {
 				// We need unquote the origin string.
 				if key, err = unquoteString(key[1 : len(key)-1]); err != nil {

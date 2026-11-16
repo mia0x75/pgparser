@@ -4092,37 +4092,19 @@ DropStmt:
 	/* DROP FUNCTION / PROCEDURE / ROUTINE / AGGREGATE */
 	| DROP FUNCTION any_name_list opt_drop_behavior
 		{
-			$$ = &ast.DropStmt{
-				Objects:    tableNamesFromNameList($3),
-				RemoveType: int(ast.OBJECT_FUNCTION),
-				Behavior:   int($4),
-			}
+			$$ = dropObjectStmt(int(ast.OBJECT_FUNCTION), tableNamesFromNameList($3), false, int($4))
 		}
 	| DROP FUNCTION IF_P EXISTS any_name_list opt_drop_behavior
 		{
-			$$ = &ast.DropStmt{
-				Objects:    tableNamesFromNameList($5),
-				RemoveType: int(ast.OBJECT_FUNCTION),
-				Behavior:   int($6),
-				Missing_ok: true,
-			}
+			$$ = dropObjectStmt(int(ast.OBJECT_FUNCTION), tableNamesFromNameList($5), true, int($6))
 		}
 	| DROP PROCEDURE any_name_list opt_drop_behavior
 		{
-			$$ = &ast.DropStmt{
-				Objects:    tableNamesFromNameList($3),
-				RemoveType: int(ast.OBJECT_PROCEDURE),
-				Behavior:   int($4),
-			}
+			$$ = dropObjectStmt(int(ast.OBJECT_PROCEDURE), tableNamesFromNameList($3), false, int($4))
 		}
 	| DROP PROCEDURE IF_P EXISTS any_name_list opt_drop_behavior
 		{
-			$$ = &ast.DropStmt{
-				Objects:    tableNamesFromNameList($5),
-				RemoveType: int(ast.OBJECT_PROCEDURE),
-				Behavior:   int($6),
-				Missing_ok: true,
-			}
+			$$ = dropObjectStmt(int(ast.OBJECT_PROCEDURE), tableNamesFromNameList($5), true, int($6))
 		}
 	| DROP ROUTINE any_name_list opt_drop_behavior
 		{
@@ -4572,7 +4554,7 @@ ViewStmt:
 			sel := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
 				Fields: &ast.FieldList{Fields: []*ast.SelectField{
-					{Expr: &ast.ColumnNameExpr{Name: &ast.ColumnName{Name: model.NewCIStr("*")}}},
+					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
 					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
@@ -4606,7 +4588,7 @@ ViewStmt:
 			sel := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
 				Fields: &ast.FieldList{Fields: []*ast.SelectField{
-					{Expr: &ast.ColumnNameExpr{Name: &ast.ColumnName{Name: model.NewCIStr("*")}}},
+					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
 					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
@@ -7239,7 +7221,7 @@ qual_all_Op:
 		}
 	| OPERATOR '(' any_operator ')'
 		{
-			$$ = $3
+			$$ = makeList(&ast.String{Str: qualifiedOperatorName($3)})
 		}
 	;
 
@@ -7250,7 +7232,7 @@ qual_Op:
 		}
 	| OPERATOR '(' any_operator ')'
 		{
-			$$ = $3
+			$$ = makeList(&ast.String{Str: qualifiedOperatorName($3)})
 		}
 	;
 
@@ -8032,7 +8014,14 @@ sortby_list:
 sortby:
 	a_expr USING qual_all_Op opt_nulls_order
 		{
-			$$ = &ast.ByItem{Expr: $1}
+			item := &ast.ByItem{Expr: $1, UseOp: operatorName($3)}
+			switch $4 {
+			case int64(ast.SORTBY_NULLS_FIRST):
+				item.NullOrder = 1
+			case int64(ast.SORTBY_NULLS_LAST):
+				item.NullOrder = 2
+			}
+			$$ = item
 		}
 	| a_expr opt_asc_desc opt_nulls_order
 		{
@@ -8456,11 +8445,11 @@ a_expr:
 		}
 	| a_expr BETWEEN SYMMETRIC b_expr AND a_expr %prec BETWEEN
 		{
-			$$ = &ast.BetweenExpr{Expr: $1, Left: $4, Right: $6}
+			$$ = &ast.BetweenExpr{Expr: $1, Left: $4, Right: $6, Symmetric: true}
 		}
 	| a_expr NOT_LA BETWEEN SYMMETRIC b_expr AND a_expr %prec NOT_LA
 		{
-			$$ = &ast.BetweenExpr{Expr: $1, Left: $5, Right: $7, Not: true}
+			$$ = &ast.BetweenExpr{Expr: $1, Left: $5, Right: $7, Not: true, Symmetric: true}
 		}
 	| a_expr IN_P '(' expr_list ')'
 		{
@@ -8480,9 +8469,11 @@ a_expr:
 		}
 	| a_expr subquery_Op sub_type select_with_parens %prec Op
 		{
+			name := operatorName($2)
 			$$ = &ast.CompareSubqueryExpr{
 				L:   $1,
-				Op:  compareOpcode(operatorName($2)),
+				Op:  compareOpcode(name),
+				OpName: name,
 				R:   &ast.SubqueryExpr{Query: $4.(ast.ResultSetNode)},
 				All: $3 == int64(ast.ALL_SUBLINK),
 			}
@@ -8562,7 +8553,7 @@ subquery_Op:
 		}
 	| OPERATOR '(' any_operator ')'
 		{
-			$$ = $3
+			$$ = makeList(&ast.String{Str: qualifiedOperatorName($3)})
 		}
 	| LIKE
 		{
@@ -12443,19 +12434,19 @@ opt_restrict:
 RemoveFuncStmt:
 	DROP FUNCTION function_with_argtypes_list opt_drop_behavior
 		{
-			$$ = dropFunctionStmt(false, $3)
+			$$ = dropFunctionStmt(false, $3, int($4))
 		}
 	| DROP FUNCTION IF_P EXISTS function_with_argtypes_list opt_drop_behavior
 		{
-			$$ = dropFunctionStmt(true, $5)
+			$$ = dropFunctionStmt(true, $5, int($6))
 		}
 	| DROP PROCEDURE function_with_argtypes_list opt_drop_behavior
 		{
-			$$ = dropProcedureStmt(false, $3)
+			$$ = dropProcedureStmt(false, $3, int($4))
 		}
 	| DROP PROCEDURE IF_P EXISTS function_with_argtypes_list opt_drop_behavior
 		{
-			$$ = dropProcedureStmt(true, $5)
+			$$ = dropProcedureStmt(true, $5, int($6))
 		}
 	| DROP ROUTINE function_with_argtypes_list opt_drop_behavior
 		{

@@ -321,6 +321,7 @@ func (d *PgDecimal) ToString() (str []byte) {
 
 // FromString parses decimal from string.
 func (d *PgDecimal) FromString(str []byte) error {
+	*d = zeroPgDecimal
 	for i := 0; i < len(str); i++ {
 		if !isSpace(str[i]) {
 			str = str[i:]
@@ -933,16 +934,18 @@ func (d *PgDecimal) Round(to *PgDecimal, frac int, roundMode RoundMode) (err err
 func (d *PgDecimal) FromInt(val int64) *PgDecimal {
 	var uVal uint64
 	if val < 0 {
-		d.negative = true
 		uVal = uint64(-val)
 	} else {
 		uVal = uint64(val)
 	}
-	return d.FromUint(uVal)
+	d.FromUint(uVal)
+	d.negative = val < 0
+	return d
 }
 
 // FromUint sets the decimal value from uint64.
 func (d *PgDecimal) FromUint(val uint64) *PgDecimal {
+	*d = zeroPgDecimal
 	x := val
 	wordIdx := 1
 	for x >= wordBase {
@@ -1120,7 +1123,14 @@ with the correct -1/0/+1 result
 	                7E F2 04 C7 2D FB 2D
 */
 func (d *PgDecimal) ToBin(precision, frac int) ([]byte, error) {
-	if precision > digitsPerWord*maxWordBufLen || precision < 0 || frac > postgres.MaxDecimalScale || frac < 0 {
+	if precision == 0 {
+		precision, frac = d.PrecisionAndFrac()
+	}
+	if precision <= 0 || precision > digitsPerWord*maxWordBufLen || frac < 0 || frac > precision {
+		return nil, ErrBadNumber
+	}
+	// Integer and fractional partial words occupy separate buffer slots.
+	if digitsToWords(precision-frac)+digitsToWords(frac) > maxWordBufLen {
 		return nil, ErrBadNumber
 	}
 	var err error
@@ -1172,7 +1182,7 @@ func (d *PgDecimal) ToBin(precision, frac int) ([]byte, error) {
 		}
 	}
 
-	if fracSize < fracSizeFrom {
+	if frac < int(d.digitsFrac) {
 		wordsFracFrom = wordsFrac
 		trailingDigitsFrom = trailingDigits
 		err = ErrTruncated
@@ -1274,45 +1284,33 @@ func (d *PgDecimal) IsZero() bool {
 
 // FromBin Restores decimal from its binary fixed-length representation.
 func (d *PgDecimal) FromBin(bin []byte, precision, frac int) (binSize int, err error) {
-	if len(bin) == 0 {
-		*d = zeroPgDecimal
+	*d = zeroPgDecimal
+	if len(bin) == 0 || precision <= 0 || precision > digitsPerWord*maxWordBufLen || frac < 0 || frac > precision {
 		return 0, ErrBadNumber
+	}
+	if digitsToWords(precision-frac)+digitsToWords(frac) > maxWordBufLen {
+		return 0, ErrBadNumber
+	}
+	binSize = decimalBinSize(precision, frac)
+	if len(bin) < binSize {
+		return binSize, ErrBadNumber
 	}
 	digitsInt := precision - frac
 	wordsInt := digitsInt / digitsPerWord
 	leadingDigits := digitsInt - wordsInt*digitsPerWord
 	wordsFrac := frac / digitsPerWord
 	trailingDigits := frac - wordsFrac*digitsPerWord
-	wordsIntTo := wordsInt
-	if leadingDigits > 0 {
-		wordsIntTo++
-	}
-	wordsFracTo := wordsFrac
-	if trailingDigits > 0 {
-		wordsFracTo++
-	}
 
 	binIdx := 0
 	mask := int32(-1)
 	if bin[binIdx]&0x80 > 0 {
 		mask = 0
 	}
-	binSize = decimalBinSize(precision, frac)
-	dCopy := make([]byte, 40)
+	dCopy := make([]byte, maxWordBufLen*wordSize)
 	dCopy = dCopy[:binSize]
-	copy(dCopy, bin)
+	copy(dCopy, bin[:binSize])
 	dCopy[0] ^= 0x80
 	bin = dCopy
-	oldWordsIntTo := wordsIntTo
-	wordsIntTo, wordsFracTo, err = fixWordCntError(wordsIntTo, wordsFracTo)
-	if err != nil {
-		if wordsIntTo < oldWordsIntTo {
-			binIdx += dig2bytes[leadingDigits] + (wordsInt-wordsIntTo)*wordSize
-		} else {
-			trailingDigits = 0
-			wordsFrac = wordsFracTo
-		}
-	}
 	d.negative = mask != 0
 	d.digitsInt = int8(wordsInt*digitsPerWord + leadingDigits)
 	d.digitsFrac = int8(wordsFrac*digitsPerWord + trailingDigits)
@@ -1323,7 +1321,7 @@ func (d *PgDecimal) FromBin(bin []byte, precision, frac int) (binSize int, err e
 		x := readWord(bin[binIdx:], i)
 		binIdx += i
 		d.wordBuf[wordIdx] = x ^ mask
-		if uint64(d.wordBuf[wordIdx]) >= uint64(powers10[leadingDigits+1]) {
+		if uint32(d.wordBuf[wordIdx]) >= uint32(powers10[leadingDigits]) {
 			*d = zeroPgDecimal
 			return binSize, ErrBadNumber
 		}
@@ -1357,16 +1355,17 @@ func (d *PgDecimal) FromBin(bin []byte, precision, frac int) (binSize int, err e
 
 	if trailingDigits > 0 {
 		i := dig2bytes[trailingDigits]
-		x := readWord(bin[binIdx:], i)
-		d.wordBuf[wordIdx] = (x ^ mask) * powers10[digitsPerWord-trailingDigits]
-		if uint32(d.wordBuf[wordIdx]) > wordMax {
+		x := readWord(bin[binIdx:], i) ^ mask
+		// Validate before scaling so invalid digits cannot wrap into a valid word.
+		if uint32(x) >= uint32(powers10[trailingDigits]) {
 			*d = zeroPgDecimal
 			return binSize, ErrBadNumber
 		}
+		d.wordBuf[wordIdx] = x * powers10[digitsPerWord-trailingDigits]
 	}
 
-	if d.digitsInt == 0 && d.digitsFrac == 0 {
-		*d = zeroPgDecimal
+	if d.IsZero() {
+		d.negative = false
 	}
 	d.resultFrac = int8(frac)
 	return binSize, err

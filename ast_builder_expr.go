@@ -8,10 +8,12 @@ import (
 	"github.com/mia0x75/pgparser/opcode"
 )
 
-// operatorName returns the operator name of a single element operator list.
 func operatorName(l *ast.List) string {
 	if l == nil {
 		return ""
+	}
+	if len(l.Items) > 1 {
+		return qualifiedOperatorName(l)
 	}
 	for _, item := range l.Items {
 		if s, ok := item.(*ast.String); ok {
@@ -19,6 +21,14 @@ func operatorName(l *ast.List) string {
 		}
 	}
 	return ""
+}
+
+func qualifiedOperatorName(l *ast.List) string {
+	parts := funcNameParts(l)
+	for i := 0; i < len(parts)-1; i++ {
+		parts[i] = `"` + strings.ReplaceAll(parts[i], `"`, `""`) + `"`
+	}
+	return "OPERATOR(" + strings.Join(parts, ".") + ")"
 }
 
 // compareOpcode maps an operator name to its comparison opcode.
@@ -37,7 +47,7 @@ func compareOpcode(name string) opcode.Op {
 	case ">=":
 		return opcode.GE
 	}
-	return opcode.EQ
+	return 0
 }
 
 // subTypeName returns the name of a subquery type (ANY or ALL).
@@ -220,6 +230,9 @@ func orderByFromList(l *ast.List) *ast.OrderByClause {
 			clause.Items = append(clause.Items, v)
 		case *ast.SortBy:
 			bi := &ast.ByItem{Expr: v.Node.(ast.ExprNode)}
+			if v.SortbyDir == ast.SORTBY_USING {
+				bi.UseOp = operatorName(v.UseOp)
+			}
 			if v.SortbyDir == ast.SORTBY_DESC {
 				bi.Desc = true
 			}

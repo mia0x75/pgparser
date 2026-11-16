@@ -896,8 +896,9 @@ func (n *TableRefsClause) Accept(v Visitor) (Node, bool) {
 type ByItem struct {
 	node
 
-	Expr ExprNode
-	Desc bool
+	Expr  ExprNode
+	UseOp string
+	Desc  bool
 	// NullOrder indicates the NULLS ordering: 0 for default, 1 for NULLS FIRST, 2 for NULLS LAST.
 	NullOrder int
 	// GroupingSet is set for PostgreSQL GROUPING SETS / ROLLUP / CUBE items.
@@ -934,7 +935,10 @@ func (n *ByItem) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore ByItem.Expr")
 	}
-	if n.Desc {
+	if n.UseOp != "" {
+		ctx.WriteKeyWord(" USING ")
+		ctx.WritePlain(n.UseOp)
+	} else if n.Desc {
 		ctx.WriteKeyWord(" DESC")
 	}
 	switch n.NullOrder {
@@ -970,7 +974,9 @@ func (n *ByItem) Format(w io.Writer) {
 	if n.Expr != nil {
 		n.Expr.Format(w)
 	}
-	if n.Desc {
+	if n.UseOp != "" {
+		_, _ = fmt.Fprint(w, " USING ", n.UseOp)
+	} else if n.Desc {
 		_, _ = fmt.Fprint(w, " DESC")
 	}
 	switch n.NullOrder {

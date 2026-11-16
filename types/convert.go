@@ -41,17 +41,17 @@ var SignedLowerBound = map[byte]int64{
 // ConvertFloatToInt converts a float64 value to a int value.
 func ConvertFloatToInt(fval float64, lowerBound, upperBound int64, tp byte) (int64, error) {
 	val := RoundFloat(fval)
-	if val < float64(lowerBound) {
+	if math.IsNaN(val) {
+		return 0, overflow(val, tp)
+	}
+	if val < math.MinInt64 {
 		return lowerBound, overflow(val, tp)
 	}
-
-	if val >= float64(upperBound) {
-		if val == float64(upperBound) {
-			return upperBound, nil
-		}
+	// MaxInt64 rounds up to 2^63 as a float, so check the exclusive limit before conversion.
+	if val >= -float64(math.MinInt64) {
 		return upperBound, overflow(val, tp)
 	}
-	return int64(val), nil
+	return ConvertIntToInt(int64(val), lowerBound, upperBound, tp)
 }
 
 // ConvertIntToInt converts an int value to another int value of different precision.

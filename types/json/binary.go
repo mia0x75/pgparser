@@ -100,8 +100,118 @@ func (bj BinaryJSON) Copy() BinaryJSON {
 
 // MarshalJSON implements the json.Marshaler interface.
 func (bj BinaryJSON) MarshalJSON() ([]byte, error) {
+	if err := bj.validate(0); err != nil {
+		return nil, err
+	}
 	buf := make([]byte, 0, len(bj.Value)*3/2)
 	return bj.marshalTo(buf)
+}
+
+func binaryValueSize(tp TypeCode, value []byte) (int, error) {
+	switch tp {
+	case TypeCodeLiteral:
+		if len(value) >= 1 && value[0] <= LiteralFalse {
+			return 1, nil
+		}
+	case TypeCodeInt64, TypeCodeUint64:
+		if len(value) >= 8 {
+			return 8, nil
+		}
+	case TypeCodeFloat64:
+		if len(value) >= 8 {
+			f := math.Float64frombits(endian.Uint64(value))
+			if math.IsNaN(f) || math.IsInf(f, 0) {
+				return 0, &json.UnsupportedValueError{Str: strconv.FormatFloat(f, 'g', -1, 64)}
+			}
+			return 8, nil
+		}
+	case TypeCodeString:
+		length, n := binary.Uvarint(value)
+		if n > 0 && length <= uint64(len(value)-n) {
+			return n + int(length), nil
+		}
+	case TypeCodeObject, TypeCodeArray:
+		if len(value) >= headerSize {
+			size := endian.Uint32(value[dataSizeOff:])
+			if size >= headerSize && uint64(size) <= uint64(len(value)) {
+				return int(size), nil
+			}
+		}
+	}
+	return 0, errors.New("invalid or truncated binary JSON value")
+}
+
+const maxBinaryJSONDepth = 10000
+
+func (bj BinaryJSON) validate(depth int) error {
+	if depth > maxBinaryJSONDepth {
+		return errors.New("binary JSON exceeds maximum nesting depth")
+	}
+	size, err := binaryValueSize(bj.TypeCode, bj.Value)
+	if err != nil {
+		return err
+	}
+	if size != len(bj.Value) {
+		return errors.New("binary JSON size does not match its value")
+	}
+	if bj.TypeCode != TypeCodeObject && bj.TypeCode != TypeCodeArray {
+		return nil
+	}
+	entrySize := valEntrySize
+	if bj.TypeCode == TypeCodeObject {
+		entrySize += keyEntrySize
+	}
+	count := uint64(endian.Uint32(bj.Value))
+	if count > uint64((size-headerSize)/entrySize) {
+		return errors.New("truncated binary JSON entries")
+	}
+	n := int(count)
+	end := headerSize + n*entrySize
+	entryStart := headerSize
+	if bj.TypeCode == TypeCodeObject {
+		for i := range n {
+			entry := headerSize + i*keyEntrySize
+			off := uint64(endian.Uint32(bj.Value[entry:]))
+			length := uint64(endian.Uint16(bj.Value[entry+keyLenOff:]))
+			if off != uint64(end) || off+length > uint64(size) {
+				return errors.New("invalid binary JSON key offset or length")
+			}
+			end = int(off + length)
+			if i > 0 && bytes.Compare(bj.objectGetKey(i-1), bj.objectGetKey(i)) >= 0 {
+				return errors.New("binary JSON keys are not sorted and unique")
+			}
+		}
+		entryStart += n * keyEntrySize
+	}
+	for i := range n {
+		entry := entryStart + i*valEntrySize
+		tp := bj.Value[entry]
+		if tp == TypeCodeLiteral {
+			if bj.Value[entry+valTypeSize] > LiteralFalse {
+				return errors.New("invalid binary JSON literal")
+			}
+			continue
+		}
+		off := uint64(endian.Uint32(bj.Value[entry+valTypeSize:]))
+		// Contiguous, disjoint payloads prevent cycles, hidden bytes and repeated traversal of aliased children.
+		if off != uint64(end) {
+			return errors.New("invalid binary JSON value offset")
+		}
+		childSize, err := binaryValueSize(tp, bj.Value[int(off):])
+		if err != nil {
+			return err
+		}
+		end = int(off) + childSize
+		if tp == TypeCodeObject || tp == TypeCodeArray {
+			if err := (BinaryJSON{TypeCode: tp, Value: bj.Value[int(off):end]}).validate(depth + 1); err != nil {
+				return err
+			}
+		}
+	}
+	if end != size {
+		return errors.New("binary JSON contains unreferenced payload")
+	}
+	return nil
 }
 
 func (bj BinaryJSON) marshalTo(buf []byte) ([]byte, error) {

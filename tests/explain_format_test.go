@@ -1,10 +1,8 @@
 package parser_test
 
 import (
-	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 )
 
@@ -29,14 +27,19 @@ func TestExplainFormatOption(t *testing.T) {
 	}
 }
 
-// PostgreSQL reports "conflicting or redundant options" for a repeated FORMAT
-// rather than silently choosing one of the two values.
-func TestExplainRejectsRepeatedFormat(t *testing.T) {
-	_, err := pgparser.New().ParseOneStmt(`EXPLAIN (FORMAT JSON, FORMAT YAML) SELECT 1`)
-	if err == nil {
-		t.Fatal("expected an error for a repeated FORMAT option")
-	}
-	if !strings.Contains(err.Error(), "conflicting or redundant options") {
-		t.Fatalf("error = %v, want the conflicting-options message", err)
+func TestExplainLastFormatWins(t *testing.T) {
+	for _, tc := range []struct{ name, sql, want string }{
+		{"yaml_last", `EXPLAIN (FORMAT JSON, FORMAT YAML) SELECT 1`, `yaml`},
+		{"json_last", `EXPLAIN (FORMAT YAML, FORMAT JSON) SELECT 1`, `json`},
+		{"case_insensitive", `EXPLAIN (Format yaml, format JSON) SELECT 1`, `json`},
+		{"same_format", `EXPLAIN (FORMAT JSON, FORMAT JSON) SELECT 1`, `json`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stmt := mustParseOne(t, tc.sql).(*ast.ExplainStmt)
+			if stmt.Format != tc.want {
+				t.Fatalf("format = %q, want %q", stmt.Format, tc.want)
+			}
+			restoreString(t, stmt)
+		})
 	}
 }

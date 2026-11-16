@@ -10,11 +10,7 @@ import (
 
 // RoundFloat uses half-away-from-zero rounding so positive and negative ties are treated symmetrically.
 func RoundFloat(f float64) float64 {
-	if math.Abs(f) < 0.5 {
-		return 0
-	}
-
-	return math.Trunc(f + math.Copysign(0.5, f))
+	return math.Round(f)
 }
 
 // Round rounds the argument f to dec decimal places.

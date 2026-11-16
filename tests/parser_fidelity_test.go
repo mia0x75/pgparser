@@ -114,6 +114,13 @@ func TestRestoreWriterErrors(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			for _, sql := range []string{
+				`SELECT a OPERATOR(public.=) ANY (SELECT b FROM t)`,
+				`SELECT a @> ANY (SELECT b FROM t)`,
+				`SELECT 1 BETWEEN SYMMETRIC 3 AND 0`,
+				`SELECT "*" ORDER BY "*" USING OPERATOR(public.>) NULLS FIRST`,
+				`DROP FUNCTION f(int), g() CASCADE`,
+				`DROP PROCEDURE p(int) CASCADE`,
+				`EXPLAIN (FORMAT JSON, FORMAT YAML) SELECT 1`,
 				`DELETE FROM t WHERE a = 1`, `SELECT 1`, `SELECT $1`, `SELECT a[$1]`,
 				`SELECT sum(a) OVER ()`, `SELECT "a.b"(1) FILTER (WHERE TRUE)`,
 				`CREATE TABLE t (a integer)`, `COMMENT ON AGGREGATE agg(*) IS 'MOCK_COMMENT'`,

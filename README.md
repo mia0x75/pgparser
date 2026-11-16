@@ -94,6 +94,12 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 
 > `CREATE EXTENSION` 目前仅返回 `*ast.GenericStmt`（保留语句种类），其余语句均映射为具体 AST 节点。
 
+### 恢复与兼容边界
+
+`CompareSubqueryExpr.OpName` 保留自定义及显式 `OPERATOR(...)`，非空时优先于旧 `Op` 字段；`BetweenExpr.Symmetric`、`ByItem.UseOp` 保留对应表达式与排序语义。`DROP FUNCTION/PROCEDURE` 有无签名均返回对应专用节点：`Arguments` 与 `Names` 对齐，nil 项表示省略签名，空列表表示 `()`；`Behavior` 保留 CASCADE，旧 `Name` 字段仍对应首个目标。
+
+`types/json` 使用内部随机访问格式，并非 PostgreSQL 的 jsonb 存储。数字比较不再使用浮点容差或将整数转为 float64；`Unquote` 返回已解码字符串，路径中的 `"*"` 是字面键，裸 `.*` 才是通配符。`MarshalJSON`、`PeekBytesAsJSON` 及返回错误的修改入口拒绝损坏布局、重叠载荷与过深嵌套；无错误返回的随机访问接口仍要求有效的内部值，不应直接传入未经校验的外部字节。
+
 ## 项目结构
 
 ```
@@ -140,7 +146,7 @@ go test ./tests -run TestParseTestdataSQL            # 默认门禁：新出现�
 PGPARSER_TESTDATA=1 go test -v ./tests -run TestParseTestdataSQL   # 附加逐语句诊断
 ```
 
-该门禁遍历 `tests/testdata/*.sql`：支持恢复的语句必须能 `Restore` 回 SQL、再次解析并稳定恢复。显式返回 `ast.ErrUnsupportedRestore` 的语句单独统计；其他已知缺口记录在 `tests/testdata/known_failures.txt`。新增失败使门禁失败；不再复现的清单条目单独统计，应及时清理。
+该门禁遍历 `tests/testdata/*.sql`：支持恢复的语句必须能 `Restore` 回 SQL、再次解析并稳定恢复。只有首次恢复显式返回 `ast.ErrUnsupportedRestore` 的语句单独统计，二次恢复报错不可跳过；其他已知缺口记录在 `tests/testdata/known_failures.txt`。新增失败使门禁失败；不再复现的清单条目单独统计，应及时清理。定向回归另行断言预期 SQL 与 AST 属性，避免把稳定的语义丢失当成成功。
 
 ### 性能验证
 

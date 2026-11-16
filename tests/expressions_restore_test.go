@@ -6,10 +6,27 @@ import (
 	"testing"
 
 	"github.com/mia0x75/pgparser/ast"
+	"github.com/mia0x75/pgparser/opcode"
 )
 
 func TestRestoreOperatorTokenBoundaries(t *testing.T) {
 	cases := []struct{ name, sql, want string }{
+		{"qualified_operator", `SELECT a OPERATOR(public.+) b`, `SELECT "a" OPERATOR("public".+) "b"`},
+		{"operator_precedence", `SELECT 1 + 2 OPERATOR(*) 3`, `SELECT 1+2 OPERATOR(*) 3`},
+		{"qualified_unary", `SELECT OPERATOR(public.-) a`, `SELECT OPERATOR("public".-) "a"`},
+		{"qualified_any", `SELECT a OPERATOR(public.=) ANY (SELECT b FROM t)`, `SELECT "a" OPERATOR("public".=) ANY (SELECT "b" FROM "t")`},
+		{"quoted_operator_schema", `SELECT a OPERATOR("S""Q".=) ALL (SELECT b FROM t)`, `SELECT "a" OPERATOR("S""Q".=) ALL (SELECT "b" FROM "t")`},
+		{"custom_any", `SELECT a @> ANY (SELECT b FROM t)`, `SELECT "a"@>ANY (SELECT "b" FROM "t")`},
+		{"custom_all", `SELECT a <@ ALL (SELECT b FROM t)`, `SELECT "a"<@ALL (SELECT "b" FROM "t")`},
+		{"qualified_array_any", `SELECT a OPERATOR(public.=) ANY (ARRAY[1])`, `SELECT "a" OPERATOR("public".=) ANY (ARRAY[1])`},
+		{"literal_star", `SELECT "*" FROM t`, `SELECT "*" FROM "t"`},
+		{"qualified_literal_star", `SELECT t."*" FROM t`, `SELECT "t"."*" FROM "t"`},
+		{"symmetric_between", `SELECT 1 WHERE 1 BETWEEN SYMMETRIC 3 AND 0`, `SELECT 1 WHERE 1 BETWEEN SYMMETRIC 3 AND 0`},
+		{"not_symmetric_between", `SELECT 1 WHERE 1 NOT BETWEEN SYMMETRIC 3 AND 0`, `SELECT 1 WHERE 1 NOT BETWEEN SYMMETRIC 3 AND 0`},
+		{"sort_using", `SELECT 1 ORDER BY 1 USING >`, `SELECT 1 ORDER BY 1 USING >`},
+		{"sort_using_nulls", `SELECT a ORDER BY a USING < NULLS LAST`, `SELECT "a" ORDER BY "a" USING < NULLS LAST`},
+		{"sort_using_qualified", `SELECT a ORDER BY a USING OPERATOR(public.>) NULLS FIRST`, `SELECT "a" ORDER BY "a" USING OPERATOR("public".>) NULLS FIRST`},
+		{"aggregate_sort_using", `SELECT array_agg(a ORDER BY a USING >)`, `SELECT ARRAY_AGG("a" ORDER BY "a" USING >)`},
 		{"subtract_negative", `SELECT 2- -1 AS three`, `SELECT 2- -1 AS "three"`},
 		{"compare_negative", `SELECT a != -1`, `SELECT "a"!= -1`},
 		{"power_negative", `SELECT a ^ -1`, `SELECT "a"^ -1`},
@@ -59,6 +76,43 @@ func TestUnaryOperatorFormat(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPreservedExpressionFormat(t *testing.T) {
+	t.Run("legacy_opcode", func(t *testing.T) {
+		expr := &ast.CompareSubqueryExpr{L: ast.NewValueExpr(int64(1)), Op: opcode.EQ, R: ast.NewValueExpr(int64(2))}
+		var out strings.Builder
+		expr.Format(&out)
+		if !strings.Contains(out.String(), " = ") || !strings.Contains(out.String(), " ANY ") {
+			t.Fatalf("Format = %q", out.String())
+		}
+	})
+	t.Run("symmetric", func(t *testing.T) {
+		stmt := mustParseOne(t, `SELECT 1 BETWEEN SYMMETRIC 3 AND 0`).(*ast.SelectStmt)
+		expr := stmt.Fields.Fields[0].Expr.(*ast.BetweenExpr)
+		var out strings.Builder
+		expr.Format(&out)
+		if !expr.Symmetric || out.String() != "1 BETWEEN SYMMETRIC 3 AND 0" {
+			t.Fatalf("Format = %q, symmetric=%v", out.String(), expr.Symmetric)
+		}
+	})
+	t.Run("comparison", func(t *testing.T) {
+		stmt := mustParseOne(t, `SELECT a @> ANY (SELECT b FROM t)`).(*ast.SelectStmt)
+		expr := stmt.Fields.Fields[0].Expr.(*ast.CompareSubqueryExpr)
+		var out strings.Builder
+		expr.Format(&out)
+		if expr.Op != 0 || expr.OpName != "@>" || !strings.Contains(out.String(), " @> ANY ") {
+			t.Fatalf("Format = %q, opcode=%d name=%q", out.String(), expr.Op, expr.OpName)
+		}
+	})
+	t.Run("sort", func(t *testing.T) {
+		stmt := mustParseOne(t, `SELECT a ORDER BY a USING > NULLS FIRST`).(*ast.SelectStmt)
+		var out strings.Builder
+		stmt.OrderBy.Items[0].Format(&out)
+		if out.String() != "`a` USING > NULLS FIRST" {
+			t.Fatalf("Format = %q", out.String())
+		}
+	})
 }
 
 func TestRestoreNegativeZeroOperand(t *testing.T) {

@@ -20,6 +20,14 @@ func FuzzParseRestore(f *testing.F) {
 	// quoted function names, reserved-word names, named windows, IS DISTINCT
 	// FROM, COPY, MERGE, TRUNCATE, DO blocks and array subscripts.
 	seeds := []string{
+		`SELECT a OPERATOR(public.=) ANY (SELECT b FROM t)`,
+		`SELECT 1 + 2 OPERATOR(*) 3`,
+		`SELECT a @> ANY (SELECT b FROM t)`,
+		`SELECT 1 BETWEEN SYMMETRIC 3 AND 0`,
+		`SELECT "*" FROM t ORDER BY "*" USING > NULLS FIRST`,
+		`DROP FUNCTION f(int), g() CASCADE`,
+		`DROP PROCEDURE p(int) CASCADE`,
+		`EXPLAIN (FORMAT JSON, FORMAT YAML) SELECT 1`,
 		`SELECT (t.a).b FROM t`,
 		`SELECT $1[1]`,
 		`SELECT a[1:2] FROM t`,

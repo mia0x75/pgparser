@@ -1547,6 +1547,9 @@ type DropFunctionStmt struct {
 	Name     *TableName
 	// Names holds all dropped functions, the first one is Name.
 	Names []*TableName
+	// Nil entries keep omitted signatures distinct from explicit empty parentheses.
+	Arguments []*List
+	Behavior  DropBehavior
 }
 
 // Restore implements Node interface.
@@ -1555,15 +1558,7 @@ func (n *DropFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IfExists {
 		ctx.WriteKeyWord("IF EXISTS ")
 	}
-	for i, name := range n.droppedNames() {
-		if i > 0 {
-			ctx.WritePlain(", ")
-		}
-		if err := name.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore DropFunctionStmt.Name")
-		}
-	}
-	return ctx.Err()
+	return restoreRoutineTargets(ctx, n.droppedNames(), n.Arguments, n.Behavior)
 }
 
 // droppedNames returns all dropped function names.
@@ -1584,11 +1579,14 @@ func (n *DropFunctionStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*DropFunctionStmt)
-	node, ok := n.Name.Accept(v)
+	names, ok := acceptRoutineTargets(v, n.droppedNames(), n.Arguments)
+	n.Names = names
+	if len(names) > 0 {
+		n.Name = names[0]
+	}
 	if !ok {
 		return n, false
 	}
-	n.Name = node.(*TableName)
 	return v.Leave(n)
 }
 
@@ -1600,6 +1598,9 @@ type DropProcedureStmt struct {
 	Name     *TableName
 	// Names holds all dropped procedures, the first one is Name.
 	Names []*TableName
+	// Nil entries keep omitted signatures distinct from explicit empty parentheses.
+	Arguments []*List
+	Behavior  DropBehavior
 }
 
 // Restore implements Node interface.
@@ -1608,15 +1609,7 @@ func (n *DropProcedureStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IfExists {
 		ctx.WriteKeyWord("IF EXISTS ")
 	}
-	for i, name := range n.droppedNames() {
-		if i > 0 {
-			ctx.WritePlain(", ")
-		}
-		if err := name.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore DropProcedureStmt.Name")
-		}
-	}
-	return ctx.Err()
+	return restoreRoutineTargets(ctx, n.droppedNames(), n.Arguments, n.Behavior)
 }
 
 // droppedNames returns all dropped procedure names.
@@ -1637,12 +1630,73 @@ func (n *DropProcedureStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*DropProcedureStmt)
-	node, ok := n.Name.Accept(v)
+	names, ok := acceptRoutineTargets(v, n.droppedNames(), n.Arguments)
+	n.Names = names
+	if len(names) > 0 {
+		n.Name = names[0]
+	}
 	if !ok {
 		return n, false
 	}
-	n.Name = node.(*TableName)
 	return v.Leave(n)
+}
+
+func restoreRoutineTargets(ctx *format.RestoreCtx, names []*TableName, args []*List, behavior DropBehavior) error {
+	if len(names) == 0 {
+		return errors.New("routine drop has no targets")
+	}
+	if len(args) > 0 && len(args) != len(names) {
+		return errors.New("routine signatures do not match the targets")
+	}
+	if behavior != DROP_RESTRICT && behavior != DROP_CASCADE {
+		return errors.New("invalid routine drop behavior")
+	}
+	for i, name := range names {
+		if name == nil {
+			return errors.New("routine drop has a nil target")
+		}
+		if i > 0 {
+			ctx.WritePlain(", ")
+		}
+		if err := name.Restore(ctx); err != nil {
+			return err
+		}
+		if len(args) > 0 && args[i] != nil {
+			ctx.WritePlain("(")
+			if err := args[i].Restore(ctx); err != nil {
+				return err
+			}
+			ctx.WritePlain(")")
+		}
+	}
+	if behavior == DROP_CASCADE {
+		ctx.WriteKeyWord(" CASCADE")
+	}
+	return ctx.Err()
+}
+
+func acceptRoutineTargets(v Visitor, names []*TableName, args []*List) ([]*TableName, bool) {
+	for i, name := range names {
+		if name == nil {
+			return names, false
+		}
+		updated, ok := name.Accept(v)
+		if !ok {
+			return names, false
+		}
+		names[i] = updated.(*TableName)
+	}
+	for i, arg := range args {
+		if arg == nil {
+			continue
+		}
+		updated, ok := arg.Accept(v)
+		if !ok {
+			return names, false
+		}
+		args[i] = updated.(*List)
+	}
+	return names, true
 }
 
 // DropTriggerStmt is a statement to drop a trigger.

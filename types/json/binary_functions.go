@@ -2,12 +2,11 @@ package json
 
 import (
 	"bytes"
-	"encoding/binary"
-	"encoding/hex"
+	"cmp"
+	"math"
 	"sort"
 	"strconv"
-	"unicode/utf8"
-	"unsafe"
+	"unicode/utf16"
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/hack"
@@ -46,24 +45,16 @@ func (bj BinaryJSON) Quote() string {
 
 // Unquote is for JSON_UNQUOTE.
 func (bj BinaryJSON) Unquote() (string, error) {
+	if err := bj.validate(0); err != nil {
+		return "", err
+	}
 	switch bj.TypeCode {
 	case TypeCodeString:
-		tmp := string(hack.String(bj.GetString()))
-		s, err := unquoteString(tmp)
-		if err != nil {
-			return "", errors.Trace(err)
-		}
-		// Remove prefix and suffix '"'.
-		slen := len(s)
-		if slen > 1 {
-			head, tail := s[0], s[slen-1]
-			if head == '"' && tail == '"' {
-				return s[1 : slen-1], nil
-			}
-		}
-		return s, nil
+		// JSON parsing has already decoded escapes; a second pass corrupts literal backslashes and quotes.
+		return string(bj.GetString()), nil
 	default:
-		return bj.String(), nil
+		out, err := bj.MarshalJSON()
+		return string(out), err
 	}
 }
 
@@ -91,15 +82,27 @@ func unquoteString(s string) (string, error) {
 			case '\\':
 				ret.WriteByte('\\')
 			case 'u':
-				if i+4 > len(s) {
+				if len(s)-i < 5 {
 					return "", errors.Errorf("Invalid unicode: %s", s[i+1:])
 				}
-				char, size, err := decodeEscapedUnicode(hack.Slice(s[i+1 : i+5]))
+				unit, err := strconv.ParseUint(s[i+1:i+5], 16, 16)
 				if err != nil {
 					return "", errors.Trace(err)
 				}
-				ret.Write(char[0:size])
 				i += 4
+				r := rune(unit)
+				if utf16.IsSurrogate(r) {
+					if r > 0xDBFF || len(s)-i < 7 || s[i+1:i+3] != `\u` {
+						return "", errors.New("Invalid unicode surrogate pair")
+					}
+					low, err := strconv.ParseUint(s[i+3:i+7], 16, 16)
+					if err != nil || low < 0xDC00 || low > 0xDFFF {
+						return "", errors.New("Invalid unicode surrogate pair")
+					}
+					r = utf16.DecodeRune(r, rune(low))
+					i += 6
+				}
+				ret.WriteRune(r)
 			default:
 				// For all other escape sequences, backslash is ignored.
 				ret.WriteByte(s[i])
@@ -109,24 +112,6 @@ func unquoteString(s string) (string, error) {
 		}
 	}
 	return ret.String(), nil
-}
-
-// decodeEscapedUnicode decodes unicode into utf8 bytes specified in RFC 3629.
-// According RFC 3629, the max length of utf8 characters is 4 bytes.
-func decodeEscapedUnicode(s []byte) (char [4]byte, size int, err error) {
-	size, err = hex.Decode(char[0:2], s)
-	if err != nil || size != 2 {
-		// The unicode must can be represented in 2 bytes.
-		return char, 0, errors.Trace(err)
-	}
-	var unicode uint16
-	err = binary.Read(bytes.NewReader(char[0:2]), binary.BigEndian, &unicode)
-	if err != nil {
-		return char, 0, errors.Trace(err)
-	}
-	size = utf8.RuneLen(rune(unicode))
-	utf8.EncodeRune(char[0:size], rune(unicode))
-	return
 }
 
 // Extract receives several path expressions as arguments, matches them in bj, and returns:
@@ -174,9 +159,9 @@ func (bj BinaryJSON) extractTo(buf []BinaryJSON, pathExpr PathExpression) []Bina
 		} else if currentLeg.arrayIndex < elemCount {
 			buf = bj.arrayGetElem(currentLeg.arrayIndex).extractTo(buf, subPathExpr)
 		}
-	case currentLeg.typ == pathLegKey && bj.TypeCode == TypeCodeObject:
+	case (currentLeg.typ == pathLegKey || currentLeg.typ == pathLegKeyAsterisk) && bj.TypeCode == TypeCodeObject:
 		elemCount := bj.GetElemCount()
-		if currentLeg.dotKey == "*" {
+		if currentLeg.typ == pathLegKeyAsterisk {
 			for i := range elemCount {
 				buf = bj.objectGetValWithCount(i, elemCount).extractTo(buf, subPathExpr)
 			}
@@ -267,11 +252,24 @@ func buildBinaryObject(keys [][]byte, elems []BinaryJSON) BinaryJSON {
 // All path expressions cannot contain * or ** wildcard.
 // If any error occurs, the input won't be changed.
 func (bj BinaryJSON) Modify(pathExprList []PathExpression, values []BinaryJSON, mt ModifyType) (retj BinaryJSON, err error) {
+	if err := bj.validate(0); err != nil {
+		return bj, err
+	}
+	for _, value := range values {
+		if err := value.validate(0); err != nil {
+			return bj, err
+		}
+	}
 	if len(pathExprList) != len(values) {
 		// TODO: should return 1582(42000)
 		return retj, errors.New("Incorrect parameter count")
 	}
 	for _, pathExpr := range pathExprList {
+		for _, leg := range pathExpr.legs {
+			if leg.typ == pathLegKey && len(leg.dotKey) > math.MaxUint16 {
+				return bj, errors.New("JSON object key is too long")
+			}
+		}
 		if pathExpr.flags.containsAnyAsterisk() {
 			// TODO: should return 3149(42000)
 			return retj, errors.New("Invalid path expression")
@@ -294,6 +292,9 @@ func (bj BinaryJSON) Modify(pathExprList []PathExpression, values []BinaryJSON, 
 
 // Remove removes the elements indicated by pathExprList from JSON.
 func (bj BinaryJSON) Remove(pathExprList []PathExpression) (BinaryJSON, error) {
+	if err := bj.validate(0); err != nil {
+		return bj, err
+	}
 	for _, pathExpr := range pathExprList {
 		if len(pathExpr.legs) == 0 {
 			// TODO: should return 3153(42000)
@@ -506,20 +507,6 @@ func (bm *binaryModifier) rebuildTo(buf []byte) ([]byte, TypeCode) {
 	return buf, bj.TypeCode
 }
 
-// floatEpsilon is the acceptable error quantity when comparing two float numbers.
-const floatEpsilon = 1.e-8
-
-// compareFloat64 returns an integer comparing the float64 x to y,
-// allowing precision loss.
-func compareFloat64PrecisionLoss(x, y float64) int {
-	if x-y < floatEpsilon && y-x < floatEpsilon {
-		return 0
-	} else if x-y < 0 {
-		return -1
-	}
-	return 1
-}
-
 // CompareBinary compares two binary json objects. Returns -1 if left < right,
 // 0 if left == right, else returns 1.
 func CompareBinary(left, right BinaryJSON) int {
@@ -536,9 +523,7 @@ func CompareBinary(left, right BinaryJSON) int {
 			// false is less than true.
 			cmp = int(right.Value[0]) - int(left.Value[0])
 		case TypeCodeInt64, TypeCodeUint64, TypeCodeFloat64:
-			leftFloat := i64AsFloat64(left.GetInt64(), left.TypeCode)
-			rightFloat := i64AsFloat64(right.GetInt64(), right.TypeCode)
-			cmp = compareFloat64PrecisionLoss(leftFloat, rightFloat)
+			cmp = compareBinaryNumber(left, right)
 		case TypeCodeString:
 			cmp = bytes.Compare(left.GetString(), right.GetString())
 		case TypeCodeArray:
@@ -564,18 +549,55 @@ func CompareBinary(left, right BinaryJSON) int {
 	return cmp
 }
 
-func i64AsFloat64(i64 int64, typeCode TypeCode) float64 {
-	switch typeCode {
-	case TypeCodeLiteral, TypeCodeInt64:
-		return float64(i64)
-	case TypeCodeUint64:
-		u64 := *(*uint64)(unsafe.Pointer(&i64))
-		return float64(u64)
-	case TypeCodeFloat64:
-		return *(*float64)(unsafe.Pointer(&i64))
-	default:
-		return 0
+func compareBinaryNumber(left, right BinaryJSON) int {
+	if left.TypeCode == TypeCodeFloat64 {
+		if right.TypeCode == TypeCodeFloat64 {
+			return cmp.Compare(left.GetFloat64(), right.GetFloat64())
+		}
+		return -compareIntegerFloat(right, left.GetFloat64())
 	}
+	if right.TypeCode == TypeCodeFloat64 {
+		return compareIntegerFloat(left, right.GetFloat64())
+	}
+	if left.TypeCode == TypeCodeInt64 && right.TypeCode == TypeCodeInt64 {
+		return cmp.Compare(left.GetInt64(), right.GetInt64())
+	}
+	if left.TypeCode == TypeCodeInt64 && left.GetInt64() < 0 {
+		return -1
+	}
+	if right.TypeCode == TypeCodeInt64 && right.GetInt64() < 0 {
+		return 1
+	}
+	return cmp.Compare(left.GetUint64(), right.GetUint64())
+}
+
+func compareIntegerFloat(integer BinaryJSON, f float64) int {
+	if math.IsNaN(f) {
+		return 1
+	}
+	var result int
+	// Convert the float only inside the integer range, keeping all integer bits for comparison.
+	if integer.TypeCode == TypeCodeInt64 {
+		if f < math.MinInt64 {
+			return 1
+		}
+		if f >= -float64(math.MinInt64) {
+			return -1
+		}
+		result = cmp.Compare(integer.GetInt64(), int64(f))
+	} else {
+		if f < 0 {
+			return 1
+		}
+		if f >= 0x1p64 {
+			return -1
+		}
+		result = cmp.Compare(integer.GetUint64(), uint64(f))
+	}
+	if result != 0 {
+		return result
+	}
+	return cmp.Compare(math.Trunc(f), f)
 }
 
 // MergeBinary merges multiple BinaryJSON into one according the following rules:
@@ -657,28 +679,17 @@ func mergeBinaryObject(objects []BinaryJSON) BinaryJSON {
 // we can deserialize a JSON from those bytes.
 func PeekBytesAsJSON(b []byte) (n int, err error) {
 	if len(b) == 0 {
-		err = errors.New("Cant peek from empty bytes")
-		return
+		return 0, errors.New("cannot peek from empty bytes")
 	}
-	switch c := TypeCode(b[0]); c {
-	case TypeCodeObject, TypeCodeArray:
-		if len(b) >= valTypeSize+headerSize {
-			size := endian.Uint32(b[valTypeSize+dataSizeOff:])
-			n = valTypeSize + int(size)
-			return
-		}
-	case TypeCodeString:
-		strLen, lenLen := binary.Uvarint(b[valTypeSize:])
-		return valTypeSize + int(strLen) + lenLen, nil
-	case TypeCodeInt64, TypeCodeUint64, TypeCodeFloat64:
-		n = valTypeSize + 8
-		return
-	case TypeCodeLiteral:
-		n = valTypeSize + 1
-		return
+	size, err := binaryValueSize(b[0], b[valTypeSize:])
+	if err != nil {
+		return 0, err
 	}
-	err = errors.New("Invalid JSON bytes")
-	return
+	n = valTypeSize + size
+	if err := (BinaryJSON{TypeCode: b[0], Value: b[valTypeSize:n]}).validate(0); err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 // ContainsBinary check whether JSON document contains specific target according the following rules:

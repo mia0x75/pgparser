@@ -175,6 +175,28 @@ func loadKnownFailures(path string) (map[string]string, error) {
 	return known, nil
 }
 
+type restoredSQLStmt struct {
+	ast.StmtNode
+	sql string
+	err error
+}
+
+func (n restoredSQLStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.WritePlain(n.sql)
+	return n.err
+}
+
+func TestCorpusRestoreErrorClassification(t *testing.T) {
+	first := restoreTestdataStatement(restoredSQLStmt{err: ast.ErrUnsupportedRestore})
+	if !errors.Is(first, ast.ErrUnsupportedRestore) {
+		t.Fatalf("first unsupported restore lost its classification: %v", first)
+	}
+	second := restoreTestdataStatement(restoredSQLStmt{sql: "ALTER TABLE t DROP CONSTRAINT c"})
+	if second == nil || errors.Is(second, ast.ErrUnsupportedRestore) || !strings.Contains(second.Error(), "second Restore") {
+		t.Fatalf("second unsupported restore was allowed: %v", second)
+	}
+}
+
 func parseTestdataStatement(sql string) (parseErr, restoreErr error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -185,22 +207,27 @@ func parseTestdataStatement(sql string) (parseErr, restoreErr error) {
 	if err != nil {
 		return err, nil
 	}
+	return nil, restoreTestdataStatement(stmt)
+}
+
+func restoreTestdataStatement(stmt ast.StmtNode) error {
 	var out strings.Builder
 	if err := stmt.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &out)); err != nil {
-		return nil, err
+		return err
 	}
 	reparsed, err := pgparser.New().ParseOneStmt(out.String())
 	if err != nil {
-		return nil, fmt.Errorf("restored SQL cannot be parsed (%q): %w", out.String(), err)
+		return fmt.Errorf("restored SQL cannot be parsed (%q): %v", out.String(), err)
 	}
 	var second strings.Builder
 	if err := reparsed.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &second)); err != nil {
-		return nil, fmt.Errorf("second Restore: %w", err)
+		// Only an unsupported first Restore may be skipped by the corpus gate.
+		return fmt.Errorf("second Restore: %v", err)
 	}
 	if second.String() != out.String() {
-		return nil, fmt.Errorf("Restore is not stable: %q then %q", out.String(), second.String())
+		return fmt.Errorf("Restore is not stable: %q then %q", out.String(), second.String())
 	}
-	return nil, nil
+	return nil
 }
 
 // psql commands and inline COPY data are not SQL statements.

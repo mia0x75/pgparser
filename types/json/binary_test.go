@@ -1,7 +1,11 @@
 package json
 
 import (
+	"bytes"
+	stdjson "encoding/json"
+	"fmt"
 	"math"
+	"math/big"
 	"strings"
 	"testing"
 )
@@ -67,6 +71,92 @@ func TestBinaryJSONExtract(t *testing.T) {
 				t.Fatalf("got %#v, want %#v", result.String(), tt.expected.String())
 			}
 		}
+	}
+}
+
+func TestBinaryJSONLiteralStarPaths(t *testing.T) {
+	base := mustParseBinaryFromString(t, `{"*": {"*": 1, "a": 2}, "a": {"*": 3}}`)
+	for _, tc := range []struct {
+		path, want string
+		wildcard   bool
+	}{
+		{`$."*"."*"`, `1`, false},
+		{`$."*".*`, `[1, 2]`, true},
+		{`$.*."*"`, `[1, 3]`, true},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			path, err := ParseJSONPathExpr(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, child := path.popOneLeg()
+			if path.ContainsAnyAsterisk() != tc.wildcard || child.ContainsAnyAsterisk() != (tc.path == `$."*".*`) {
+				t.Fatal("wildcard flag changed meaning")
+			}
+			got, found := base.Extract([]PathExpression{path})
+			if !found || got.String() != tc.want {
+				t.Fatalf("got %s, found=%v", got, found)
+			}
+		})
+	}
+	path, err := ParseJSONPathExpr(`$."*"."*"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updated, err := base.Modify([]PathExpression{path}, []BinaryJSON{mustParseBinaryFromString(t, "9")}, ModifySet)
+	if err != nil || updated.String() != `{"*": {"*": 9, "a": 2}, "a": {"*": 3}}` {
+		t.Fatalf("modify = %s, %v", updated, err)
+	}
+	removed, err := base.Remove([]PathExpression{path})
+	if err != nil || removed.String() != `{"*": {"a": 2}, "a": {"*": 3}}` {
+		t.Fatalf("remove = %s, %v", removed, err)
+	}
+	emoji := mustParseBinaryFromString(t, `{"😀": 7}`)
+	path, err = ParseJSONPathExpr(`$."\uD83D\uDE00"`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, found := emoji.Extract([]PathExpression{path})
+	if !found || got.String() != "7" {
+		t.Fatalf("emoji extraction = %s, %v", got, found)
+	}
+}
+
+func TestBinaryJSONModifyKeyLength(t *testing.T) {
+	base := mustParseBinaryFromString(t, `{}`)
+	value := mustParseBinaryFromString(t, `1`)
+	for _, size := range []int{math.MaxUint16, math.MaxUint16 + 1} {
+		t.Run(fmt.Sprint(size), func(t *testing.T) {
+			key := strings.Repeat("a", size)
+			path, err := ParseJSONPathExpr(`$."` + key + `"`)
+			if err != nil {
+				t.Fatal(err)
+			}
+			first, err := ParseJSONPathExpr("$.first")
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := base.Modify([]PathExpression{first, path}, []BinaryJSON{value, value}, ModifySet)
+			if size > math.MaxUint16 {
+				if err == nil || got.String() != "{}" {
+					t.Fatalf("long key modified object: %s, %v", got, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatal(err)
+				}
+				selected, found := got.Extract([]PathExpression{path})
+				if !found || selected.String() != "1" {
+					t.Fatal("maximum length key was lost")
+				}
+				if _, err := got.MarshalJSON(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if base.String() != "{}" {
+				t.Fatal("original object mutated")
+			}
+		})
 	}
 }
 
@@ -150,6 +240,10 @@ func TestBinaryJSONUnquote(t *testing.T) {
 		{j: `"'"`, unquoted: `'`},
 		{j: `"''"`, unquoted: `''`},
 		{j: `""`, unquoted: ``},
+		{j: `"\\n"`, unquoted: `\n`},
+		{j: `"\\u123"`, unquoted: `\u123`},
+		{j: `"\\uD800"`, unquoted: `\uD800`},
+		{j: `"\"hello\""`, unquoted: `"hello"`},
 	}
 	for _, tt := range tests {
 		bj := mustParseBinaryFromString(t, tt.j)
@@ -422,6 +516,218 @@ func TestBinaryJSONDepth(t *testing.T) {
 			t.Fatalf("got %#v, want %#v", obj.GetElemDepth(), tt.expected)
 		}
 	}
+}
+
+func TestBinaryJSONNumberComparisonExact(t *testing.T) {
+	var numbers []BinaryJSON
+	add := func(bj BinaryJSON, err error) {
+		if err != nil {
+			t.Fatal(err)
+		}
+		numbers = append(numbers, bj)
+	}
+	for _, n := range []int64{math.MinInt64, -9007199254740993, -1, 0, 1, 9007199254740992, 9007199254740993, math.MaxInt64} {
+		add(CreateBinary(n))
+	}
+	for _, n := range []uint64{0, 1, 9007199254740993, 1 << 63, 1<<63 + 1, math.MaxUint64} {
+		add(CreateBinary(n))
+	}
+	for _, n := range []float64{
+		math.Nextafter(float64(math.MinInt64), math.Inf(-1)), float64(math.MinInt64), -1.5, -0.5, 0, 0.5, 1, 1.5,
+		1 + 1e-9, math.Nextafter(math.Exp2(63), 0), math.Exp2(63), math.Nextafter(math.Exp2(64), 0), math.Exp2(64),
+	} {
+		add(CreateBinary(n))
+	}
+	rational := func(bj BinaryJSON) *big.Rat {
+		switch bj.TypeCode {
+		case TypeCodeInt64:
+			return new(big.Rat).SetInt64(bj.GetInt64())
+		case TypeCodeUint64:
+			return new(big.Rat).SetInt(new(big.Int).SetUint64(bj.GetUint64()))
+		default:
+			return new(big.Rat).SetFloat64(bj.GetFloat64())
+		}
+	}
+	for i, left := range numbers {
+		for j, right := range numbers {
+			t.Run(fmt.Sprintf("%d/%d", i, j), func(t *testing.T) {
+				want := rational(left).Cmp(rational(right))
+				got := CompareBinary(left, right)
+				if got != want || got != -CompareBinary(right, left) || ContainsBinary(left, right) != (want == 0) {
+					t.Fatalf("%s vs %s: compare=%d, want=%d", left, right, got, want)
+				}
+			})
+		}
+	}
+}
+
+func TestBinaryJSONRejectsMalformedLayout(t *testing.T) {
+	array := mustParseBinaryFromString(t, `[1, [2], "x"]`)
+	object := mustParseBinaryFromString(t, `{"a": 1, "b": true}`)
+	for _, tc := range []struct {
+		name   string
+		base   BinaryJSON
+		mutate func([]byte)
+	}{
+		{"count", array, func(b []byte) { endian.PutUint32(b, math.MaxUint32) }},
+		{"unreferenced_payload", array, func(b []byte) { endian.PutUint32(b, 0) }},
+		{"short_size", array, func(b []byte) { endian.PutUint32(b[dataSizeOff:], 1) }},
+		{"long_size", array, func(b []byte) { endian.PutUint32(b[dataSizeOff:], math.MaxUint32) }},
+		{"offset", array, func(b []byte) { endian.PutUint32(b[headerSize+1:], math.MaxUint32) }},
+		{"back_reference", array, func(b []byte) { b[headerSize] = TypeCodeArray; endian.PutUint32(b[headerSize+1:], 0) }},
+		{"overlap", array, func(b []byte) {
+			copy(b[headerSize+valEntrySize:headerSize+2*valEntrySize], b[headerSize:headerSize+valEntrySize])
+		}},
+		{"unknown_child_type", array, func(b []byte) { b[headerSize] = 0xff }},
+		{"string_length", array, func(b []byte) { off := endian.Uint32(b[headerSize+2*valEntrySize+1:]); b[off] = 127 }},
+		{"key_offset", object, func(b []byte) { endian.PutUint32(b[headerSize:], 0) }},
+		{"key_length", object, func(b []byte) { endian.PutUint16(b[headerSize+keyLenOff:], math.MaxUint16) }},
+		{"bad_literal", object, func(b []byte) { b[headerSize+2*keyEntrySize+valEntrySize+1] = 9 }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bj := tc.base.Copy()
+			tc.mutate(bj.Value)
+			if out, err := bj.MarshalJSON(); err == nil || out != nil {
+				t.Fatalf("malformed layout emitted %q, %v", out, err)
+			}
+			if _, err := PeekBytesAsJSON(append([]byte{bj.TypeCode}, bj.Value...)); err == nil {
+				t.Fatal("peek accepted malformed layout")
+			}
+		})
+	}
+	for _, bj := range []BinaryJSON{array, object, {TypeCode: TypeCodeInt64, Value: make([]byte, 8)}, {TypeCode: TypeCodeString, Value: []byte{3, 'a', 'b', 'c'}}} {
+		for size := 0; size < len(bj.Value); size++ {
+			t.Run(fmt.Sprintf("truncate/%d/%d", bj.TypeCode, size), func(t *testing.T) {
+				if out, err := (BinaryJSON{TypeCode: bj.TypeCode, Value: bj.Value[:size]}).MarshalJSON(); err == nil || out != nil {
+					t.Fatalf("truncation emitted %q, %v", out, err)
+				}
+			})
+		}
+	}
+	for _, bj := range []BinaryJSON{{}, {TypeCode: 0xff, Value: []byte{0}}, {TypeCode: TypeCodeLiteral, Value: []byte{9}}, {TypeCode: TypeCodeString, Value: bytes.Repeat([]byte{0xff}, 12)}} {
+		if _, err := bj.MarshalJSON(); err == nil {
+			t.Fatal("invalid scalar accepted")
+		}
+	}
+	for _, number := range []float64{math.NaN(), math.Inf(1), math.Inf(-1)} {
+		value := make([]byte, 8)
+		endian.PutUint64(value, math.Float64bits(number))
+		bj := BinaryJSON{TypeCode: TypeCodeFloat64, Value: value}
+		if _, err := bj.MarshalJSON(); err == nil {
+			t.Fatal("non-finite JSON number was accepted")
+		}
+		if _, err := PeekBytesAsJSON(append([]byte{bj.TypeCode}, value...)); err == nil {
+			t.Fatal("peek accepted a non-finite JSON number")
+		}
+	}
+	stream := append([]byte{array.TypeCode}, array.Value...)
+	stream = append(stream, 0xff)
+	if n, err := PeekBytesAsJSON(stream); err != nil || n != len(stream)-1 {
+		t.Fatalf("stream peek = %d, %v", n, err)
+	}
+	path, err := ParseJSONPathExpr("$.x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := object.Modify([]PathExpression{path}, []BinaryJSON{{}}, ModifySet); err == nil {
+		t.Fatal("invalid replacement accepted")
+	}
+}
+
+func TestBinaryJSONRejectsPayloadGaps(t *testing.T) {
+	path, err := ParseJSONPathExpr("$[0]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, text := range []string{`[1, 2]`, `{"a": 1, "b": 2}`} {
+		base := mustParseBinaryFromString(t, text)
+		count := base.GetElemCount()
+		entryStart := headerSize
+		payloadStart := headerSize + count*valEntrySize
+		if base.TypeCode == TypeCodeObject {
+			entryStart += count * keyEntrySize
+			payloadStart += count * keyEntrySize
+		}
+		for gap := payloadStart; gap < len(base.Value); gap++ {
+			t.Run(fmt.Sprintf("%s/gap=%d", text, gap), func(t *testing.T) {
+				bj := base.Copy()
+				bj.Value = append(bj.Value[:gap], append([]byte{0}, base.Value[gap:]...)...)
+				endian.PutUint32(bj.Value[dataSizeOff:], uint32(len(bj.Value)))
+				for i := range count {
+					entries := []int{entryStart + i*valEntrySize + valTypeSize}
+					if bj.TypeCode == TypeCodeObject {
+						entries = append(entries, headerSize+i*keyEntrySize)
+					}
+					for _, entry := range entries {
+						off := endian.Uint32(bj.Value[entry:])
+						if int(off) >= gap {
+							endian.PutUint32(bj.Value[entry:], off+1)
+						}
+					}
+				}
+				if _, err := bj.MarshalJSON(); err == nil {
+					t.Fatal("marshal accepted a payload gap")
+				}
+				if _, err := PeekBytesAsJSON(append([]byte{bj.TypeCode}, bj.Value...)); err == nil {
+					t.Fatal("peek accepted a payload gap")
+				}
+				if _, err := bj.Unquote(); err == nil {
+					t.Fatal("unquote accepted a payload gap")
+				}
+				if _, err := bj.Modify([]PathExpression{path}, []BinaryJSON{base}, ModifySet); err == nil {
+					t.Fatal("modify accepted a payload gap")
+				}
+				if _, err := bj.Remove([]PathExpression{path}); err == nil {
+					t.Fatal("remove accepted a payload gap")
+				}
+			})
+		}
+	}
+}
+
+func TestBinaryJSONNestingLimit(t *testing.T) {
+	levels := maxBinaryJSONDepth + 2
+	value := make([]byte, levels*(headerSize+valEntrySize))
+	for i := range levels {
+		part := value[i*(headerSize+valEntrySize):]
+		endian.PutUint32(part, 1)
+		endian.PutUint32(part[dataSizeOff:], uint32(len(part)))
+		if i == levels-1 {
+			part[headerSize] = TypeCodeLiteral
+		} else {
+			part[headerSize] = TypeCodeArray
+			endian.PutUint32(part[headerSize+valTypeSize:], headerSize+valEntrySize)
+		}
+	}
+	if _, err := (BinaryJSON{TypeCode: TypeCodeArray, Value: value}).MarshalJSON(); err == nil {
+		t.Fatal("excessive nesting was accepted")
+	}
+}
+
+func FuzzBinaryJSONMarshal(f *testing.F) {
+	for _, text := range []string{`null`, `1`, `"x"`, `[1, [2], "x"]`, `{"a": true}`} {
+		bj, err := ParseBinaryFromString(text)
+		if err != nil {
+			f.Fatal(err)
+		}
+		f.Add(append([]byte{bj.TypeCode}, bj.Value...))
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) == 0 {
+			return
+		}
+		bj := BinaryJSON{TypeCode: data[0], Value: data[1:]}
+		out, err := bj.MarshalJSON()
+		if err != nil {
+			return
+		}
+		if !stdjson.Valid(out) {
+			t.Fatalf("invalid JSON output %q", out)
+		}
+		if n, err := PeekBytesAsJSON(data); err != nil || n != len(data) {
+			t.Fatalf("valid marshal cannot peek: n=%d, %v", n, err)
+		}
+	})
 }
 
 // Truncated or hand-built values must not panic the public accessors.
