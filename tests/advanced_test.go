@@ -215,7 +215,7 @@ func TestParseSQLMaintenanceAndSessionStatementsAST(t *testing.T) {
 
 func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	sel := mustParseOne(t, `SELECT a COLLATE "C", count(*) FILTER (WHERE a > 0), percentile_cont(0.5) WITHIN GROUP (ORDER BY a), sum(a) OVER w FROM t TABLESAMPLE system (10) REPEATABLE (5) WINDOW w AS (PARTITION BY b ORDER BY c) FOR NO KEY UPDATE OF t SKIP LOCKED;`).(*ast.SelectStmt)
-	if len(sel.WindowSpecs) != 1 || sel.WindowSpecs[0].Name.L != "w" {
+	if len(sel.WindowSpecs) != 1 || sel.WindowSpecs[0].Name.Name != "w" {
 		t.Fatalf("WindowSpecs = %#v", sel.WindowSpecs)
 	}
 	if sel.LockTp != ast.SelectLockNoKeyUpdate || sel.LockWaitPolicy != ast.SelectLockWaitSkipLocked || len(sel.LockedTables) != 1 {

@@ -27457,7 +27457,7 @@ yydefault:
 	case 1417:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.node = &ast.WindowSpec{Name: model.NewCIStr(yyDollar[2].str), OnlyAlias: true}
+			yyVAL.node = &ast.WindowSpec{Name: syntaxIdent(yylex, yyDollar[2].str, yyS[yypt].span), OnlyAlias: true}
 		}
 	case 1418:
 		yyDollar = yyS[yypt-0 : yypt+1]
@@ -27488,13 +27488,13 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			n := yyDollar[3].node.(*ast.WindowSpec)
-			n.Name = model.NewCIStr(yyDollar[1].str)
+			n.Name = syntaxIdent(yylex, yyDollar[1].str, yyS[yypt-2].span)
 			yyVAL.node = n
 		}
 	case 1424:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			spec := &ast.WindowSpec{Ref: model.NewCIStr(yyDollar[2].str)}
+			spec := &ast.WindowSpec{Ref: syntaxIdent(yylex, yyDollar[2].str, yyS[yypt-4].span)}
 			if yyDollar[3].exprs != nil {
 				spec.PartitionBy = &ast.PartitionByClause{Items: byItemsFromExprs(yyDollar[3].exprs)}
 			}

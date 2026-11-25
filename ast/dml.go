@@ -3514,10 +3514,10 @@ func (n *ShowStmt) Accept(v Visitor) (Node, bool) {
 type WindowSpec struct {
 	node
 
-	Name model.CIStr
+	Name lex.Ident
 	// Ref is the reference window of this specification. For example, in `w2 as (w1 order by a)`,
 	// the definition of `w2` references `w1`.
-	Ref model.CIStr
+	Ref lex.Ident
 
 	PartitionBy *PartitionByClause
 	OrderBy     *OrderByClause
@@ -3529,8 +3529,8 @@ type WindowSpec struct {
 
 // Restore implements Node interface.
 func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
-	if name := n.Name.String(); name != "" {
-		ctx.WriteName(name)
+	if n.Name.Present() {
+		ctx.WriteIdent(n.Name)
 		if n.OnlyAlias {
 			return ctx.Err()
 		}
@@ -3538,8 +3538,8 @@ func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain("(")
 	sep := ""
-	if refName := n.Ref.String(); refName != "" {
-		ctx.WriteName(refName)
+	if n.Ref.Present() {
+		ctx.WriteIdent(n.Ref)
 		sep = " "
 	}
 	if n.PartitionBy != nil {
@@ -3569,8 +3569,8 @@ func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the WindowSpec into a Writer.
 func (n *WindowSpec) Format(w io.Writer) {
-	name := n.Name.String()
-	if name != "" {
+	if n.Name.Present() {
+		name := n.Name.Name
 		_, _ = fmt.Fprint(w, name)
 		if n.OnlyAlias {
 			return
@@ -3579,8 +3579,8 @@ func (n *WindowSpec) Format(w io.Writer) {
 	}
 	_, _ = fmt.Fprint(w, "(")
 	sep := ""
-	refName := n.Ref.String()
-	if refName != "" {
+	if n.Ref.Present() {
+		refName := n.Ref.Name
 		_, _ = fmt.Fprint(w, refName)
 		sep = " "
 	}

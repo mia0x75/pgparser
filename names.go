@@ -10,6 +10,35 @@ import (
 	"github.com/mia0x75/pgparser/ast"
 )
 
+func syntaxIdent(l yyLexer, name string, span loc.Span) lex.Ident {
+	ident := lex.Ident{Name: name, Span: loc.InvalidSpan()}
+	scanner, ok := l.(*Scanner)
+	if !ok || scanner.lexer == nil {
+		return ident
+	}
+	src := scanner.lexer.input
+	if !span.Within(len(src)) || span.Empty() {
+		return ident
+	}
+	ident.Span = span
+	ident.Raw = src[span.Start:span.End]
+	switch ident.Raw[0] {
+	case '`':
+		ident.Quote = lex.QuoteBacktick
+	case '"':
+		ident.Quote = lex.QuoteDouble
+	case '\'':
+		ident.Quote = lex.QuoteSingle
+	}
+	if ident.Quote != lex.QuoteUnquoted && len(ident.Raw) >= 2 {
+		body := ident.Raw[1 : len(ident.Raw)-1]
+		if body == name && ident.Raw[len(ident.Raw)-1] == ident.Raw[0] {
+			ident.Name = body
+		}
+	}
+	return ident
+}
+
 func syntaxName(parts ...lex.Ident) ast.QualifiedName {
 	name := ast.QualifiedName{Parts: parts, Span: loc.InvalidSpan()}
 	for _, part := range parts {

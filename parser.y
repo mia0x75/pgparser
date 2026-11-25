@@ -8881,7 +8881,7 @@ over_clause:
 	OVER window_specification	{ $$ = $2 }
 	| OVER ColId
 		{
-			$$ = &ast.WindowSpec{Name: model.NewCIStr($2), OnlyAlias: true}
+			$$ = &ast.WindowSpec{Name: syntaxIdent(yylex, $2, yyS[yypt].span), OnlyAlias: true}
 		}
 	| /* EMPTY */				{ $$ = nil }
 	;
@@ -8900,7 +8900,7 @@ window_definition:
 	ColId AS window_specification
 		{
 			n := $3.(*ast.WindowSpec)
-			n.Name = model.NewCIStr($1)
+			n.Name = syntaxIdent(yylex, $1, yyS[yypt-2].span)
 			$$ = n
 		}
 	;
@@ -8908,7 +8908,7 @@ window_definition:
 window_specification:
 	'(' opt_existing_window_name opt_partition_clause opt_sort_clause opt_frame_clause ')'
 		{
-			spec := &ast.WindowSpec{Ref: model.NewCIStr($2)}
+			spec := &ast.WindowSpec{Ref: syntaxIdent(yylex, $2, yyS[yypt-4].span)}
 			if $3 != nil {
 				spec.PartitionBy = &ast.PartitionByClause{Items: byItemsFromExprs($3)}
 			}
