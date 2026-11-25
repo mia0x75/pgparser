@@ -165,4 +165,4 @@ go test ./tests -run '^$' -bench '^Benchmark(Parse|LexerOperator)$' -benchmem -b
 
 - 语法参考 [PostgreSQL](https://www.postgresql.org/) 的 `gram.y` 及其移植版本 [pgplex/pgparser](https://github.com/pgplex/pgparser)。
 - 解析器生成器 [golang.org/x/tools/cmd/goyacc](https://pkg.go.dev/golang.org/x/tools/cmd/goyacc)。
-- `ast` 与部分基础设施源自 [TiDB](https://github.com/pingcap/tidb) 的 parser。
+- `ast` 与部分基础设施按 PostgreSQL 语法解析器的通用设计独立实现。
