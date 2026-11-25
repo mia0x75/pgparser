@@ -57,9 +57,6 @@ func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
 			}
 		}
 	}
-	for _, stmt := range parser.result {
-		ast.SetFlag(stmt)
-	}
 	return parser.result, nil
 }
 

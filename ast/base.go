@@ -2,8 +2,6 @@ package ast
 
 import (
 	pkast "github.com/mia0x75/parserkit/ast"
-
-	"github.com/mia0x75/pgparser/types"
 )
 
 // node shares the common syntax data; outer nodes implement Accept and Restore.
@@ -22,37 +20,17 @@ type ddlNode = pkast.BaseDDL
 // DML implementations should embed it in.
 type dmlNode = pkast.BaseDML
 
-// exprNode shares the common expression marker and keeps the local legacy
-// type and flag cache.
+// resultSetNode shares the common result-set marker; outer nodes implement Accept and Restore.
+// Result-set implementations should embed it in.
+type resultSetNode = pkast.BaseResultSet
+
+// exprNode shares the common expression marker; syntax nodes no longer cache
+// execution-layer type or flag data.
 // Expression implementations should embed it in.
-type exprNode struct {
-	pkast.BaseExpr
-	Type types.FieldType
-	flag uint64
-}
+type exprNode = pkast.BaseExpr
 
 // TexprNode preserves the legacy base type name during migration.
 type TexprNode = exprNode
-
-// SetType stores the local legacy field type.
-func (en *exprNode) SetType(tp *types.FieldType) {
-	en.Type = *tp
-}
-
-// GetType returns the local legacy field type.
-func (en *exprNode) GetType() *types.FieldType {
-	return &en.Type
-}
-
-// SetFlag stores the local legacy flag cache.
-func (en *exprNode) SetFlag(flag uint64) {
-	en.flag = flag
-}
-
-// GetFlag returns the local legacy flag cache.
-func (en *exprNode) GetFlag() uint64 {
-	return en.flag
-}
 
 type funcNode struct {
 	exprNode

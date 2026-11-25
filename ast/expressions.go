@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	"github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/types"
@@ -427,7 +429,7 @@ func (n *CaseExpr) Accept(v Visitor) (Node, bool) {
 
 // SubqueryExpr represents a subquery.
 type SubqueryExpr struct {
-	exprNode
+	pkast.BaseQueryExpr
 	// Query is the query SelectNode.
 	Query      ResultSetNode
 	Evaluated  bool

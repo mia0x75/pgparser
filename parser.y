@@ -4545,7 +4545,7 @@ ViewStmt:
 			cte := &ast.CommonTableExpression{
 				Name:     model.NewCIStr(rv.Name.O),
 				ColNames: columnNameStrings($7),
-				Query:    $11.(ast.ResultSetNode),
+				Query:    $11.(ast.StmtNode),
 			}
 			wc := &ast.WithClause{
 				CTEs:        []*ast.CommonTableExpression{cte},
@@ -4579,7 +4579,7 @@ ViewStmt:
 			cte := &ast.CommonTableExpression{
 				Name:     model.NewCIStr(rv.Name.O),
 				ColNames: columnNameStrings($9),
-				Query:    $13.(ast.ResultSetNode),
+				Query:    $13.(ast.StmtNode),
 			}
 			wc := &ast.WithClause{
 				CTEs:        []*ast.CommonTableExpression{cte},
@@ -7462,7 +7462,7 @@ common_table_expr:
 			cte := &ast.CommonTableExpression{
 				Name:         model.NewCIStr($1),
 				ColNames:   columnNameStrings($2),
-				Query:        $6.(ast.ResultSetNode),
+				Query:        $6.(ast.StmtNode),
 			}
 			if $8 != nil {
 				_ = $8
@@ -7477,7 +7477,7 @@ common_table_expr:
 			cte := &ast.CommonTableExpression{
 				Name:         model.NewCIStr($1),
 				ColNames:   columnNameStrings($3),
-				Query:        $8.(ast.ResultSetNode),
+				Query:        $8.(ast.StmtNode),
 			}
 			if $10 != nil {
 				_ = $10
@@ -7679,7 +7679,7 @@ table_ref:
 		}
 	| xmltable opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $1}
+			ts := &ast.TableSource{Source: $1.(ast.ResultSetNode)}
 			if $2 != nil {
 				ts.AsName = model.NewCIStr(aliasName($2))
 			}
@@ -7687,7 +7687,7 @@ table_ref:
 		}
 	| LATERAL_P xmltable opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $2, Lateral: true}
+			ts := &ast.TableSource{Source: $2.(ast.ResultSetNode), Lateral: true}
 			if $3 != nil {
 				ts.AsName = model.NewCIStr(aliasName($3))
 			}
@@ -7695,7 +7695,7 @@ table_ref:
 		}
 	| json_table opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $1}
+			ts := &ast.TableSource{Source: $1.(ast.ResultSetNode)}
 			if $2 != nil {
 				ts.AsName = model.NewCIStr(aliasName($2))
 			}
@@ -7703,7 +7703,7 @@ table_ref:
 		}
 	| LATERAL_P json_table opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $2, Lateral: true}
+			ts := &ast.TableSource{Source: $2.(ast.ResultSetNode), Lateral: true}
 			if $3 != nil {
 				ts.AsName = model.NewCIStr(aliasName($3))
 			}

@@ -76,11 +76,15 @@ type ResultField struct {
 	Referenced bool
 }
 
-// ResultSetNode interface has a ResultFields property, represents a Node that returns result set.
+// ResultSetNode represents a Node that returns a result set.
 // Implementations include SelectStmt, SubqueryExpr, TableSource, TableName and Join.
-type ResultSetNode interface {
-	Node
-}
+type ResultSetNode = pkast.ResultSetNode
+
+// QueryNode classifies a statement that produces a result set.
+type QueryNode = pkast.QueryNode
+
+// TableRefNode classifies a table reference that can be used as a result set.
+type TableRefNode = pkast.TableRefNode
 
 // SensitiveStmtNode overloads StmtNode and provides a SecureText method.
 type SensitiveStmtNode interface {

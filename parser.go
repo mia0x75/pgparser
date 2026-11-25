@@ -22444,7 +22444,7 @@ yydefault:
 			cte := &ast.CommonTableExpression{
 				Name:     model.NewCIStr(rv.Name.O),
 				ColNames: columnNameStrings(yyDollar[7].list),
-				Query:    yyDollar[11].node.(ast.ResultSetNode),
+				Query:    yyDollar[11].node.(ast.StmtNode),
 			}
 			wc := &ast.WithClause{
 				CTEs:        []*ast.CommonTableExpression{cte},
@@ -22478,7 +22478,7 @@ yydefault:
 			cte := &ast.CommonTableExpression{
 				Name:     model.NewCIStr(rv.Name.O),
 				ColNames: columnNameStrings(yyDollar[9].list),
-				Query:    yyDollar[13].node.(ast.ResultSetNode),
+				Query:    yyDollar[13].node.(ast.StmtNode),
 			}
 			wc := &ast.WithClause{
 				CTEs:        []*ast.CommonTableExpression{cte},
@@ -25700,7 +25700,7 @@ yydefault:
 			cte := &ast.CommonTableExpression{
 				Name:     model.NewCIStr(yyDollar[1].str),
 				ColNames: columnNameStrings(yyDollar[2].list),
-				Query:    yyDollar[6].node.(ast.ResultSetNode),
+				Query:    yyDollar[6].node.(ast.StmtNode),
 			}
 			if yyDollar[8].node != nil {
 				_ = yyDollar[8].node
@@ -25716,7 +25716,7 @@ yydefault:
 			cte := &ast.CommonTableExpression{
 				Name:     model.NewCIStr(yyDollar[1].str),
 				ColNames: columnNameStrings(yyDollar[3].list),
-				Query:    yyDollar[8].node.(ast.ResultSetNode),
+				Query:    yyDollar[8].node.(ast.StmtNode),
 			}
 			if yyDollar[10].node != nil {
 				_ = yyDollar[10].node
@@ -25996,7 +25996,7 @@ yydefault:
 	case 1157:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			ts := &ast.TableSource{Source: yyDollar[1].node}
+			ts := &ast.TableSource{Source: yyDollar[1].node.(ast.ResultSetNode)}
 			if yyDollar[2].node != nil {
 				ts.AsName = model.NewCIStr(aliasName(yyDollar[2].node))
 			}
@@ -26005,7 +26005,7 @@ yydefault:
 	case 1158:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			ts := &ast.TableSource{Source: yyDollar[2].node, Lateral: true}
+			ts := &ast.TableSource{Source: yyDollar[2].node.(ast.ResultSetNode), Lateral: true}
 			if yyDollar[3].node != nil {
 				ts.AsName = model.NewCIStr(aliasName(yyDollar[3].node))
 			}
@@ -26014,7 +26014,7 @@ yydefault:
 	case 1159:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			ts := &ast.TableSource{Source: yyDollar[1].node}
+			ts := &ast.TableSource{Source: yyDollar[1].node.(ast.ResultSetNode)}
 			if yyDollar[2].node != nil {
 				ts.AsName = model.NewCIStr(aliasName(yyDollar[2].node))
 			}
@@ -26023,7 +26023,7 @@ yydefault:
 	case 1160:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			ts := &ast.TableSource{Source: yyDollar[2].node, Lateral: true}
+			ts := &ast.TableSource{Source: yyDollar[2].node.(ast.ResultSetNode), Lateral: true}
 			if yyDollar[3].node != nil {
 				ts.AsName = model.NewCIStr(aliasName(yyDollar[3].node))
 			}

@@ -139,7 +139,7 @@ func restoreExprList(ctx *format.RestoreCtx, exprs []ExprNode) error {
 
 // XMLTableExpr is a table function of an XMLTABLE call.
 type XMLTableExpr struct {
-	node
+	resultSetNode
 
 	// RowExpr is the row expression of the XMLTABLE call.
 	RowExpr ExprNode
@@ -351,7 +351,7 @@ func (n *XMLTableNamespace) Accept(v Visitor) (Node, bool) {
 
 // JSONTableExpr is a table function of a JSON_TABLE call.
 type JSONTableExpr struct {
-	node
+	resultSetNode
 
 	// ContextItem is the context item of the JSON_TABLE call.
 	ContextItem ExprNode
@@ -641,7 +641,7 @@ func (n *JSONTableColumn) Accept(v Visitor) (Node, bool) {
 
 // RowsFromExpr is a table function of a ROWS FROM call.
 type RowsFromExpr struct {
-	node
+	resultSetNode
 
 	// Functions are the functions of the ROWS FROM call.
 	Functions []*TableFunction

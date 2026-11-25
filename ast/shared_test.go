@@ -90,6 +90,15 @@ func TestSharedNodeIdentity(t *testing.T) {
 	if reflect.TypeFor[ast.Visitor]() != reflect.TypeFor[pkast.Visitor]() {
 		t.Error("dialect Visitor is not the shared Visitor type")
 	}
+	if reflect.TypeFor[ast.ResultSetNode]() != reflect.TypeFor[pkast.ResultSetNode]() {
+		t.Error("dialect ResultSetNode is not the shared ResultSetNode type")
+	}
+	if reflect.TypeFor[ast.QueryNode]() != reflect.TypeFor[pkast.QueryNode]() {
+		t.Error("dialect QueryNode is not the shared QueryNode type")
+	}
+	if reflect.TypeFor[ast.TableRefNode]() != reflect.TypeFor[pkast.TableRefNode]() {
+		t.Error("dialect TableRefNode is not the shared TableRefNode type")
+	}
 	// The pure expression satisfies the dialect expression contract.
 	var _ ast.ExprNode = (*sharedPureExpr)(nil)
 }
@@ -245,10 +254,9 @@ func TestSharedFormatExprAndFlag(t *testing.T) {
 		t.Fatalf("failed foreign format is %q, want %q", got, "<unsupported>")
 	}
 
-	legacy := driver.NewValueExpr("abc")
-	legacy.SetFlag(ast.FlagHasParamMarker)
-	if got := ast.ExprFlag(legacy); got != ast.FlagHasParamMarker {
-		t.Fatalf("legacy flag is %d, want %d", got, ast.FlagHasParamMarker)
+	marker := driver.NewParamMarkerExpr(0)
+	if got := ast.ExprFlag(marker); got != ast.FlagHasParamMarker {
+		t.Fatalf("derived flag is %d, want %d", got, ast.FlagHasParamMarker)
 	}
 	if got := ast.ExprFlag(&sharedPureExpr{}); got != 0 {
 		t.Fatalf("pure flag is %d, want 0", got)
@@ -275,5 +283,31 @@ func TestSharedConstructors(t *testing.T) {
 	marker := ast.NewParamMarkerExpr(0)
 	if _, ok := marker.(*driver.ParamMarkerExpr); !ok {
 		t.Fatalf("dialect NewParamMarkerExpr returned %T", marker)
+	}
+}
+
+// TestSharedBasesDoNotDispatch checks that shared bases never gain Node methods.
+func TestSharedBasesDoNotDispatch(t *testing.T) {
+	t.Parallel()
+
+	nodeType := reflect.TypeFor[ast.Node]()
+	tests := []struct {
+		name string
+		typ  reflect.Type
+	}{
+		{"BaseNode", reflect.TypeFor[*pkast.BaseNode]()},
+		{"BaseExpr", reflect.TypeFor[*pkast.BaseExpr]()},
+		{"BaseStmt", reflect.TypeFor[*pkast.BaseStmt]()},
+		{"BaseDML", reflect.TypeFor[*pkast.BaseDML]()},
+		{"BaseDDL", reflect.TypeFor[*pkast.BaseDDL]()},
+		{"BaseResultSet", reflect.TypeFor[*pkast.BaseResultSet]()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if tt.typ.Implements(nodeType) {
+				t.Errorf("%s implements ast.Node; promoted dispatch would lose outer identity", tt.name)
+			}
+		})
 	}
 }

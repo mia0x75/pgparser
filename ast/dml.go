@@ -7,6 +7,8 @@ import (
 
 	"github.com/mia0x75/pgparser/errors"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	"github.com/mia0x75/pgparser/auth"
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
@@ -63,7 +65,7 @@ const (
 
 // Join represents table join.
 type Join struct {
-	node
+	resultSetNode
 
 	// Left table can be TableSource or JoinNode.
 	Left ResultSetNode
@@ -187,7 +189,7 @@ func (n *Join) Accept(v Visitor) (Node, bool) {
 
 // TableName represents a table name.
 type TableName struct {
-	node
+	resultSetNode
 
 	Catalog model.CIStr
 	Schema  model.CIStr
@@ -434,7 +436,7 @@ func (n *OnCondition) Accept(v Visitor) (Node, bool) {
 
 // TableSource represents table source with a name.
 type TableSource struct {
-	node
+	resultSetNode
 
 	// Source is the source of the data, can be a TableName,
 	// a SelectStmt, a SetOprStmt, a JoinNode, or a TableFunction.
@@ -521,7 +523,7 @@ func (n *TableSample) Accept(v Visitor) (Node, bool) {
 
 // TableFunction represents a set-returning function used as a table source.
 type TableFunction struct {
-	node
+	resultSetNode
 
 	// Expr is the function call expression.
 	Expr ExprNode
@@ -1207,7 +1209,7 @@ func (n *OrderByClause) Accept(v Visitor) (Node, bool) {
 
 // SelectStmt represents the select query node.
 type SelectStmt struct {
-	dmlNode
+	pkast.BaseQuery
 
 	// SelectStmtOpts wraps around select hints and switches.
 	*SelectStmtOpts
@@ -1560,7 +1562,7 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 
 // ValuesStmt is a table value constructor statement.
 type ValuesStmt struct {
-	dmlNode
+	pkast.BaseQuery
 
 	Rows             []*RowExpr
 	AfterSetOperator *SetOprType
@@ -1685,7 +1687,7 @@ type CommonTableExpression struct {
 
 	Name     model.CIStr
 	ColNames []model.CIStr
-	Query    ResultSetNode
+	Query    StmtNode
 }
 
 // Restore implements Node interface.
@@ -1721,7 +1723,7 @@ func (n *CommonTableExpression) Accept(v Visitor) (Node, bool) {
 	if !ok {
 		return n, false
 	}
-	n.Query = node.(ResultSetNode)
+	n.Query = node.(StmtNode)
 	return v.Leave(n)
 }
 
@@ -1871,7 +1873,7 @@ func (n *SetOprSelectList) Accept(v Visitor) (Node, bool) {
 
 // SetOprStmt represents a "union/except/intersect statement"
 type SetOprStmt struct {
-	dmlNode
+	pkast.BaseQuery
 
 	// IsInBraces indicates whether the whole statement is in braces.
 	IsInBraces bool
