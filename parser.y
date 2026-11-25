@@ -8833,10 +8833,10 @@ func_expr:
 			}
 			if $4 != nil {
 				$$ = windowFuncExpr(fn, $4.(*ast.WindowSpec))
-			} else if fn.WithinGroup != nil || fn.Filter != nil || isAggregateName(fn.FnName.O) {
+			} else if fn.WithinGroup != nil || fn.Filter != nil || isAggregateName(nameString(fn.Name)) {
 				$$ = &ast.AggregateFuncExpr{
-					FnNameParts: fn.FnNameParts,
-					F:           fn.FnName.O,
+					FnNameParts: nameStrings(fn.Name),
+					F:           nameString(fn.Name),
 					Args:        fn.Args,
 					Filter:      fn.Filter,
 					WithinGroup: fn.WithinGroup,
@@ -9004,7 +9004,9 @@ func_application:
 		}
 	| func_name '(' '*' ')'
 		{
-			$$ = &ast.FuncCallExpr{FnName: model.NewCIStr(funcNameString($1)), FnNameParts: funcNameParts($1), Star: true}
+			fn := ast.NewFuncCallExprParts(funcNameParts($1))
+			fn.Star = true
+			$$ = fn
 		}
 	| func_name '(' DISTINCT func_arg_list opt_sort_clause ')'
 		{
@@ -9132,10 +9134,9 @@ func_expr_common_subexpr:
 		}
 	| EXTRACT '(' extract_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("extract"),
-       Args: exprsFromList($3),
-   }
+			fn := ast.NewFuncCallExpr("extract", exprsFromList($3)...)
+			fn.KeywordForm = true
+			$$ = fn
 		}
 	| NORMALIZE '(' a_expr ')'
 		{
@@ -9157,38 +9158,23 @@ func_expr_common_subexpr:
 		}
 	| OVERLAY '(' overlay_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.overlay"),
-       Args: exprsFromList($3),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.overlay", exprsFromList($3)...)
 		}
 	| OVERLAY '(' func_arg_list_opt ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("overlay"),
-       Args: exprsFromList($3),
-   }
+			$$ = ast.NewFuncCallExpr("overlay", exprsFromList($3)...)
 		}
 	| POSITION '(' position_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.position"),
-       Args: exprsFromList($3),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.position", exprsFromList($3)...)
 		}
 	| SUBSTRING '(' substr_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.substring"),
-       Args: exprsFromList($3),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.substring", exprsFromList($3)...)
 		}
 	| SUBSTRING '(' func_arg_list_opt ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("substring"),
-       Args: exprsFromList($3),
-   }
+			$$ = ast.NewFuncCallExpr("substring", exprsFromList($3)...)
 		}
 	| TREAT '(' a_expr AS Typename ')'
 		{
@@ -9202,31 +9188,19 @@ func_expr_common_subexpr:
 		}
 	| TRIM '(' BOTH trim_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.btrim"),
-       Args: exprsFromList($4),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.btrim", exprsFromList($4)...)
 		}
 	| TRIM '(' LEADING trim_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.ltrim"),
-       Args: exprsFromList($4),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.ltrim", exprsFromList($4)...)
 		}
 	| TRIM '(' TRAILING trim_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.rtrim"),
-       Args: exprsFromList($4),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.rtrim", exprsFromList($4)...)
 		}
 	| TRIM '(' trim_list ')'
 		{
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.btrim"),
-       Args: exprsFromList($3),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.btrim", exprsFromList($3)...)
 		}
 	| GROUPING '(' expr_list ')'
 		{
@@ -9346,10 +9320,7 @@ func_expr_common_subexpr:
 	| JSON_OBJECT '(' func_arg_list ')'
 		{
 			/* Legacy json_object() function call */
-			$$ = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.json_object"),
-       Args: exprsFromList($3),
-   }
+			$$ = ast.NewFuncCallExpr("pg_catalog.json_object", exprsFromList($3)...)
 		}
 	| JSON_OBJECT '(' json_name_and_value_list json_object_constructor_null_clause_opt
 		json_key_uniqueness_constraint_opt json_returning_clause_opt ')'

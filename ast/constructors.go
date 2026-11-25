@@ -2,7 +2,6 @@ package ast
 
 import (
 	"io"
-	"strings"
 
 	pkast "github.com/mia0x75/parserkit/ast"
 
@@ -46,16 +45,12 @@ func NewUnaryOperationExprByName(name string, v ExprNode) *UnaryOperationExpr {
 
 // NewFuncCallExpr returns a FuncCallExpr for the given function name.
 func NewFuncCallExpr(name string, args ...ExprNode) *FuncCallExpr {
-	return &FuncCallExpr{FnName: model.NewCIStr(name), Args: args}
+	return &FuncCallExpr{BaseCallExpr: pkast.BaseCallExpr{Name: nameFromDotted(name), Args: args}}
 }
 
 // NewFuncCallExprParts returns a FuncCallExpr for the given name parts.
 func NewFuncCallExprParts(parts []string, args ...ExprNode) *FuncCallExpr {
-	return &FuncCallExpr{
-		FnName:      model.NewCIStr(strings.Join(parts, ".")),
-		FnNameParts: parts,
-		Args:        args,
-	}
+	return &FuncCallExpr{BaseCallExpr: pkast.BaseCallExpr{Name: nameFromStrings(parts), Args: args}}
 }
 
 // NewTypeCastExpr returns a FuncCastExpr casting expr to tp.

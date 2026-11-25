@@ -5,10 +5,10 @@ import (
 	"io"
 	"strings"
 
-	"github.com/mia0x75/pgparser/errors"
+	pkast "github.com/mia0x75/parserkit/ast"
 
+	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/format"
-	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/types"
 )
 
@@ -132,14 +132,9 @@ const (
 
 // FuncCallExpr is for function expression.
 type FuncCallExpr struct {
-	funcNode
-	// FnName is the dotted function name used by Format and legacy callers.
-	FnName model.CIStr
-	// FnNameParts keeps each name part unquoted so Restore can quote and case
-	// them correctly; a flattened FnName cannot be split when a part contains a dot.
-	FnNameParts []string
-	// Args is the function args.
-	Args []ExprNode
+	pkast.BaseCallExpr
+	// KeywordForm marks the grammar's EXTRACT(unit FROM expr) spelling.
+	KeywordForm bool
 	// Filter is the optional FILTER (WHERE expr) clause.
 	Filter ExprNode
 	// WithinGroup is the optional WITHIN GROUP (ORDER BY ...) clause.
@@ -149,6 +144,8 @@ type FuncCallExpr struct {
 	Distinct bool
 	OrderBy  *OrderByClause
 }
+
+func (*FuncCallExpr) functionExpression() {}
 
 // mustQuoteFuncNames are the parser keywords that cannot be written as a bare
 // function name: SELECT "<kw>"(1, 2) parses but SELECT <KW>(1, 2) does not, so
@@ -327,12 +324,15 @@ func simpleLowerIdent(s string) bool {
 
 // Restore implements Node interface.
 func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
-	keywordForm := n.keywordFormName()
+	keywordForm := n.KeywordForm && len(n.Args) == 2
 	if keywordForm {
-		// The grammar's keyword forms (EXTRACT/POSITION/TRIM) must stay bare.
-		ctx.WriteKeyword(n.FnName.O)
-	} else {
-		writeFuncName(ctx, n.FnNameParts, n.FnName.O)
+		_, keywordForm = n.Args[0].(ValueExpr)
+	}
+	if keywordForm {
+		// The grammar's EXTRACT(unit FROM expr) spelling must stay bare.
+		ctx.WriteKeyword("EXTRACT")
+	} else if err := restoreFunctionName(ctx, n.Name); err != nil {
+		return err
 	}
 	ctx.WritePlain("(")
 	if n.Distinct {
@@ -379,86 +379,16 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 	return ctx.Err()
 }
 
-// keywordFormName reports whether the call has the argument shape of one of the
-// grammar's keyword forms. A quoted user function like "extract"(a) does not
-// match, so it keeps its quoted name instead of becoming the EXTRACT keyword.
-func (n *FuncCallExpr) keywordFormName() bool {
-	if len(n.FnNameParts) != 0 {
-		return false
-	}
-	switch n.FnName.L {
-	case "extract":
-		if len(n.Args) != 2 {
-			return false
-		}
-		_, ok := n.Args[0].(ValueExpr)
-		return ok
-	case "position":
-		return len(n.Args) == 2
-	case "trim":
-		switch len(n.Args) {
-		case 1, 2:
-			return true
-		case 3:
-			_, ok2 := n.Args[2].(ValueExpr)
-			_, ok1 := n.Args[1].(ValueExpr)
-			return ok1 && ok2
-		}
-	}
-	return false
-}
-
-// restoreKeywordForm writes extract(), position() and trim() in their SQL forms.
-// It is only called when keywordFormName reports a matching shape.
+// restoreKeywordForm writes EXTRACT(unit FROM expr) in its SQL form.
 func (n *FuncCallExpr) restoreKeywordForm(ctx *format.RestoreCtx) error {
-	switch n.FnName.L {
-	case "extract":
-		ctx.WriteKeyword(n.Args[0].(ValueExpr).GetString())
-		ctx.WriteKeyword(" FROM ")
-		return n.Args[1].Restore(ctx)
-	case "position":
-		if err := n.Args[0].Restore(ctx); err != nil {
-			return err
-		}
-		ctx.WriteKeyword(" IN ")
-		return n.Args[1].Restore(ctx)
-	case "trim":
-		switch len(n.Args) {
-		case 1:
-			return n.Args[0].Restore(ctx)
-		case 2:
-			if err := n.Args[1].Restore(ctx); err != nil {
-				return err
-			}
-			ctx.WriteKeyword(" FROM ")
-			return n.Args[0].Restore(ctx)
-		case 3:
-			direction := n.Args[2].(ValueExpr)
-			from := n.Args[1].(ValueExpr)
-			switch fmt.Sprint(direction.GetValue()) {
-			case "3":
-				ctx.WriteKeyword("TRAILING ")
-			case "2":
-				ctx.WriteKeyword("LEADING ")
-			case "0", "1":
-				ctx.WriteKeyword("BOTH ")
-			}
-			if from.GetValue() != nil {
-				if err := n.Args[1].Restore(ctx); err != nil {
-					return err
-				}
-				ctx.WritePlain(" ")
-			}
-			ctx.WriteKeyword("FROM ")
-			return n.Args[0].Restore(ctx)
-		}
-	}
-	return ctx.Err()
+	ctx.WriteKeyword(n.Args[0].(ValueExpr).GetString())
+	ctx.WriteKeyword(" FROM ")
+	return n.Args[1].Restore(ctx)
 }
 
 // Format the ExprNode into a Writer.
 func (n *FuncCallExpr) Format(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "%s(", n.FnName.L)
+	_, _ = fmt.Fprintf(w, "%s(", qualifiedNameString(n.Name))
 	if n.Star {
 		_, _ = fmt.Fprint(w, "*")
 	} else {

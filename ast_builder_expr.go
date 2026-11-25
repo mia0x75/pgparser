@@ -311,8 +311,8 @@ func groupingSetExprs(e ast.ExprNode) []ast.ExprNode {
 
 // windowFuncExpr returns the window expression of a function call.
 func windowFuncExpr(fn *ast.FuncCallExpr, spec *ast.WindowSpec) ast.ExprNode {
-	wf := &ast.WindowFuncExpr{F: fn.FnName.O, Args: fn.Args, Star: fn.Star,
-		FnNameParts: fn.FnNameParts, Distinct: fn.Distinct, OrderBy: fn.OrderBy,
+	wf := &ast.WindowFuncExpr{F: nameString(fn.Name), Args: fn.Args, Star: fn.Star,
+		FnNameParts: nameStrings(fn.Name), Distinct: fn.Distinct, OrderBy: fn.OrderBy,
 		Filter: fn.Filter, WithinGroup: fn.WithinGroup}
 	if spec != nil {
 		wf.Spec = *spec

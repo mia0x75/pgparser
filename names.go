@@ -62,11 +62,15 @@ func nameFromParts(parts ...string) ast.QualifiedName {
 }
 
 func nameString(name ast.QualifiedName) string {
+	return strings.Join(nameStrings(name), ".")
+}
+
+func nameStrings(name ast.QualifiedName) []string {
 	parts := make([]string, 0, len(name.Parts))
 	for _, part := range name.Parts {
 		parts = append(parts, part.Name)
 	}
-	return strings.Join(parts, ".")
+	return parts
 }
 
 func syntaxTableName(name ast.QualifiedName) *ast.TableName {

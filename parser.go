@@ -27383,10 +27383,10 @@ yydefault:
 			}
 			if yyDollar[4].node != nil {
 				yyVAL.expr = windowFuncExpr(fn, yyDollar[4].node.(*ast.WindowSpec))
-			} else if fn.WithinGroup != nil || fn.Filter != nil || isAggregateName(fn.FnName.O) {
+			} else if fn.WithinGroup != nil || fn.Filter != nil || isAggregateName(nameString(fn.Name)) {
 				yyVAL.expr = &ast.AggregateFuncExpr{
-					FnNameParts: fn.FnNameParts,
-					F:           fn.FnName.O,
+					FnNameParts: nameStrings(fn.Name),
+					F:           nameString(fn.Name),
 					Args:        fn.Args,
 					Filter:      fn.Filter,
 					WithinGroup: fn.WithinGroup,
@@ -27633,7 +27633,9 @@ yydefault:
 	case 1449:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{FnName: model.NewCIStr(funcNameString(yyDollar[1].list)), FnNameParts: funcNameParts(yyDollar[1].list), Star: true}
+			fn := ast.NewFuncCallExprParts(funcNameParts(yyDollar[1].list))
+			fn.Star = true
+			yyVAL.expr = fn
 		}
 	case 1450:
 		yyDollar = yyS[yypt-6 : yypt+1]
@@ -27783,10 +27785,9 @@ yydefault:
 	case 1475:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("extract"),
-				Args:   exprsFromList(yyDollar[3].exprs),
-			}
+			fn := ast.NewFuncCallExpr("extract", exprsFromList(yyDollar[3].exprs)...)
+			fn.KeywordForm = true
+			yyVAL.expr = fn
 		}
 	case 1476:
 		yyDollar = yyS[yypt-4 : yypt+1]
@@ -27811,42 +27812,27 @@ yydefault:
 	case 1478:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.overlay"),
-				Args:   exprsFromList(yyDollar[3].exprs),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.overlay", exprsFromList(yyDollar[3].exprs)...)
 		}
 	case 1479:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("overlay"),
-				Args:   exprsFromList(yyDollar[3].list),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("overlay", exprsFromList(yyDollar[3].list)...)
 		}
 	case 1480:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.position"),
-				Args:   exprsFromList(yyDollar[3].exprs),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.position", exprsFromList(yyDollar[3].exprs)...)
 		}
 	case 1481:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.substring"),
-				Args:   exprsFromList(yyDollar[3].exprs),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.substring", exprsFromList(yyDollar[3].exprs)...)
 		}
 	case 1482:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("substring"),
-				Args:   exprsFromList(yyDollar[3].list),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("substring", exprsFromList(yyDollar[3].list)...)
 		}
 	case 1483:
 		yyDollar = yyS[yypt-6 : yypt+1]
@@ -27862,34 +27848,22 @@ yydefault:
 	case 1484:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.btrim"),
-				Args:   exprsFromList(yyDollar[4].exprs),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.btrim", exprsFromList(yyDollar[4].exprs)...)
 		}
 	case 1485:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.ltrim"),
-				Args:   exprsFromList(yyDollar[4].exprs),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.ltrim", exprsFromList(yyDollar[4].exprs)...)
 		}
 	case 1486:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.rtrim"),
-				Args:   exprsFromList(yyDollar[4].exprs),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.rtrim", exprsFromList(yyDollar[4].exprs)...)
 		}
 	case 1487:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.btrim"),
-				Args:   exprsFromList(yyDollar[3].exprs),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.btrim", exprsFromList(yyDollar[3].exprs)...)
 		}
 	case 1488:
 		yyDollar = yyS[yypt-4 : yypt+1]
@@ -28022,10 +27996,7 @@ yydefault:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			/* Legacy json_object() function call */
-			yyVAL.expr = &ast.FuncCallExpr{
-				FnName: model.NewCIStr("pg_catalog.json_object"),
-				Args:   exprsFromList(yyDollar[3].list),
-			}
+			yyVAL.expr = ast.NewFuncCallExpr("pg_catalog.json_object", exprsFromList(yyDollar[3].list)...)
 		}
 	case 1502:
 		yyDollar = yyS[yypt-7 : yypt+1]

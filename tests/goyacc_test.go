@@ -694,7 +694,7 @@ func TestParseSQLCastAndExtract(t *testing.T) {
 		t.Fatalf("expected cast expression, got %T", st.Fields.Fields[0].Expr)
 	}
 	fc, ok := st.Fields.Fields[1].Expr.(*ast.FuncCallExpr)
-	if !ok || fc.FnName.L != "extract" {
+	if !ok || len(fc.Name.Parts) != 1 || fc.Name.Parts[0].Name != "extract" {
 		t.Fatalf("expected extract call, got %#v", st.Fields.Fields[1].Expr)
 	}
 	if _, ok := st.Where.(*ast.BinaryOperationExpr); !ok {
@@ -738,7 +738,7 @@ func TestParseSQLQualifiedFunctionAndSoftKeywords(t *testing.T) {
 		t.Fatalf("fields = %d, want 2", len(st.Fields.Fields))
 	}
 	fc, ok := st.Fields.Fields[0].Expr.(*ast.FuncCallExpr)
-	if !ok || fc.FnName.O != "pg_catalog.lower" {
+	if !ok || len(fc.Name.Parts) != 2 || fc.Name.Parts[0].Name != "pg_catalog" || fc.Name.Parts[1].Name != "lower" {
 		t.Fatalf("expected qualified function, got %#v", st.Fields.Fields[0].Expr)
 	}
 	if st.Where == nil {
@@ -815,7 +815,7 @@ func TestParseSQLDropBehaviorAndMaterialized(t *testing.T) {
 func TestParseSQLAtTimeZone(t *testing.T) {
 	st := mustParseSelect(t, "SELECT created_at AT TIME ZONE 'UTC' FROM events;")
 	fc, ok := st.Fields.Fields[0].Expr.(*ast.FuncCallExpr)
-	if !ok || fc.FnName.L != "timezone" {
+	if !ok || len(fc.Name.Parts) != 1 || fc.Name.Parts[0].Name != "timezone" {
 		t.Fatalf("expected timezone call, got %#v", st.Fields.Fields[0].Expr)
 	}
 }
