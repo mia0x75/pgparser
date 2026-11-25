@@ -964,7 +964,7 @@ type paramCollector struct {
 }
 
 func (c *paramCollector) Enter(n ast.Node) (ast.Node, bool) {
-	if _, ok := n.(ast.ParamMarkerExpr); ok {
+	if _, ok := n.(*ast.ParamMarkerExpr); ok {
 		c.count++
 	}
 	return n, false

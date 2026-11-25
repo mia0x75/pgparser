@@ -224,10 +224,10 @@ func (v *auditVisitor) Enter(n ast.Node) (ast.Node, bool) {
 			return &copy, false
 		}
 	}
-	if _, ok := n.(*ast.NumericLiteral); ok {
+	if _, ok := n.(*ast.LiteralExpr); ok {
 		v.seen++
 		if v.replace {
-			return &ast.NumericLiteral{Value: "2.5"}, false
+			return &ast.LiteralExpr{BaseLiteralExpr: pkast.BaseLiteralExpr{Kind: pkast.LiteralFloat, Value: "2.5"}}, false
 		}
 	}
 	return n, false

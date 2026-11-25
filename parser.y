@@ -10055,11 +10055,11 @@ AexprConst:
 		}
 	| BCONST
 		{
-			$$ = ast.NewValueExpr($1)
+			$$ = bitStringLiteral($1)
 		}
 	| XCONST
 		{
-			$$ = ast.NewValueExpr($1)
+			$$ = hexStringLiteral($1)
 		}
 	| TRUE_P
 		{

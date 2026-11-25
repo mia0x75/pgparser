@@ -3,12 +3,9 @@ package driver
 import (
 	"fmt"
 	"io"
-	"math"
 	"strconv"
 
-	"github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/pgparser/errors"
-	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/hack"
 	"github.com/mia0x75/pgparser/postgres"
 	"github.com/mia0x75/pgparser/types"
@@ -31,14 +28,8 @@ func NewBitLiteral(str string) (any, error) {
 	return types.NewBitLiteral(str)
 }
 
-var (
-	_ ast.ExprNode = &ParamMarkerExpr{}
-	_ ast.ExprNode = &ValueExpr{}
-)
-
-// ValueExpr is the simple value expression.
+// ValueExpr is a runtime execution value, not an AST node.
 type ValueExpr struct {
-	ast.BaseExpr
 	types.Datum
 	Type             types.FieldType
 	flag             uint64
@@ -98,28 +89,6 @@ func valueExprString(n *ValueExpr) (string, error) {
 	}
 }
 
-// Restore implements Node interface.
-func (n *ValueExpr) Restore(ctx *format.RestoreCtx) error {
-	s, err := valueExprString(n)
-	if err != nil {
-		return err
-	}
-	if n.Kind() == types.KindString {
-		if n.Type.Charset != "" && n.Type.Charset != postgres.DefaultCharset {
-			ctx.WritePlain("_")
-			ctx.WriteKeyword(n.Type.Charset)
-		}
-		ctx.WriteString(s)
-		return ctx.Err()
-	}
-	if n.Kind() == types.KindBytes {
-		ctx.WriteString(s)
-		return ctx.Err()
-	}
-	ctx.WritePlain(s)
-	return ctx.Err()
-}
-
 // GetDatumString preserves the dialect ValueExpr string accessor.
 func (n *ValueExpr) GetDatumString() string {
 	return n.GetString()
@@ -160,59 +129,4 @@ func (n *ValueExpr) SetProjectionOffset(offset int) {
 // GetProjectionOffset returns ValueExpr.projectionOffset.
 func (n *ValueExpr) GetProjectionOffset() int {
 	return n.projectionOffset
-}
-
-// Accept implements Node interface.
-func (n *ValueExpr) Accept(v ast.Visitor) (ast.Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*ValueExpr)
-	return v.Leave(n)
-}
-
-// ParamMarkerExpr expression holds a place for another expression.
-// Used in parsing prepare statement.
-type ParamMarkerExpr struct {
-	ValueExpr
-	Offset int
-	Order  int
-}
-
-// Restore implements Node interface.
-func (n *ParamMarkerExpr) Restore(ctx *format.RestoreCtx) error {
-	if n.Offset < 0 || n.Offset >= math.MaxInt32 {
-		return errors.New("invalid PostgreSQL parameter number")
-	}
-	ctx.WritePlainf("$%d", n.Offset+1)
-	return ctx.Err()
-}
-
-// NewParamMarkerExpr preserves PostgreSQL's zero-based parameter numbering.
-func NewParamMarkerExpr(offset int) *ParamMarkerExpr {
-	return &ParamMarkerExpr{
-		Offset: offset,
-		Order:  offset,
-	}
-}
-
-// Format the ExprNode into a Writer.
-func (n *ParamMarkerExpr) Format(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "$%d", n.Offset+1)
-}
-
-// Accept implements Node Accept interface.
-func (n *ParamMarkerExpr) Accept(v ast.Visitor) (ast.Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*ParamMarkerExpr)
-	return v.Leave(n)
-}
-
-// SetOrder preserves the parser's legacy parameter ordering API.
-func (n *ParamMarkerExpr) SetOrder(order int) {
-	n.Order = order
 }

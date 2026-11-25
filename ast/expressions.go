@@ -9,9 +9,7 @@ import (
 
 	pkast "github.com/mia0x75/parserkit/ast"
 
-	"github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/errors"
-	"github.com/mia0x75/pgparser/types"
 
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
@@ -43,30 +41,11 @@ var (
 	_ Node = &WhenClause{}
 )
 
-// ValueExpr define a interface for ValueExpr.
+// ValueExpr is the accessor kept by syntax literals for legacy callers.
 type ValueExpr interface {
 	ExprNode
-	SetType(*types.FieldType)
-	GetType() *types.FieldType
-	SetFlag(uint64)
-	GetFlag() uint64
-	Format(io.Writer)
-	SetValue(val any)
 	GetValue() any
-	GetDatumString() string
 	GetString() string
-	GetProjectionOffset() int
-	SetProjectionOffset(offset int)
-}
-
-// NewValueExpr creates a ValueExpr with value, and sets default field type.
-func NewValueExpr(value any) ValueExpr {
-	return driver.NewValueExpr(value)
-}
-
-// NewParamMarkerExpr creates a ParamMarkerExpr.
-func NewParamMarkerExpr(offset int) ParamMarkerExpr {
-	return driver.NewParamMarkerExpr(offset)
 }
 
 // BetweenExpr is for "between and" or "not between and" expression.
@@ -235,8 +214,11 @@ func startsWithSymbol(expr ExprNode) bool {
 		return startsWithSymbol(n.Expr)
 	case *UnaryOperationExpr:
 		return !wordOperator(n.OpName) && (n.OpName != "" || n.Op != opcode.Not)
-	case *NumericLiteral:
-		return strings.HasPrefix(n.Value, "-") || strings.HasPrefix(n.Value, "+")
+	case *LiteralExpr:
+		switch n.Kind {
+		case pkast.LiteralInteger, pkast.LiteralFloat, pkast.LiteralDecimal:
+			return strings.HasPrefix(n.Value, "-") || strings.HasPrefix(n.Value, "+")
+		}
 	case ValueExpr:
 		switch value := n.GetValue().(type) {
 		case int64:
@@ -1067,13 +1049,6 @@ func (n *PatternLikeExpr) Accept(v Visitor) (Node, bool) {
 		n.Escape = child.(ExprNode)
 	}
 	return v.Leave(n)
-}
-
-// ParamMarkerExpr expression holds a place for another expression.
-// Used in parsing prepare statement.
-type ParamMarkerExpr interface {
-	ValueExpr
-	SetOrder(int)
 }
 
 // ParenthesesExpr is the parentheses expression.

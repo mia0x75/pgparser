@@ -61,7 +61,7 @@ func (v *sharedVisitor) Enter(n pkast.Node) (pkast.Node, bool) {
 
 func (v *sharedVisitor) Leave(n pkast.Node) (pkast.Node, bool) {
 	if v.replacement != nil {
-		if _, ok := n.(*driver.ValueExpr); ok {
+		if _, ok := n.(*ast.LiteralExpr); ok {
 			return v.replacement, true
 		}
 	}
@@ -113,8 +113,8 @@ func TestSharedVisitorPureChild(t *testing.T) {
 	pure.SetText("pure")
 	between := &ast.BetweenExpr{
 		Expr:  pure,
-		Left:  driver.NewValueExpr(int64(1)),
-		Right: driver.NewValueExpr(int64(2)),
+		Left:  ast.NewValueExpr(int64(1)),
+		Right: ast.NewValueExpr(int64(2)),
 	}
 
 	replacement := &sharedPureExpr{}
@@ -147,8 +147,8 @@ func TestSharedVisitorPureChild(t *testing.T) {
 		skipped := &sharedVisitor{skipRoot: true}
 		tree := &ast.BetweenExpr{
 			Expr:  &sharedPureExpr{},
-			Left:  driver.NewValueExpr(int64(1)),
-			Right: driver.NewValueExpr(int64(2)),
+			Left:  ast.NewValueExpr(int64(1)),
+			Right: ast.NewValueExpr(int64(2)),
 		}
 		if _, ok := tree.Accept(skipped); !ok {
 			t.Fatal("traversal stopped unexpectedly")
@@ -165,8 +165,8 @@ func TestSharedVisitorPureChild(t *testing.T) {
 		stopper := &sharedVisitor{stop: true}
 		tree := &ast.BetweenExpr{
 			Expr:  &sharedPureExpr{},
-			Left:  driver.NewValueExpr(int64(1)),
-			Right: driver.NewValueExpr(int64(2)),
+			Left:  ast.NewValueExpr(int64(1)),
+			Right: ast.NewValueExpr(int64(2)),
 		}
 		if _, ok := tree.Accept(stopper); ok {
 			t.Fatal("visitor stop was ignored")
@@ -182,7 +182,7 @@ func TestSharedVisitorPureChild(t *testing.T) {
 func TestSharedParamMarkerAccept(t *testing.T) {
 	t.Parallel()
 
-	marker := driver.NewParamMarkerExpr(0)
+	marker := ast.NewParamMarkerExpr(0)
 	v := &sharedVisitor{}
 	node, ok := marker.Accept(v)
 	if !ok {
@@ -194,11 +194,8 @@ func TestSharedParamMarkerAccept(t *testing.T) {
 	if len(v.entered) != 1 {
 		t.Fatalf("visited %d nodes, want 1", len(v.entered))
 	}
-	if _, ok := v.entered[0].(*driver.ParamMarkerExpr); !ok {
-		t.Fatalf("visited node is %T, want *driver.ParamMarkerExpr", v.entered[0])
-	}
-	if _, ok := v.entered[0].(*driver.ValueExpr); ok {
-		t.Fatal("visited node is the embedded value expression")
+	if _, ok := v.entered[0].(*ast.ParamMarkerExpr); !ok {
+		t.Fatalf("visited node is %T, want *ast.ParamMarkerExpr", v.entered[0])
 	}
 }
 
@@ -230,12 +227,12 @@ func TestSharedFormatExprAndFlag(t *testing.T) {
 	t.Parallel()
 
 	var sb strings.Builder
-	ast.FormatExpr(driver.NewValueExpr("abc"), &sb)
+	ast.FormatExpr(ast.NewValueExpr("abc"), &sb)
 	if got := sb.String(); got != `"abc"` {
 		t.Fatalf("legacy string format is %q, want %q", got, `"abc"`)
 	}
 	sb.Reset()
-	ast.FormatExpr(driver.NewValueExpr(int64(42)), &sb)
+	ast.FormatExpr(ast.NewValueExpr(int64(42)), &sb)
 	if got := sb.String(); got != "42" {
 		t.Fatalf("legacy int format is %q, want %q", got, "42")
 	}
@@ -254,7 +251,7 @@ func TestSharedFormatExprAndFlag(t *testing.T) {
 		t.Fatalf("failed foreign format is %q, want %q", got, "<unsupported>")
 	}
 
-	marker := driver.NewParamMarkerExpr(0)
+	marker := ast.NewParamMarkerExpr(0)
 	if got := ast.ExprFlag(marker); got != ast.FlagHasParamMarker {
 		t.Fatalf("derived flag is %d, want %d", got, ast.FlagHasParamMarker)
 	}
@@ -272,17 +269,15 @@ func TestSharedConstructors(t *testing.T) {
 	if got := driver.NewValueExpr(value); got != value {
 		t.Fatal("driver.NewValueExpr did not keep the existing value expression")
 	}
-	built := ast.NewValueExpr(value)
-	concrete, ok := built.(*driver.ValueExpr)
-	if !ok {
-		t.Fatalf("dialect NewValueExpr returned %T", built)
-	}
-	if concrete != value {
-		t.Fatal("dialect NewValueExpr did not keep the existing value expression")
+	// The driver value expression is an execution-layer bridge, not an AST node.
+	built := ast.NewValueExpr("abc")
+	literal, ok := built.(*ast.LiteralExpr)
+	if !ok || literal.Kind != pkast.LiteralString || literal.Value != "abc" {
+		t.Fatalf("dialect NewValueExpr returned %#v", built)
 	}
 	marker := ast.NewParamMarkerExpr(0)
-	if _, ok := marker.(*driver.ParamMarkerExpr); !ok {
-		t.Fatalf("dialect NewParamMarkerExpr returned %T", marker)
+	if marker.Index != 0 {
+		t.Fatalf("dialect NewParamMarkerExpr returned index %d", marker.Index)
 	}
 }
 

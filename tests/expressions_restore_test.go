@@ -61,6 +61,21 @@ func TestRestoreOperatorTokenBoundaries(t *testing.T) {
 	}
 }
 
+func TestRestoreBitAndHexLiterals(t *testing.T) {
+	for _, tc := range []struct{ name, sql, want string }{
+		{"bit", `SELECT B'1010'`, `SELECT b'1010'`},
+		{"hex", `SELECT X'ff'`, `SELECT x'ff'`},
+		{"empty bit", `SELECT B''`, `SELECT b''`},
+		{"malformed bit keeps string form", `SELECT b' 0'`, `SELECT 'b 0'`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := restoreString(t, mustParseOne(t, tc.sql)); got != tc.want {
+				t.Fatalf("restore = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestUnaryOperatorFormat(t *testing.T) {
 	for _, tc := range []struct{ name, sql, want string }{
 		{"not", `SELECT NOT a`, "NOT `a`"},

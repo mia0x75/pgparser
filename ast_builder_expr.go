@@ -3,6 +3,8 @@ package parser
 import (
 	"strings"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
@@ -60,12 +62,12 @@ func subTypeName(t int64) string {
 
 // negateExpr returns the negation of an expression.
 func negateExpr(e ast.ExprNode) ast.ExprNode {
-	if v, ok := e.(ast.ValueExpr); ok {
-		switch val := v.GetValue().(type) {
-		case int64:
-			return ast.NewValueExpr(-val)
-		case float64:
-			return ast.NewValueExpr(-val)
+	if literal, ok := e.(*ast.LiteralExpr); ok {
+		switch literal.Kind {
+		case pkast.LiteralInteger, pkast.LiteralFloat, pkast.LiteralDecimal:
+			if !strings.HasPrefix(literal.Value, "-") {
+				return ast.NewLiteralExpr(literal.Kind, "-"+literal.Value)
+			}
 		}
 	}
 	return ast.NewUnaryOperationExpr(opcode.Minus, e)
@@ -96,9 +98,52 @@ func whenClauses(l *ast.List) []*ast.WhenClause {
 	return result
 }
 
-// floatValueExpr returns the value expression of a floating point constant.
+// floatValueExpr keeps the source spelling of a floating point constant. The
+// lexer leaves oversized PostgreSQL integer forms (0x, 0o, 0b) as strings.
 func floatValueExpr(s string) ast.ExprNode {
-	return &ast.NumericLiteral{Value: s}
+	kind := pkast.LiteralFloat
+	unsigned := strings.TrimPrefix(strings.TrimPrefix(s, "+"), "-")
+	if strings.HasPrefix(unsigned, "0x") || strings.HasPrefix(unsigned, "0o") || strings.HasPrefix(unsigned, "0b") {
+		kind = pkast.LiteralInteger
+	}
+	return ast.NewLiteralExpr(kind, s)
+}
+
+// bitStringLiteral strips the token's b prefix; the value is restored with it.
+// shortcut: the lexer accepts invalid bit digits, so those tokens keep the
+// legacy string form; drop the fallback when the lexer rejects them.
+func bitStringLiteral(token string) ast.ExprNode {
+	value := strings.TrimPrefix(strings.TrimPrefix(token, "b"), "B")
+	if !validBinaryDigits(value, 2) {
+		return ast.NewLiteralExpr(pkast.LiteralString, token)
+	}
+	return ast.NewLiteralExpr(pkast.LiteralBit, value)
+}
+
+// hexStringLiteral strips the token's x prefix; the value is restored with it.
+// shortcut: see bitStringLiteral; malformed hex tokens keep the string form.
+func hexStringLiteral(token string) ast.ExprNode {
+	value := strings.TrimPrefix(strings.TrimPrefix(token, "x"), "X")
+	if !validBinaryDigits(value, 16) {
+		return ast.NewLiteralExpr(pkast.LiteralString, token)
+	}
+	return ast.NewLiteralExpr(pkast.LiteralHex, value)
+}
+
+func validBinaryDigits(value string, base int) bool {
+	for _, digit := range value {
+		var valid bool
+		switch base {
+		case 2:
+			valid = digit == '0' || digit == '1'
+		default:
+			valid = digit >= '0' && digit <= '9' || digit >= 'a' && digit <= 'f' || digit >= 'A' && digit <= 'F'
+		}
+		if !valid {
+			return false
+		}
+	}
+	return true
 }
 
 // columnRefWithIndirection builds a column reference with an indirection list.

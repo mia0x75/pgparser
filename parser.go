@@ -28932,12 +28932,12 @@ yydefault:
 	case 1659:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewValueExpr(yyDollar[1].str)
+			yyVAL.expr = bitStringLiteral(yyDollar[1].str)
 		}
 	case 1660:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewValueExpr(yyDollar[1].str)
+			yyVAL.expr = hexStringLiteral(yyDollar[1].str)
 		}
 	case 1661:
 		yyDollar = yyS[yypt-1 : yypt+1]

@@ -16,7 +16,7 @@ func ExprFlag(expr ExprNode) uint64 {
 	if expr == nil {
 		return 0
 	}
-	if _, ok := expr.(ParamMarkerExpr); ok {
+	if _, ok := expr.(*ParamMarkerExpr); ok {
 		return FlagHasParamMarker
 	}
 	switch x := expr.(type) {
