@@ -268,7 +268,7 @@ func TestAuditExpressionFlags(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			n := mustParseSelect(t, tc.sql)
-			if got := n.Fields.Fields[0].Expr.GetFlag(); got != tc.flag {
+			if got := ast.ExprFlag(n.Fields.Fields[0].Expr); got != tc.flag {
 				t.Fatalf("expression flags = %d, want %d", got, tc.flag)
 			}
 		})

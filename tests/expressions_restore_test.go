@@ -70,7 +70,7 @@ func TestUnaryOperatorFormat(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			stmt := mustParseOne(t, tc.sql).(*ast.SelectStmt)
 			var out strings.Builder
-			stmt.Fields.Fields[0].Expr.Format(&out)
+			ast.FormatExpr(stmt.Fields.Fields[0].Expr, &out)
 			if got := out.String(); got != tc.want {
 				t.Fatalf("format = %q, want %q", got, tc.want)
 			}

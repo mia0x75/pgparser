@@ -2,7 +2,7 @@
 // This grammar is compatible with goyacc (golang.org/x/tools/cmd/goyacc)
 //
 // To generate the parser:
-//   go run golang.org/x/tools/cmd/goyacc@v0.38.0 -o parser.go -l -p yy parser.y
+//   go run golang.org/x/tools/cmd/goyacc@v0.52.0 -o parser.go -l -p yy parser.y
 
 %{
 package parser

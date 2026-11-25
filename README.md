@@ -124,7 +124,7 @@ internal/astgen/    AST visitor 代码生成工具（make generate 调用）
 make generate
 # 等价于：
 #   go run ./internal/astgen            # 重新生成 AST visitor
-#   go tool goyacc -o parser.go -l -p yy parser.y   # go.mod pins v0.38.0
+#   go tool goyacc -o parser.go -l -p yy parser.y   # go.mod pins v0.52.0
 ```
 
 不要在提交中手工修改 `parser.go`。若需查看冲突，可附加 `-v y.output`（该文件已被忽略）。

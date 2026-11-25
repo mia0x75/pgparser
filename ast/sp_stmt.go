@@ -54,7 +54,7 @@ func (n *BeginEndStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
 	}
-	ctx.WriteKeyWord("BEGIN")
+	ctx.WriteKeyword("BEGIN")
 	if len(n.List) > 0 {
 		ctx.WritePlain("\n")
 		for _, s := range n.List {
@@ -66,7 +66,7 @@ func (n *BeginEndStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain("\n")
 		}
 	}
-	ctx.WriteKeyWord("END")
+	ctx.WriteKeyword("END")
 	if n.Label != "" {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
@@ -100,7 +100,7 @@ type DeclareStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DECLARE ")
+	ctx.WriteKeyword("DECLARE ")
 	for i, name := range n.Names {
 		if i > 0 {
 			ctx.WritePlain(", ")
@@ -112,7 +112,7 @@ func (n *DeclareStmt) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore DeclareStmt.Type")
 	}
 	if n.Default != nil {
-		ctx.WriteKeyWord(" DEFAULT ")
+		ctx.WriteKeyword(" DEFAULT ")
 		if err := n.Default.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore DeclareStmt.Default")
 		}
@@ -160,18 +160,18 @@ type HandlerCondition struct {
 func (c *HandlerCondition) Restore(ctx *format.RestoreCtx) error {
 	switch c.Type {
 	case HandlerConditionSQLState:
-		ctx.WriteKeyWord("SQLSTATE VALUE ")
+		ctx.WriteKeyword("SQLSTATE VALUE ")
 		ctx.WriteString(c.Value)
 	case HandlerConditionErrorCode:
 		ctx.WritePlain(c.Value)
 	case HandlerConditionName:
 		ctx.WriteName(c.Value)
 	case HandlerConditionSQLWarning:
-		ctx.WriteKeyWord("SQLWARNING")
+		ctx.WriteKeyword("SQLWARNING")
 	case HandlerConditionNotFound:
-		ctx.WriteKeyWord("NOT FOUND")
+		ctx.WriteKeyword("NOT FOUND")
 	case HandlerConditionSQLException:
-		ctx.WriteKeyWord("SQLEXCEPTION")
+		ctx.WriteKeyword("SQLEXCEPTION")
 	}
 	return ctx.Err()
 }
@@ -192,9 +192,9 @@ type DeclareConditionStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareConditionStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DECLARE ")
+	ctx.WriteKeyword("DECLARE ")
 	ctx.WriteName(n.Name)
-	ctx.WriteKeyWord(" CONDITION FOR ")
+	ctx.WriteKeyword(" CONDITION FOR ")
 	return n.Condition.Restore(ctx)
 }
 
@@ -222,22 +222,22 @@ type DeclareCursorStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareCursorStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DECLARE ")
+	ctx.WriteKeyword("DECLARE ")
 	ctx.WriteName(n.Name)
 	if n.Binary {
-		ctx.WriteKeyWord(" BINARY")
+		ctx.WriteKeyword(" BINARY")
 	}
 	if n.Scroll {
-		ctx.WriteKeyWord(" SCROLL")
+		ctx.WriteKeyword(" SCROLL")
 	}
 	if n.NoScroll {
-		ctx.WriteKeyWord(" NO SCROLL")
+		ctx.WriteKeyword(" NO SCROLL")
 	}
-	ctx.WriteKeyWord(" CURSOR")
+	ctx.WriteKeyword(" CURSOR")
 	if n.Hold {
-		ctx.WriteKeyWord(" WITH HOLD")
+		ctx.WriteKeyword(" WITH HOLD")
 	}
-	ctx.WriteKeyWord(" FOR ")
+	ctx.WriteKeyword(" FOR ")
 	return n.Select.Restore(ctx)
 }
 
@@ -290,9 +290,9 @@ type DeclareHandlerStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareHandlerStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DECLARE ")
-	ctx.WriteKeyWord(HandlerTypeString(n.Action))
-	ctx.WriteKeyWord(" HANDLER FOR ")
+	ctx.WriteKeyword("DECLARE ")
+	ctx.WriteKeyword(HandlerTypeString(n.Action))
+	ctx.WriteKeyword(" HANDLER FOR ")
 	for i, c := range n.Conditions {
 		if i > 0 {
 			ctx.WritePlain(", ")
@@ -338,25 +338,25 @@ type IfStmt struct {
 func (n *IfStmt) Restore(ctx *format.RestoreCtx) error {
 	for i, c := range n.Conditions {
 		if i == 0 {
-			ctx.WriteKeyWord("IF ")
+			ctx.WriteKeyword("IF ")
 		} else {
-			ctx.WriteKeyWord(" ELSEIF ")
+			ctx.WriteKeyword(" ELSEIF ")
 		}
 		if err := c.Condition.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore IfStmt.Conditions")
 		}
-		ctx.WriteKeyWord(" THEN ")
+		ctx.WriteKeyword(" THEN ")
 		if err := restoreStmtList(ctx, c.List); err != nil {
 			return err
 		}
 	}
 	if n.ElseList != nil {
-		ctx.WriteKeyWord(" ELSE ")
+		ctx.WriteKeyword(" ELSE ")
 		if err := restoreStmtList(ctx, n.ElseList); err != nil {
 			return err
 		}
 	}
-	ctx.WriteKeyWord(" END IF")
+	ctx.WriteKeyword(" END IF")
 	return ctx.Err()
 }
 
@@ -406,7 +406,7 @@ type CaseStmt struct {
 
 // Restore implements Node interface.
 func (n *CaseStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CASE")
+	ctx.WriteKeyword("CASE")
 	if n.Value != nil {
 		ctx.WritePlain(" ")
 		if err := n.Value.Restore(ctx); err != nil {
@@ -414,22 +414,22 @@ func (n *CaseStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	for _, w := range n.Whens {
-		ctx.WriteKeyWord(" WHEN ")
+		ctx.WriteKeyword(" WHEN ")
 		if err := w.Expr.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore CaseStmt.Whens")
 		}
-		ctx.WriteKeyWord(" THEN ")
+		ctx.WriteKeyword(" THEN ")
 		if err := restoreStmtList(ctx, w.List); err != nil {
 			return err
 		}
 	}
 	if n.ElseList != nil {
-		ctx.WriteKeyWord(" ELSE ")
+		ctx.WriteKeyword(" ELSE ")
 		if err := restoreStmtList(ctx, n.ElseList); err != nil {
 			return err
 		}
 	}
-	ctx.WriteKeyWord(" END CASE")
+	ctx.WriteKeyword(" END CASE")
 	return ctx.Err()
 }
 
@@ -487,15 +487,15 @@ func (n *WhileStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
 	}
-	ctx.WriteKeyWord("WHILE ")
+	ctx.WriteKeyword("WHILE ")
 	if err := n.Condition.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore WhileStmt.Condition")
 	}
-	ctx.WriteKeyWord(" DO ")
+	ctx.WriteKeyword(" DO ")
 	if err := restoreStmtList(ctx, n.List); err != nil {
 		return err
 	}
-	ctx.WriteKeyWord(" END WHILE")
+	ctx.WriteKeyword(" END WHILE")
 	if n.Label != "" {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
@@ -541,15 +541,15 @@ func (n *RepeatStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
 	}
-	ctx.WriteKeyWord("REPEAT ")
+	ctx.WriteKeyword("REPEAT ")
 	if err := restoreStmtList(ctx, n.List); err != nil {
 		return err
 	}
-	ctx.WriteKeyWord(" UNTIL ")
+	ctx.WriteKeyword(" UNTIL ")
 	if err := n.Condition.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore RepeatStmt.Condition")
 	}
-	ctx.WriteKeyWord(" END REPEAT")
+	ctx.WriteKeyword(" END REPEAT")
 	if n.Label != "" {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
@@ -594,11 +594,11 @@ func (n *LoopStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
 	}
-	ctx.WriteKeyWord("LOOP ")
+	ctx.WriteKeyword("LOOP ")
 	if err := restoreStmtList(ctx, n.List); err != nil {
 		return err
 	}
-	ctx.WriteKeyWord(" END LOOP")
+	ctx.WriteKeyword(" END LOOP")
 	if n.Label != "" {
 		ctx.WritePlain(" ")
 		ctx.WriteName(n.Label)
@@ -630,7 +630,7 @@ type LeaveStmt struct {
 
 // Restore implements Node interface.
 func (n *LeaveStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("LEAVE ")
+	ctx.WriteKeyword("LEAVE ")
 	ctx.WriteName(n.Label)
 	return ctx.Err()
 }
@@ -653,7 +653,7 @@ type IterateStmt struct {
 
 // Restore implements Node interface.
 func (n *IterateStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ITERATE ")
+	ctx.WriteKeyword("ITERATE ")
 	ctx.WriteName(n.Label)
 	return ctx.Err()
 }
@@ -676,7 +676,7 @@ type OpenStmt struct {
 
 // Restore implements Node interface.
 func (n *OpenStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("OPEN ")
+	ctx.WriteKeyword("OPEN ")
 	ctx.WriteName(n.Name)
 	return ctx.Err()
 }
@@ -699,7 +699,7 @@ type CloseStmt struct {
 
 // Restore implements Node interface.
 func (n *CloseStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CLOSE ")
+	ctx.WriteKeyword("CLOSE ")
 	ctx.WriteName(n.Name)
 	return ctx.Err()
 }
@@ -723,9 +723,9 @@ type FetchStmt struct {
 
 // Restore implements Node interface.
 func (n *FetchStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("FETCH ")
+	ctx.WriteKeyword("FETCH ")
 	ctx.WriteName(n.Name)
-	ctx.WriteKeyWord(" INTO ")
+	ctx.WriteKeyword(" INTO ")
 	for i, v := range n.Vars {
 		if i > 0 {
 			ctx.WritePlain(", ")
@@ -764,12 +764,12 @@ type SignalStmt struct {
 
 // Restore implements Node interface.
 func (n *SignalStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("SIGNAL ")
+	ctx.WriteKeyword("SIGNAL ")
 	if err := n.Condition.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore SignalStmt.Condition")
 	}
 	if len(n.InfoItems) > 0 {
-		ctx.WriteKeyWord(" SET ")
+		ctx.WriteKeyword(" SET ")
 		for i, item := range n.InfoItems {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -811,7 +811,7 @@ type ResignalStmt struct {
 
 // Restore implements Node interface.
 func (n *ResignalStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("RESIGNAL")
+	ctx.WriteKeyword("RESIGNAL")
 	if n.Condition != nil {
 		ctx.WritePlain(" ")
 		if err := n.Condition.Restore(ctx); err != nil {
@@ -819,7 +819,7 @@ func (n *ResignalStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if len(n.InfoItems) > 0 {
-		ctx.WriteKeyWord(" SET ")
+		ctx.WriteKeyword(" SET ")
 		for i, item := range n.InfoItems {
 			if i > 0 {
 				ctx.WritePlain(", ")

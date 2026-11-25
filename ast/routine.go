@@ -24,14 +24,14 @@ func (n *CreateFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Name == nil {
 		return fmt.Errorf("routine has no name")
 	}
-	ctx.WriteKeyWord("CREATE ")
+	ctx.WriteKeyword("CREATE ")
 	if n.OrReplace {
-		ctx.WriteKeyWord("OR REPLACE ")
+		ctx.WriteKeyword("OR REPLACE ")
 	}
 	if n.IsProcedure {
-		ctx.WriteKeyWord("PROCEDURE ")
+		ctx.WriteKeyword("PROCEDURE ")
 	} else {
-		ctx.WriteKeyWord("FUNCTION ")
+		ctx.WriteKeyword("FUNCTION ")
 	}
 	if err := n.Name.Restore(ctx); err != nil {
 		return err
@@ -44,13 +44,13 @@ func (n *CreateFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 	if n.ReturnTable != nil {
-		ctx.WriteKeyWord(" RETURNS TABLE (")
+		ctx.WriteKeyword(" RETURNS TABLE (")
 		if err := n.ReturnTable.Restore(ctx); err != nil {
 			return fmt.Errorf("routine return columns: %w", err)
 		}
 		ctx.WritePlain(")")
 	} else if n.Returns != nil {
-		ctx.WriteKeyWord(" RETURNS ")
+		ctx.WriteKeyword(" RETURNS ")
 		if err := n.Returns.Restore(ctx); err != nil {
 			return fmt.Errorf("routine return type: %w", err)
 		}
@@ -130,7 +130,7 @@ func (n *AlterFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return fmt.Errorf("invalid routine kind %q", n.Objtype)
 	}
-	ctx.WriteKeyWord("ALTER " + n.Objtype + " ")
+	ctx.WriteKeyword("ALTER " + n.Objtype + " ")
 	if err := n.Func.Restore(ctx); err != nil {
 		return fmt.Errorf("routine signature: %w", err)
 	}
@@ -187,7 +187,7 @@ func restoreRoutineOption(ctx *format.RestoreCtx, option *DefElem) error {
 		if !ok || list == nil || len(list.Items) == 0 {
 			return fmt.Errorf("option has no arguments")
 		}
-		ctx.WriteKeyWord(option.Defname + " ")
+		ctx.WriteKeyword(option.Defname + " ")
 		for i, item := range list.Items {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -196,7 +196,7 @@ func restoreRoutineOption(ctx *format.RestoreCtx, option *DefElem) error {
 				return fmt.Errorf("option has a nil argument")
 			}
 			if name == "transform" {
-				ctx.WriteKeyWord("FOR TYPE ")
+				ctx.WriteKeyword("FOR TYPE ")
 			}
 			if err := item.Restore(ctx); err != nil {
 				return err
@@ -209,19 +209,19 @@ func restoreRoutineOption(ctx *format.RestoreCtx, option *DefElem) error {
 		}
 		switch name {
 		case "language":
-			ctx.WriteKeyWord("LANGUAGE ")
+			ctx.WriteKeyword("LANGUAGE ")
 			ctx.WriteName(arg.Str)
 		case "volatility":
 			switch strings.ToLower(arg.Str) {
 			case "immutable", "stable", "volatile":
-				ctx.WriteKeyWord(arg.Str)
+				ctx.WriteKeyword(arg.Str)
 			default:
 				return fmt.Errorf("invalid volatility %q", arg.Str)
 			}
 		case "parallel":
 			switch strings.ToLower(arg.Str) {
 			case "safe", "restricted", "unsafe":
-				ctx.WriteKeyWord("PARALLEL " + arg.Str)
+				ctx.WriteKeyword("PARALLEL " + arg.Str)
 			default:
 				return fmt.Errorf("invalid parallel mode %q", arg.Str)
 			}
@@ -239,28 +239,28 @@ func restoreRoutineOption(ctx *format.RestoreCtx, option *DefElem) error {
 			on, off = "LEAKPROOF", "NOT LEAKPROOF"
 		}
 		if arg.Ival == 1 {
-			ctx.WriteKeyWord(on)
+			ctx.WriteKeyword(on)
 		} else {
-			ctx.WriteKeyWord(off)
+			ctx.WriteKeyword(off)
 		}
 	case "cost", "rows":
 		if option.Arg == nil {
 			return fmt.Errorf("option has no value")
 		}
-		ctx.WriteKeyWord(option.Defname + " ")
+		ctx.WriteKeyword(option.Defname + " ")
 		return option.Arg.Restore(ctx)
 	case "window":
 		arg, ok := option.Arg.(*Integer)
 		if !ok || arg == nil || arg.Ival != 1 {
 			return fmt.Errorf("WINDOW option is not enabled")
 		}
-		ctx.WriteKeyWord("WINDOW")
+		ctx.WriteKeyword("WINDOW")
 	case "support":
 		list, ok := option.Arg.(*List)
 		if !ok {
 			return fmt.Errorf("SUPPORT has no function name")
 		}
-		ctx.WriteKeyWord("SUPPORT ")
+		ctx.WriteKeyword("SUPPORT ")
 		return restoreNameList(ctx, list)
 	case "set":
 		stmt, ok := option.Arg.(*VariableSetStmt)
@@ -283,7 +283,7 @@ func (n *ReturnStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Expr == nil {
 		return fmt.Errorf("RETURN has no expression")
 	}
-	ctx.WriteKeyWord("RETURN ")
+	ctx.WriteKeyword("RETURN ")
 	return n.Expr.Restore(ctx)
 }
 

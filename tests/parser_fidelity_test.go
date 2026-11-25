@@ -72,7 +72,7 @@ func TestIndirectionAndWindowFlags(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			n := mustParseOne(t, tc.sql).(*ast.SelectStmt)
-			if got := n.Fields.Fields[0].Expr.GetFlag(); got != tc.flag {
+			if got := ast.ExprFlag(n.Fields.Fields[0].Expr); got != tc.flag {
 				t.Fatalf("flags = %d, want %d", got, tc.flag)
 			}
 		})

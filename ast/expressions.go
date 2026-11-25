@@ -7,7 +7,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/errors"
+	"github.com/mia0x75/pgparser/types"
 
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
@@ -42,6 +44,11 @@ var (
 // ValueExpr define a interface for ValueExpr.
 type ValueExpr interface {
 	ExprNode
+	SetType(*types.FieldType)
+	GetType() *types.FieldType
+	SetFlag(uint64)
+	GetFlag() uint64
+	Format(io.Writer)
 	SetValue(val any)
 	GetValue() any
 	GetDatumString() string
@@ -51,10 +58,14 @@ type ValueExpr interface {
 }
 
 // NewValueExpr creates a ValueExpr with value, and sets default field type.
-var NewValueExpr func(any) ValueExpr
+func NewValueExpr(value any) ValueExpr {
+	return driver.NewValueExpr(value)
+}
 
 // NewParamMarkerExpr creates a ParamMarkerExpr.
-var NewParamMarkerExpr func(offset int) ParamMarkerExpr
+func NewParamMarkerExpr(offset int) ParamMarkerExpr {
+	return driver.NewParamMarkerExpr(offset)
+}
 
 // BetweenExpr is for "between and" or "not between and" expression.
 type BetweenExpr struct {
@@ -76,17 +87,17 @@ func (n *BetweenExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore BetweenExpr.Expr")
 	}
 	if n.Not {
-		ctx.WriteKeyWord(" NOT BETWEEN ")
+		ctx.WriteKeyword(" NOT BETWEEN ")
 	} else {
-		ctx.WriteKeyWord(" BETWEEN ")
+		ctx.WriteKeyword(" BETWEEN ")
 	}
 	if n.Symmetric {
-		ctx.WriteKeyWord("SYMMETRIC ")
+		ctx.WriteKeyword("SYMMETRIC ")
 	}
 	if err := n.Left.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore BetweenExpr.Left")
 	}
-	ctx.WriteKeyWord(" AND ")
+	ctx.WriteKeyword(" AND ")
 	if err := n.Right.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore BetweenExpr.Right ")
 	}
@@ -95,7 +106,7 @@ func (n *BetweenExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *BetweenExpr) Format(w io.Writer) {
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 	if n.Not {
 		_, _ = fmt.Fprint(w, " NOT BETWEEN ")
 	} else {
@@ -104,9 +115,9 @@ func (n *BetweenExpr) Format(w io.Writer) {
 	if n.Symmetric {
 		_, _ = fmt.Fprint(w, "SYMMETRIC ")
 	}
-	n.Left.Format(w)
+	FormatExpr(n.Left, w)
 	_, _ = fmt.Fprint(w, " AND ")
-	n.Right.Format(w)
+	FormatExpr(n.Right, w)
 }
 
 // Accept implements Node interface.
@@ -191,7 +202,7 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *BinaryOperationExpr) Format(w io.Writer) {
-	n.L.Format(w)
+	FormatExpr(n.L, w)
 	_, _ = fmt.Fprint(w, " ")
 	if n.OpName != "" {
 		_, _ = fmt.Fprint(w, n.OpName)
@@ -201,10 +212,10 @@ func (n *BinaryOperationExpr) Format(w io.Writer) {
 	_, _ = fmt.Fprint(w, " ")
 	if strings.HasSuffix(n.OpName, "ANY") || strings.HasSuffix(n.OpName, "ALL") {
 		_, _ = fmt.Fprint(w, "(")
-		n.R.Format(w)
+		FormatExpr(n.R, w)
 		_, _ = fmt.Fprint(w, ")")
 	} else {
-		n.R.Format(w)
+		FormatExpr(n.R, w)
 	}
 }
 
@@ -290,11 +301,11 @@ type WhenClause struct {
 
 // Restore implements Node interface.
 func (n *WhenClause) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("WHEN ")
+	ctx.WriteKeyword("WHEN ")
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore WhenClauses.Expr")
 	}
-	ctx.WriteKeyWord(" THEN ")
+	ctx.WriteKeyword(" THEN ")
 	if err := n.Result.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore WhenClauses.Result")
 	}
@@ -336,7 +347,7 @@ type CaseExpr struct {
 
 // Restore implements Node interface.
 func (n *CaseExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CASE")
+	ctx.WriteKeyword("CASE")
 	if n.Value != nil {
 		ctx.WritePlain(" ")
 		if err := n.Value.Restore(ctx); err != nil {
@@ -350,12 +361,12 @@ func (n *CaseExpr) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.ElseClause != nil {
-		ctx.WriteKeyWord(" ELSE ")
+		ctx.WriteKeyword(" ELSE ")
 		if err := n.ElseClause.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore CaseExpr.ElseClause")
 		}
 	}
-	ctx.WriteKeyWord(" END")
+	ctx.WriteKeyword(" END")
 
 	return ctx.Err()
 }
@@ -366,18 +377,18 @@ func (n *CaseExpr) Format(w io.Writer) {
 	// Because the presence of `case when` syntax, `Value` could be nil and we need check this.
 	if n.Value != nil {
 		_, _ = fmt.Fprint(w, " ")
-		n.Value.Format(w)
+		FormatExpr(n.Value, w)
 	}
 	for _, clause := range n.WhenClauses {
 		_, _ = fmt.Fprint(w, " ")
 		_, _ = fmt.Fprint(w, "WHEN ")
-		clause.Expr.Format(w)
+		FormatExpr(clause.Expr, w)
 		_, _ = fmt.Fprint(w, " THEN ")
-		clause.Result.Format(w)
+		FormatExpr(clause.Result, w)
 	}
 	if n.ElseClause != nil {
 		_, _ = fmt.Fprint(w, " ELSE ")
-		n.ElseClause.Format(w)
+		FormatExpr(n.ElseClause, w)
 	}
 	_, _ = fmt.Fprint(w, " END")
 }
@@ -429,7 +440,7 @@ type SubqueryExpr struct {
 // Restore implements Node interface.
 func (n *SubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if n.Array {
-		ctx.WriteKeyWord("ARRAY")
+		ctx.WriteKeyword("ARRAY")
 	}
 	ctx.WritePlain("(")
 	if err := n.Query.Restore(ctx); err != nil {
@@ -494,9 +505,9 @@ func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 	}
 	if n.All {
-		ctx.WriteKeyWord("ALL ")
+		ctx.WriteKeyword("ALL ")
 	} else {
-		ctx.WriteKeyWord("ANY ")
+		ctx.WriteKeyword("ANY ")
 	}
 	if err := n.R.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore CompareSubqueryExpr.R")
@@ -506,7 +517,7 @@ func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *CompareSubqueryExpr) Format(w io.Writer) {
-	n.L.Format(w)
+	FormatExpr(n.L, w)
 	_, _ = fmt.Fprint(w, " ")
 	if n.OpName != "" {
 		_, _ = fmt.Fprint(w, n.OpName)
@@ -518,7 +529,7 @@ func (n *CompareSubqueryExpr) Format(w io.Writer) {
 	} else {
 		_, _ = fmt.Fprint(w, " ANY ")
 	}
-	n.R.Format(w)
+	FormatExpr(n.R, w)
 }
 
 // Accept implements Node Accept interface.
@@ -680,7 +691,7 @@ type DefaultExpr struct {
 
 // Restore implements Node interface.
 func (n *DefaultExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DEFAULT")
+	ctx.WriteKeyword("DEFAULT")
 	if n.Name != nil {
 		ctx.WritePlain("(")
 		if err := n.Name.Restore(ctx); err != nil {
@@ -729,9 +740,9 @@ type ExistsSubqueryExpr struct {
 // Restore implements Node interface.
 func (n *ExistsSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if n.Not {
-		ctx.WriteKeyWord("NOT EXISTS ")
+		ctx.WriteKeyword("NOT EXISTS ")
 	} else {
-		ctx.WriteKeyWord("EXISTS ")
+		ctx.WriteKeyword("EXISTS ")
 	}
 	if err := n.Sel.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore ExistsSubqueryExpr.Sel")
@@ -747,7 +758,7 @@ func (n *ExistsSubqueryExpr) Format(w io.Writer) {
 		_, _ = fmt.Fprint(w, "EXISTS ")
 	}
 	if n.Sel != nil {
-		n.Sel.Format(w)
+		FormatExpr(n.Sel, w)
 	}
 }
 
@@ -785,9 +796,9 @@ func (n *PatternInExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore PatternInExpr.Expr")
 	}
 	if n.Not {
-		ctx.WriteKeyWord(" NOT IN ")
+		ctx.WriteKeyword(" NOT IN ")
 	} else {
-		ctx.WriteKeyWord(" IN ")
+		ctx.WriteKeyword(" IN ")
 	}
 	if n.Sel != nil {
 		if err := n.Sel.Restore(ctx); err != nil {
@@ -810,7 +821,7 @@ func (n *PatternInExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *PatternInExpr) Format(w io.Writer) {
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 	if n.Not {
 		_, _ = fmt.Fprint(w, " NOT IN (")
 	} else {
@@ -820,7 +831,7 @@ func (n *PatternInExpr) Format(w io.Writer) {
 		if i != 0 {
 			_, _ = fmt.Fprint(w, ",")
 		}
-		expr.Format(w)
+		FormatExpr(expr, w)
 	}
 	_, _ = fmt.Fprint(w, ")")
 }
@@ -869,16 +880,16 @@ func (n *IsNullExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Trace(err)
 	}
 	if n.Not {
-		ctx.WriteKeyWord(" IS NOT NULL")
+		ctx.WriteKeyword(" IS NOT NULL")
 	} else {
-		ctx.WriteKeyWord(" IS NULL")
+		ctx.WriteKeyword(" IS NULL")
 	}
 	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
 func (n *IsNullExpr) Format(w io.Writer) {
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 	if n.Not {
 		_, _ = fmt.Fprint(w, " IS NOT NULL")
 		return
@@ -918,21 +929,21 @@ func (n *IsTruthExpr) Restore(ctx *format.RestoreCtx) error {
 		return errors.Trace(err)
 	}
 	if n.Not {
-		ctx.WriteKeyWord(" IS NOT")
+		ctx.WriteKeyword(" IS NOT")
 	} else {
-		ctx.WriteKeyWord(" IS")
+		ctx.WriteKeyword(" IS")
 	}
 	if n.True > 0 {
-		ctx.WriteKeyWord(" TRUE")
+		ctx.WriteKeyword(" TRUE")
 	} else {
-		ctx.WriteKeyWord(" FALSE")
+		ctx.WriteKeyword(" FALSE")
 	}
 	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
 func (n *IsTruthExpr) Format(w io.Writer) {
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 	if n.Not {
 		_, _ = fmt.Fprint(w, " IS NOT")
 	} else {
@@ -987,13 +998,13 @@ func (n *PatternLikeExpr) Restore(ctx *format.RestoreCtx) error {
 
 	switch {
 	case n.Not && n.ILike:
-		ctx.WriteKeyWord(" NOT ILIKE ")
+		ctx.WriteKeyword(" NOT ILIKE ")
 	case n.ILike:
-		ctx.WriteKeyWord(" ILIKE ")
+		ctx.WriteKeyword(" ILIKE ")
 	case n.Not:
-		ctx.WriteKeyWord(" NOT LIKE ")
+		ctx.WriteKeyword(" NOT LIKE ")
 	default:
-		ctx.WriteKeyWord(" LIKE ")
+		ctx.WriteKeyword(" LIKE ")
 	}
 
 	if err := n.Pattern.Restore(ctx); err != nil {
@@ -1001,7 +1012,7 @@ func (n *PatternLikeExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 
 	if n.Escape != nil {
-		ctx.WriteKeyWord(" ESCAPE ")
+		ctx.WriteKeyword(" ESCAPE ")
 		if err := n.Escape.Restore(ctx); err != nil {
 			return errors.Annotate(err, "LIKE escape")
 		}
@@ -1011,7 +1022,7 @@ func (n *PatternLikeExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *PatternLikeExpr) Format(w io.Writer) {
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 	switch {
 	case n.Not && n.ILike:
 		_, _ = fmt.Fprint(w, " NOT ILIKE ")
@@ -1022,10 +1033,10 @@ func (n *PatternLikeExpr) Format(w io.Writer) {
 	default:
 		_, _ = fmt.Fprint(w, " LIKE ")
 	}
-	n.Pattern.Format(w)
+	FormatExpr(n.Pattern, w)
 	if n.Escape != nil {
 		_, _ = fmt.Fprint(w, " ESCAPE ")
-		n.Escape.Format(w)
+		FormatExpr(n.Escape, w)
 	}
 }
 
@@ -1087,7 +1098,7 @@ func (n *ParenthesesExpr) Restore(ctx *format.RestoreCtx) error {
 // Format the ExprNode into a Writer.
 func (n *ParenthesesExpr) Format(w io.Writer) {
 	_, _ = fmt.Fprint(w, "(")
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 	_, _ = fmt.Fprint(w, ")")
 }
 
@@ -1172,16 +1183,16 @@ func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 
 	if n.Not {
-		ctx.WriteKeyWord(" NOT SIMILAR TO ")
+		ctx.WriteKeyword(" NOT SIMILAR TO ")
 	} else {
-		ctx.WriteKeyWord(" SIMILAR TO ")
+		ctx.WriteKeyword(" SIMILAR TO ")
 	}
 
 	if err := n.Pattern.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore PatternRegexpExpr.Pattern")
 	}
 	if n.Escape != nil {
-		ctx.WriteKeyWord(" ESCAPE ")
+		ctx.WriteKeyword(" ESCAPE ")
 		if err := n.Escape.Restore(ctx); err != nil {
 			return errors.Annotate(err, "SIMILAR TO escape")
 		}
@@ -1192,16 +1203,16 @@ func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *PatternRegexpExpr) Format(w io.Writer) {
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 	if n.Not {
 		_, _ = fmt.Fprint(w, " NOT SIMILAR TO ")
 	} else {
 		_, _ = fmt.Fprint(w, " SIMILAR TO ")
 	}
-	n.Pattern.Format(w)
+	FormatExpr(n.Pattern, w)
 	if n.Escape != nil {
 		_, _ = fmt.Fprint(w, " ESCAPE ")
-		n.Escape.Format(w)
+		FormatExpr(n.Escape, w)
 	}
 }
 
@@ -1241,7 +1252,7 @@ type RowExpr struct {
 
 // Restore implements Node interface.
 func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ROW")
+	ctx.WriteKeyword("ROW")
 	ctx.WritePlain("(")
 	for i, v := range n.Values {
 		if i != 0 {
@@ -1262,7 +1273,7 @@ func (n *RowExpr) Format(w io.Writer) {
 		if i != 0 {
 			_, _ = fmt.Fprint(w, ", ")
 		}
-		val.Format(w)
+		FormatExpr(val, w)
 	}
 	_, _ = fmt.Fprint(w, ")")
 }
@@ -1304,7 +1315,7 @@ func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain(" ")
 		}
 	case n.Op == opcode.Not:
-		ctx.WriteKeyWord("NOT ")
+		ctx.WriteKeyword("NOT ")
 	default:
 		if err := n.Op.Restore(ctx); err != nil {
 			return errors.Trace(err)
@@ -1335,7 +1346,7 @@ func (n *UnaryOperationExpr) Format(w io.Writer) {
 	if startsWithSymbol(n) && startsWithSymbol(n.V) {
 		_, _ = fmt.Fprint(w, " ")
 	}
-	n.V.Format(w)
+	FormatExpr(n.V, w)
 }
 
 // Accept implements Node Accept interface.
@@ -1362,7 +1373,7 @@ type ValuesExpr struct {
 
 // Restore implements Node interface.
 func (n *ValuesExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("VALUES")
+	ctx.WriteKeyword("VALUES")
 	ctx.WritePlain("(")
 	if err := n.Column.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore ValuesExpr.Column")
@@ -1417,9 +1428,9 @@ func (n *VariableExpr) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain("@@")
 		if n.ExplicitScope {
 			if n.IsGlobal {
-				ctx.WriteKeyWord("GLOBAL")
+				ctx.WriteKeyword("GLOBAL")
 			} else {
-				ctx.WriteKeyWord("SESSION")
+				ctx.WriteKeyword("SESSION")
 			}
 			ctx.WritePlain(".")
 		}
@@ -1455,7 +1466,7 @@ func (n *VariableExpr) Format(w io.Writer) {
 	_, _ = fmt.Fprint(w, n.Name)
 	if n.Value != nil {
 		_, _ = fmt.Fprint(w, ":=")
-		n.Value.Format(w)
+		FormatExpr(n.Value, w)
 	}
 }
 
@@ -1485,7 +1496,7 @@ type MaxValueExpr struct {
 
 // Restore implements Node interface.
 func (n *MaxValueExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("MAXVALUE")
+	ctx.WriteKeyword("MAXVALUE")
 	return ctx.Err()
 }
 

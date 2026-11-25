@@ -20,9 +20,9 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		ctx.WritePlain(n.Fval)
 	case *Boolean:
 		if n.Boolval {
-			ctx.WriteKeyWord("TRUE")
+			ctx.WriteKeyword("TRUE")
 		} else {
-			ctx.WriteKeyWord("FALSE")
+			ctx.WriteKeyword("FALSE")
 		}
 	case *A_Star:
 		ctx.WritePlain("*")
@@ -54,7 +54,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		}
 	case *A_Const:
 		if n.Isnull {
-			ctx.WriteKeyWord("NULL")
+			ctx.WriteKeyword("NULL")
 		} else {
 			if n.Val == nil {
 				return fmt.Errorf("constant has no value")
@@ -79,13 +79,13 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		case ROLESPEC_CSTRING:
 			ctx.WriteName(n.Rolename)
 		case ROLESPEC_CURRENT_ROLE:
-			ctx.WriteKeyWord("CURRENT_ROLE")
+			ctx.WriteKeyword("CURRENT_ROLE")
 		case ROLESPEC_CURRENT_USER:
-			ctx.WriteKeyWord("CURRENT_USER")
+			ctx.WriteKeyword("CURRENT_USER")
 		case ROLESPEC_SESSION_USER:
-			ctx.WriteKeyWord("SESSION_USER")
+			ctx.WriteKeyword("SESSION_USER")
 		case ROLESPEC_PUBLIC:
-			ctx.WriteKeyWord("PUBLIC")
+			ctx.WriteKeyword("PUBLIC")
 		default:
 			return fmt.Errorf("unsupported role target %d", n.Roletype)
 		}
@@ -108,11 +108,11 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		switch n.Mode {
 		case FUNC_PARAM_IN, FUNC_PARAM_TABLE:
 		case FUNC_PARAM_OUT:
-			ctx.WriteKeyWord("OUT ")
+			ctx.WriteKeyword("OUT ")
 		case FUNC_PARAM_INOUT:
-			ctx.WriteKeyWord("INOUT ")
+			ctx.WriteKeyword("INOUT ")
 		case FUNC_PARAM_VARIADIC:
-			ctx.WriteKeyWord("VARIADIC ")
+			ctx.WriteKeyword("VARIADIC ")
 		default:
 			return fmt.Errorf("invalid parameter mode %d", n.Mode)
 		}
@@ -124,7 +124,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 			return err
 		}
 		if n.Defexpr != nil {
-			ctx.WriteKeyWord(" DEFAULT ")
+			ctx.WriteKeyword(" DEFAULT ")
 			return n.Defexpr.Restore(ctx)
 		}
 	case *VacuumRelation:
@@ -154,11 +154,11 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 	case *PartitionSpec:
 		switch strings.ToLower(n.Strategy) {
 		case "r", "range":
-			ctx.WriteKeyWord("RANGE")
+			ctx.WriteKeyword("RANGE")
 		case "l", "list":
-			ctx.WriteKeyWord("LIST")
+			ctx.WriteKeyword("LIST")
 		case "h", "hash":
-			ctx.WriteKeyWord("HASH")
+			ctx.WriteKeyword("HASH")
 		default:
 			if n.Strategy == "" {
 				return fmt.Errorf("partition strategy is missing")
@@ -187,7 +187,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 			return fmt.Errorf("partition key has no expression")
 		}
 		if n.Collation != nil {
-			ctx.WriteKeyWord(" COLLATE ")
+			ctx.WriteKeyword(" COLLATE ")
 			if err := restoreNameList(ctx, n.Collation); err != nil {
 				return err
 			}
@@ -214,9 +214,9 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 	case *VariableSetStmt:
 		return restoreVariableSet(ctx, n)
 	case *AlterSeqStmt:
-		ctx.WriteKeyWord("ALTER SEQUENCE ")
+		ctx.WriteKeyword("ALTER SEQUENCE ")
 		if n.MissingOk {
-			ctx.WriteKeyWord("IF EXISTS ")
+			ctx.WriteKeyword("IF EXISTS ")
 		}
 		if n.Sequence == nil {
 			return fmt.Errorf("ALTER SEQUENCE has no target")
@@ -232,31 +232,31 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 			return fmt.Errorf("trigger transition has no name")
 		}
 		if n.IsNew {
-			ctx.WriteKeyWord("NEW ")
+			ctx.WriteKeyword("NEW ")
 		} else {
-			ctx.WriteKeyWord("OLD ")
+			ctx.WriteKeyword("OLD ")
 		}
 		if n.IsTable {
-			ctx.WriteKeyWord("TABLE AS ")
+			ctx.WriteKeyword("TABLE AS ")
 		} else {
-			ctx.WriteKeyWord("ROW AS ")
+			ctx.WriteKeyword("ROW AS ")
 		}
 		ctx.WriteName(n.Name)
 	case *LockingClause:
 		switch LockClauseStrength(n.Strength) {
 		case LCS_FORKEYSHARE:
-			ctx.WriteKeyWord("FOR KEY SHARE")
+			ctx.WriteKeyword("FOR KEY SHARE")
 		case LCS_FORSHARE:
-			ctx.WriteKeyWord("FOR SHARE")
+			ctx.WriteKeyword("FOR SHARE")
 		case LCS_FORNOKEYUPDATE:
-			ctx.WriteKeyWord("FOR NO KEY UPDATE")
+			ctx.WriteKeyword("FOR NO KEY UPDATE")
 		case LCS_FORUPDATE:
-			ctx.WriteKeyWord("FOR UPDATE")
+			ctx.WriteKeyword("FOR UPDATE")
 		default:
 			return fmt.Errorf("invalid lock strength %d", n.Strength)
 		}
 		if n.LockedRels != nil {
-			ctx.WriteKeyWord(" OF ")
+			ctx.WriteKeyword(" OF ")
 			for i, rel := range n.LockedRels.Items {
 				if i > 0 {
 					ctx.WritePlain(", ")
@@ -272,9 +272,9 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		switch LockWaitPolicy(n.WaitPolicy) {
 		case LockWaitBlock:
 		case LockWaitError:
-			ctx.WriteKeyWord(" NOWAIT")
+			ctx.WriteKeyword(" NOWAIT")
 		case LockWaitSkip:
-			ctx.WriteKeyWord(" SKIP LOCKED")
+			ctx.WriteKeyword(" SKIP LOCKED")
 		default:
 			return fmt.Errorf("invalid lock wait policy %d", n.WaitPolicy)
 		}
@@ -296,10 +296,10 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 			return fmt.Errorf("SELECT INTO has no target")
 		}
 		if n.Rel.Relpersistence == 't' {
-			ctx.WriteKeyWord("TEMPORARY ")
+			ctx.WriteKeyword("TEMPORARY ")
 		}
 		if n.Rel.Relpersistence == 'u' {
-			ctx.WriteKeyWord("UNLOGGED ")
+			ctx.WriteKeyword("UNLOGGED ")
 		}
 		if err := n.Rel.Restore(ctx); err != nil {
 			return err
@@ -311,7 +311,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		if n.Output != nil {
 			return fmt.Errorf("%w: JSON_SCALAR output", ErrUnsupportedRestore)
 		}
-		ctx.WriteKeyWord("JSON_SCALAR(")
+		ctx.WriteKeyword("JSON_SCALAR(")
 		if err := n.Expr.Restore(ctx); err != nil {
 			return err
 		}
@@ -327,19 +327,19 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 	case *JsonBehavior:
 		switch n.Btype {
 		case JSON_BEHAVIOR_ERROR:
-			ctx.WriteKeyWord("ERROR")
+			ctx.WriteKeyword("ERROR")
 		case JSON_BEHAVIOR_NULL:
-			ctx.WriteKeyWord("NULL")
+			ctx.WriteKeyword("NULL")
 		case JSON_BEHAVIOR_TRUE:
-			ctx.WriteKeyWord("TRUE")
+			ctx.WriteKeyword("TRUE")
 		case JSON_BEHAVIOR_FALSE:
-			ctx.WriteKeyWord("FALSE")
+			ctx.WriteKeyword("FALSE")
 		case JSON_BEHAVIOR_UNKNOWN:
-			ctx.WriteKeyWord("UNKNOWN")
+			ctx.WriteKeyword("UNKNOWN")
 		case JSON_BEHAVIOR_EMPTY_ARRAY:
-			ctx.WriteKeyWord("EMPTY ARRAY")
+			ctx.WriteKeyword("EMPTY ARRAY")
 		case JSON_BEHAVIOR_EMPTY_OBJECT:
-			ctx.WriteKeyWord("EMPTY OBJECT")
+			ctx.WriteKeyword("EMPTY OBJECT")
 		case JSON_BEHAVIOR_DEFAULT:
 			return fmt.Errorf("%w: JSON DEFAULT", ErrUnsupportedRestore)
 		default:
@@ -383,7 +383,7 @@ func restoreAlterOptions(ctx *format.RestoreCtx, options *List) error {
 	if options == nil || len(options.Items) == 0 {
 		return fmt.Errorf("foreign options are missing")
 	}
-	ctx.WriteKeyWord("OPTIONS (")
+	ctx.WriteKeyword("OPTIONS (")
 	for i, item := range options.Items {
 		option, ok := item.(*DefElem)
 		if !ok || option == nil || option.Defname == "" || option.Defnamespace != "" {
@@ -395,14 +395,14 @@ func restoreAlterOptions(ctx *format.RestoreCtx, options *List) error {
 		switch DefElemAction(option.Defaction) {
 		case DEFELEM_UNSPEC:
 		case DEFELEM_ADD:
-			ctx.WriteKeyWord("ADD ")
+			ctx.WriteKeyword("ADD ")
 		case DEFELEM_SET:
-			ctx.WriteKeyWord("SET ")
+			ctx.WriteKeyword("SET ")
 		case DEFELEM_DROP:
 			if option.Arg != nil {
 				return fmt.Errorf("DROP option has a value")
 			}
-			ctx.WriteKeyWord("DROP ")
+			ctx.WriteKeyword("DROP ")
 		default:
 			return fmt.Errorf("invalid option action %d", option.Defaction)
 		}
@@ -473,54 +473,54 @@ func restoreSeqOptions(ctx *format.RestoreCtx, options *List) error {
 		ctx.WritePlain(" ")
 		switch option.Defname {
 		case "as":
-			ctx.WriteKeyWord("AS ")
+			ctx.WriteKeyword("AS ")
 			ctx.WritePlain(value)
 		case "cache":
-			ctx.WriteKeyWord("CACHE ")
+			ctx.WriteKeyword("CACHE ")
 			ctx.WritePlain(value)
 		case "cycle":
 			if value == "true" {
-				ctx.WriteKeyWord("CYCLE")
+				ctx.WriteKeyword("CYCLE")
 			} else {
-				ctx.WriteKeyWord("NO CYCLE")
+				ctx.WriteKeyword("NO CYCLE")
 			}
 		case "increment":
-			ctx.WriteKeyWord("INCREMENT ")
+			ctx.WriteKeyword("INCREMENT ")
 			ctx.WritePlain(value)
 		case "minvalue":
 			if value == "" {
-				ctx.WriteKeyWord("NO MINVALUE")
+				ctx.WriteKeyword("NO MINVALUE")
 			} else {
-				ctx.WriteKeyWord("MINVALUE ")
+				ctx.WriteKeyword("MINVALUE ")
 				ctx.WritePlain(value)
 			}
 		case "maxvalue":
 			if value == "" {
-				ctx.WriteKeyWord("NO MAXVALUE")
+				ctx.WriteKeyword("NO MAXVALUE")
 			} else {
-				ctx.WriteKeyWord("MAXVALUE ")
+				ctx.WriteKeyword("MAXVALUE ")
 				ctx.WritePlain(value)
 			}
 		case "owned_by":
-			ctx.WriteKeyWord("OWNED BY ")
+			ctx.WriteKeyword("OWNED BY ")
 			ctx.WritePlain(value)
 		case "sequence_name":
-			ctx.WriteKeyWord("SEQUENCE NAME ")
+			ctx.WriteKeyword("SEQUENCE NAME ")
 			ctx.WritePlain(value)
 		case "start":
-			ctx.WriteKeyWord("START ")
+			ctx.WriteKeyword("START ")
 			ctx.WritePlain(value)
 		case "restart":
-			ctx.WriteKeyWord("RESTART")
+			ctx.WriteKeyword("RESTART")
 			if value != "" {
 				ctx.WritePlain(" ")
 				ctx.WritePlain(value)
 			}
 		case "logged":
 			if value == "true" {
-				ctx.WriteKeyWord("LOGGED")
+				ctx.WriteKeyword("LOGGED")
 			} else {
-				ctx.WriteKeyWord("UNLOGGED")
+				ctx.WriteKeyword("UNLOGGED")
 			}
 		default:
 			return fmt.Errorf("%w: sequence option %q", ErrUnsupportedRestore, option.Defname)
@@ -531,7 +531,7 @@ func restoreSeqOptions(ctx *format.RestoreCtx, options *List) error {
 
 func restoreVariableSet(ctx *format.RestoreCtx, n *VariableSetStmt) error {
 	if n.Kind == VAR_RESET_ALL {
-		ctx.WriteKeyWord("RESET ALL")
+		ctx.WriteKeyword("RESET ALL")
 		return ctx.Err()
 	}
 	if n.Name == "" {
@@ -539,34 +539,34 @@ func restoreVariableSet(ctx *format.RestoreCtx, n *VariableSetStmt) error {
 	}
 	switch n.Kind {
 	case VAR_RESET:
-		ctx.WriteKeyWord("RESET ")
+		ctx.WriteKeyword("RESET ")
 		ctx.WriteName(n.Name)
 		return ctx.Err()
 	case VAR_SET_VALUE, VAR_SET_DEFAULT, VAR_SET_CURRENT:
-		ctx.WriteKeyWord("SET ")
+		ctx.WriteKeyword("SET ")
 		if n.IsLocal {
-			ctx.WriteKeyWord("LOCAL ")
+			ctx.WriteKeyword("LOCAL ")
 		}
 		ctx.WriteName(n.Name)
 	case VAR_SET_MULTI:
 		if n.Args == nil || len(n.Args.Items) == 0 {
 			return fmt.Errorf("SET has no transaction values")
 		}
-		ctx.WriteKeyWord("SET ")
+		ctx.WriteKeyword("SET ")
 		if n.IsLocal {
-			ctx.WriteKeyWord("LOCAL ")
+			ctx.WriteKeyword("LOCAL ")
 		}
 		switch n.Name {
 		case "TRANSACTION SNAPSHOT":
 			if len(n.Args.Items) != 1 {
 				return fmt.Errorf("SET TRANSACTION SNAPSHOT requires one value")
 			}
-			ctx.WriteKeyWord("TRANSACTION SNAPSHOT ")
+			ctx.WriteKeyword("TRANSACTION SNAPSHOT ")
 			return n.Args.Restore(ctx)
 		case "TRANSACTION":
-			ctx.WriteKeyWord("TRANSACTION ")
+			ctx.WriteKeyword("TRANSACTION ")
 		case "SESSION CHARACTERISTICS":
-			ctx.WriteKeyWord("SESSION CHARACTERISTICS AS TRANSACTION ")
+			ctx.WriteKeyword("SESSION CHARACTERISTICS AS TRANSACTION ")
 		default:
 			return fmt.Errorf("invalid transaction SET name %q", n.Name)
 		}
@@ -576,14 +576,14 @@ func restoreVariableSet(ctx *format.RestoreCtx, n *VariableSetStmt) error {
 	}
 	switch n.Kind {
 	case VAR_SET_CURRENT:
-		ctx.WriteKeyWord(" FROM CURRENT")
+		ctx.WriteKeyword(" FROM CURRENT")
 	case VAR_SET_DEFAULT:
-		ctx.WriteKeyWord(" TO DEFAULT")
+		ctx.WriteKeyword(" TO DEFAULT")
 	case VAR_SET_VALUE:
 		if n.Args == nil || len(n.Args.Items) == 0 {
 			return fmt.Errorf("SET has no values")
 		}
-		ctx.WriteKeyWord(" TO ")
+		ctx.WriteKeyword(" TO ")
 		return n.Args.Restore(ctx)
 	}
 	return ctx.Err()
@@ -610,7 +610,7 @@ func restoreTransactionModes(ctx *format.RestoreCtx, modes *List) error {
 			}
 			switch strings.ToUpper(level) {
 			case "READ UNCOMMITTED", "READ COMMITTED", "REPEATABLE READ", "SERIALIZABLE":
-				ctx.WriteKeyWord("ISOLATION LEVEL " + level)
+				ctx.WriteKeyword("ISOLATION LEVEL " + level)
 			default:
 				return fmt.Errorf("invalid isolation level")
 			}
@@ -624,9 +624,9 @@ func restoreTransactionModes(ctx *format.RestoreCtx, modes *List) error {
 				on, off = "DEFERRABLE", "NOT DEFERRABLE"
 			}
 			if flag == 1 {
-				ctx.WriteKeyWord(on)
+				ctx.WriteKeyword(on)
 			} else {
-				ctx.WriteKeyWord(off)
+				ctx.WriteKeyword(off)
 			}
 		default:
 			return fmt.Errorf("invalid transaction mode %q", option.Defname)
@@ -663,7 +663,7 @@ func restoreSQLValue(ctx *format.RestoreCtx, n *SQLValueFunction) error {
 	default:
 		return fmt.Errorf("unsupported SQL value operation %d", n.Op)
 	}
-	ctx.WriteKeyWord(name)
+	ctx.WriteKeyword(name)
 	if n.Typmod >= 0 {
 		ctx.WritePlainf("(%d)", n.Typmod)
 	}
@@ -698,19 +698,19 @@ func restoreXML(ctx *format.RestoreCtx, n *XmlExpr) error {
 	if n.Op != IS_XMLPARSE || n.Args == nil || len(n.Args.Items) != 2 {
 		return fmt.Errorf("%w: XML operation %d", ErrUnsupportedRestore, n.Op)
 	}
-	ctx.WriteKeyWord("XMLPARSE(")
+	ctx.WriteKeyword("XMLPARSE(")
 	if n.Xmloption == XMLOPTION_DOCUMENT {
-		ctx.WriteKeyWord("DOCUMENT ")
+		ctx.WriteKeyword("DOCUMENT ")
 	} else {
-		ctx.WriteKeyWord("CONTENT ")
+		ctx.WriteKeyword("CONTENT ")
 	}
 	if err := n.Args.Items[0].Restore(ctx); err != nil {
 		return err
 	}
 	if value, ok := n.Args.Items[1].(ValueExpr); ok && (value.GetValue() == true || value.GetValue() == int64(1)) {
-		ctx.WriteKeyWord(" PRESERVE WHITESPACE")
+		ctx.WriteKeyword(" PRESERVE WHITESPACE")
 	} else {
-		ctx.WriteKeyWord(" STRIP WHITESPACE")
+		ctx.WriteKeyword(" STRIP WHITESPACE")
 	}
 	ctx.WritePlain(")")
 	return ctx.Err()

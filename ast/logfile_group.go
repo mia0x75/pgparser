@@ -40,24 +40,24 @@ type LogfileGroupOption struct {
 func (n *LogfileGroupOption) Restore(ctx *format.RestoreCtx) error {
 	switch n.Tp {
 	case LogfileGroupOptionInitialSize:
-		ctx.WriteKeyWord("INITIAL_SIZE = ")
+		ctx.WriteKeyword("INITIAL_SIZE = ")
 		ctx.WritePlainf("%d", n.Val)
 	case LogfileGroupOptionUndoBufferSize:
-		ctx.WriteKeyWord("UNDO_BUFFER_SIZE = ")
+		ctx.WriteKeyword("UNDO_BUFFER_SIZE = ")
 		ctx.WritePlainf("%d", n.Val)
 	case LogfileGroupOptionRedoBufferSize:
-		ctx.WriteKeyWord("REDO_BUFFER_SIZE = ")
+		ctx.WriteKeyword("REDO_BUFFER_SIZE = ")
 		ctx.WritePlainf("%d", n.Val)
 	case LogfileGroupOptionNodegroup:
-		ctx.WriteKeyWord("NODEGROUP = ")
+		ctx.WriteKeyword("NODEGROUP = ")
 		ctx.WritePlainf("%d", n.Val)
 	case LogfileGroupOptionWait:
-		ctx.WriteKeyWord("WAIT")
+		ctx.WriteKeyword("WAIT")
 	case LogfileGroupOptionComment:
-		ctx.WriteKeyWord("COMMENT = ")
+		ctx.WriteKeyword("COMMENT = ")
 		ctx.WriteString(n.Str)
 	case LogfileGroupOptionEngine:
-		ctx.WriteKeyWord("ENGINE = ")
+		ctx.WriteKeyword("ENGINE = ")
 		ctx.WritePlain(n.Str)
 	default:
 		return errors.New("An error occurred while splicing LogfileGroupOption")
@@ -96,9 +96,9 @@ type CreateLogfileGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CREATE LOGFILE GROUP ")
+	ctx.WriteKeyword("CREATE LOGFILE GROUP ")
 	ctx.WriteName(n.Name)
-	ctx.WriteKeyWord(" ADD UNDOFILE ")
+	ctx.WriteKeyword(" ADD UNDOFILE ")
 	ctx.WriteString(n.UndoFile)
 	return restoreLogfileGroupOptions(ctx, n.Options)
 }
@@ -131,9 +131,9 @@ type AlterLogfileGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ALTER LOGFILE GROUP ")
+	ctx.WriteKeyword("ALTER LOGFILE GROUP ")
 	ctx.WriteName(n.Name)
-	ctx.WriteKeyWord(" ADD UNDOFILE ")
+	ctx.WriteKeyword(" ADD UNDOFILE ")
 	ctx.WriteString(n.UndoFile)
 	return restoreLogfileGroupOptions(ctx, n.Options)
 }
@@ -165,7 +165,7 @@ type DropLogfileGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *DropLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DROP LOGFILE GROUP ")
+	ctx.WriteKeyword("DROP LOGFILE GROUP ")
 	ctx.WriteName(n.Name)
 	return restoreLogfileGroupOptions(ctx, n.Options)
 }

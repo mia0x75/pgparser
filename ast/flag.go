@@ -2,12 +2,12 @@ package ast
 
 // HasAggFlag checks if the expr contains FlagHasAggregateFunc.
 func HasAggFlag(expr ExprNode) bool {
-	return expr.GetFlag()&FlagHasAggregateFunc > 0
+	return ExprFlag(expr)&FlagHasAggregateFunc > 0
 }
 
 // HasWindowFlag TODO:
 func HasWindowFlag(expr ExprNode) bool {
-	return expr.GetFlag()&FlagHasWindowFunc > 0
+	return ExprFlag(expr)&FlagHasWindowFunc > 0
 }
 
 // SetFlag sets flag for expression.
@@ -45,31 +45,31 @@ func (f *flagSetter) Leave(in Node) (Node, bool) {
 	case *WindowFuncExpr:
 		f.windowFunc(x)
 	case *BetweenExpr:
-		x.SetFlag(x.Expr.GetFlag() | x.Left.GetFlag() | x.Right.GetFlag())
+		x.SetFlag(ExprFlag(x.Expr) | ExprFlag(x.Left) | ExprFlag(x.Right))
 	case *BinaryOperationExpr:
-		x.SetFlag(x.L.GetFlag() | x.R.GetFlag())
+		x.SetFlag(ExprFlag(x.L) | ExprFlag(x.R))
 	case *CaseExpr:
 		f.caseExpr(x)
 	case *ColumnNameExpr:
 		x.SetFlag(FlagHasReference)
 	case *CompareSubqueryExpr:
-		x.SetFlag(x.L.GetFlag() | x.R.GetFlag())
+		x.SetFlag(ExprFlag(x.L) | ExprFlag(x.R))
 	case *DefaultExpr:
 		x.SetFlag(FlagHasDefault)
 	case *ExistsSubqueryExpr:
-		x.SetFlag(x.Sel.GetFlag())
+		x.SetFlag(ExprFlag(x.Sel))
 	case *FuncCallExpr:
 		f.funcCall(x)
 	case *SQLValueFunction:
 		x.SetFlag(FlagHasFunc)
 	case *FuncCastExpr:
-		x.SetFlag(FlagHasFunc | x.Expr.GetFlag())
+		x.SetFlag(FlagHasFunc | ExprFlag(x.Expr))
 	case *IsNullExpr:
-		x.SetFlag(x.Expr.GetFlag())
+		x.SetFlag(ExprFlag(x.Expr))
 	case *IsTruthExpr:
-		x.SetFlag(x.Expr.GetFlag())
+		x.SetFlag(ExprFlag(x.Expr))
 	case *ParenthesesExpr:
-		x.SetFlag(x.Expr.GetFlag())
+		x.SetFlag(ExprFlag(x.Expr))
 	case *PatternInExpr:
 		f.patternIn(x)
 	case *PatternLikeExpr:
@@ -83,14 +83,14 @@ func (f *flagSetter) Leave(in Node) (Node, bool) {
 	case *SubqueryExpr:
 		x.SetFlag(FlagHasSubquery)
 	case *UnaryOperationExpr:
-		x.SetFlag(x.V.GetFlag())
+		x.SetFlag(ExprFlag(x.V))
 	case *ValuesExpr:
 		x.SetFlag(FlagHasReference)
 	case *VariableExpr:
 		if x.Value == nil {
 			x.SetFlag(FlagHasVariable)
 		} else {
-			x.SetFlag(FlagHasVariable | x.Value.GetFlag())
+			x.SetFlag(FlagHasVariable | ExprFlag(x.Value))
 		}
 	}
 
@@ -100,41 +100,41 @@ func (f *flagSetter) Leave(in Node) (Node, bool) {
 func (f *flagSetter) caseExpr(x *CaseExpr) {
 	var flag uint64
 	if x.Value != nil {
-		flag |= x.Value.GetFlag()
+		flag |= ExprFlag(x.Value)
 	}
 	for _, val := range x.WhenClauses {
-		flag |= val.Expr.GetFlag()
-		flag |= val.Result.GetFlag()
+		flag |= ExprFlag(val.Expr)
+		flag |= ExprFlag(val.Result)
 	}
 	if x.ElseClause != nil {
-		flag |= x.ElseClause.GetFlag()
+		flag |= ExprFlag(x.ElseClause)
 	}
 	x.SetFlag(flag)
 }
 
 func (f *flagSetter) patternIn(x *PatternInExpr) {
-	flag := x.Expr.GetFlag()
+	flag := ExprFlag(x.Expr)
 	for _, val := range x.List {
-		flag |= val.GetFlag()
+		flag |= ExprFlag(val)
 	}
 	if x.Sel != nil {
-		flag |= x.Sel.GetFlag()
+		flag |= ExprFlag(x.Sel)
 	}
 	x.SetFlag(flag)
 }
 
 func (f *flagSetter) patternLike(x *PatternLikeExpr) {
-	flag := x.Pattern.GetFlag()
+	flag := ExprFlag(x.Pattern)
 	if x.Expr != nil {
-		flag |= x.Expr.GetFlag()
+		flag |= ExprFlag(x.Expr)
 	}
 	x.SetFlag(flag)
 }
 
 func (f *flagSetter) patternRegexp(x *PatternRegexpExpr) {
-	flag := x.Pattern.GetFlag()
+	flag := ExprFlag(x.Pattern)
 	if x.Expr != nil {
-		flag |= x.Expr.GetFlag()
+		flag |= ExprFlag(x.Expr)
 	}
 	x.SetFlag(flag)
 }
@@ -142,7 +142,7 @@ func (f *flagSetter) patternRegexp(x *PatternRegexpExpr) {
 func (f *flagSetter) row(x *RowExpr) {
 	var flag uint64
 	for _, val := range x.Values {
-		flag |= val.GetFlag()
+		flag |= ExprFlag(val)
 	}
 	x.SetFlag(flag)
 }
@@ -150,7 +150,7 @@ func (f *flagSetter) row(x *RowExpr) {
 func (f *flagSetter) funcCall(x *FuncCallExpr) {
 	flag := FlagHasFunc
 	for _, val := range x.Args {
-		flag |= val.GetFlag()
+		flag |= ExprFlag(val)
 	}
 	x.SetFlag(flag | functionOptionFlags(x.Filter, x.OrderBy, x.WithinGroup))
 }
@@ -158,7 +158,7 @@ func (f *flagSetter) funcCall(x *FuncCallExpr) {
 func (f *flagSetter) aggregateFunc(x *AggregateFuncExpr) {
 	flag := FlagHasAggregateFunc
 	for _, val := range x.Args {
-		flag |= val.GetFlag()
+		flag |= ExprFlag(val)
 	}
 	x.SetFlag(flag | functionOptionFlags(x.Filter, x.OrderBy, x.WithinGroup))
 }
@@ -166,11 +166,11 @@ func (f *flagSetter) aggregateFunc(x *AggregateFuncExpr) {
 func (f *flagSetter) windowFunc(x *WindowFuncExpr) {
 	flag := FlagHasWindowFunc
 	for _, val := range x.Args {
-		flag |= val.GetFlag()
+		flag |= ExprFlag(val)
 	}
 	if x.Spec.PartitionBy != nil {
 		for _, item := range x.Spec.PartitionBy.Items {
-			flag |= item.Expr.GetFlag()
+			flag |= ExprFlag(item.Expr)
 		}
 	}
 	flag |= functionOptionFlags(nil, x.Spec.OrderBy, nil)
@@ -186,7 +186,7 @@ func expressionFlags(nodes ...Node) uint64 {
 	var flag uint64
 	for _, n := range nodes {
 		if expr, ok := n.(ExprNode); ok && expr != nil {
-			flag |= expr.GetFlag()
+			flag |= ExprFlag(expr)
 		}
 	}
 	return flag
@@ -195,12 +195,12 @@ func expressionFlags(nodes ...Node) uint64 {
 func functionOptionFlags(filter ExprNode, orderBy, withinGroup *OrderByClause) uint64 {
 	var flag uint64
 	if filter != nil {
-		flag |= filter.GetFlag()
+		flag |= ExprFlag(filter)
 	}
 	for _, order := range []*OrderByClause{orderBy, withinGroup} {
 		if order != nil {
 			for _, item := range order.Items {
-				flag |= item.Expr.GetFlag()
+				flag |= ExprFlag(item.Expr)
 			}
 		}
 	}

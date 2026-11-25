@@ -28,12 +28,6 @@ func New() *Parser {
 
 // Parse parses a query string to raw ast.StmtNode.
 func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
-	if ast.NewValueExpr == nil ||
-		ast.NewParamMarkerExpr == nil ||
-		ast.NewHexLiteral == nil ||
-		ast.NewBitLiteral == nil {
-		return nil, errors.New("no parser driver (forgotten import?)")
-	}
 	parser.result = nil
 
 	parser.lexer.reset(sql)

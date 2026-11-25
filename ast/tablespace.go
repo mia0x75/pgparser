@@ -26,19 +26,19 @@ type CreateTablespaceStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CREATE TABLESPACE ")
+	ctx.WriteKeyword("CREATE TABLESPACE ")
 	ctx.WriteName(n.Name)
 	if n.Owner != nil {
-		ctx.WriteKeyWord(" OWNER ")
+		ctx.WriteKeyword(" OWNER ")
 		if err := n.Owner.Restore(ctx); err != nil {
 			return err
 		}
 	}
 	// LOCATION is mandatory syntax, so it is written even when empty.
-	ctx.WriteKeyWord(" LOCATION ")
+	ctx.WriteKeyword(" LOCATION ")
 	ctx.WriteString(n.Location)
 	if n.Options != nil {
-		ctx.WriteKeyWord(" WITH ")
+		ctx.WriteKeyword(" WITH ")
 		if err := restoreRelOptions(ctx, n.Options); err != nil {
 			return err
 		}
@@ -84,19 +84,19 @@ type AlterTablespaceStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ALTER TABLESPACE ")
+	ctx.WriteKeyword("ALTER TABLESPACE ")
 	ctx.WriteName(n.Name)
 	if n.Action != "" {
 		if n.Options == nil {
 			return fmt.Errorf("ALTER TABLESPACE %s has no options", n.Action)
 		}
-		ctx.WriteKeyWord(" " + n.Action + " ")
+		ctx.WriteKeyword(" " + n.Action + " ")
 		if err := restoreRelOptions(ctx, n.Options); err != nil {
 			return err
 		}
 	}
 	if n.RenameTo != "" {
-		ctx.WriteKeyWord(" RENAME TO ")
+		ctx.WriteKeyword(" RENAME TO ")
 		ctx.WriteName(n.RenameTo)
 	}
 	return ctx.Err()
@@ -129,9 +129,9 @@ type DropTablespaceStmt struct {
 
 // Restore implements Node interface.
 func (n *DropTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DROP TABLESPACE ")
+	ctx.WriteKeyword("DROP TABLESPACE ")
 	if n.IfExists {
-		ctx.WriteKeyWord("IF EXISTS ")
+		ctx.WriteKeyword("IF EXISTS ")
 	}
 	ctx.WriteName(n.Name)
 	return ctx.Err()

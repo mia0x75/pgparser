@@ -11,7 +11,7 @@ type AnalyzeTableStmt struct {
 }
 
 func (n *AnalyzeTableStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ANALYZE")
+	ctx.WriteKeyword("ANALYZE")
 	if err := restoreUtilityOptions(ctx, n.Options); err != nil {
 		return err
 	}

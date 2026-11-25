@@ -1,38 +1,15 @@
+// Package format provides the PostgreSQL dialect facade over the shared
+// github.com/mia0x75/parserkit/format restore primitives.
 package format
 
 import (
-	"bytes"
-	"fmt"
 	"io"
-	"strings"
-)
 
-const (
-	st0 = iota
-	stBOL
-	stPERC
-	stBOLPERC
+	pkformat "github.com/mia0x75/parserkit/format"
 )
 
 // Formatter is an io.Writer extended formatter by a fmt.Printf like function Format.
-type Formatter interface {
-	io.Writer
-	Format(format string, args ...any) (n int, errno error)
-}
-
-type indentFormatter struct {
-	io.Writer
-	indent      []byte
-	indentLevel int
-	state       int
-}
-
-var replace = map[rune]string{
-	'\000': "\\0",
-	'\'':   "''",
-	'\n':   "\\n",
-	'\r':   "\\r",
-}
+type Formatter = pkformat.Formatter
 
 // IndentFormatter returns a new Formatter which interprets %i and %u in the
 // Format() formats string as indent and unindent commands. The commands can
@@ -62,93 +39,8 @@ var replace = map[rune]string{
 //	f.Format("abc%d%%e%i\nx\n", 3)
 //	f.Format("y\n%uz\n")
 func IndentFormatter(w io.Writer, indent string) Formatter {
-	return &indentFormatter{w, []byte(indent), 0, stBOL}
+	return pkformat.IndentFormatter(w, indent)
 }
-
-func (f *indentFormatter) format(flat bool, format string, args ...any) (n int, errno error) {
-	var buf = make([]byte, 0)
-	for i := 0; i < len(format); i++ {
-		c := format[i]
-		switch f.state {
-		case st0:
-			switch c {
-			case '\n':
-				cc := c
-				if flat && f.indentLevel != 0 {
-					cc = ' '
-				}
-				buf = append(buf, cc)
-				f.state = stBOL
-			case '%':
-				f.state = stPERC
-			default:
-				buf = append(buf, c)
-			}
-		case stBOL:
-			switch c {
-			case '\n':
-				cc := c
-				if flat && f.indentLevel != 0 {
-					cc = ' '
-				}
-				buf = append(buf, cc)
-			case '%':
-				f.state = stBOLPERC
-			default:
-				if !flat {
-					for i := 0; i < f.indentLevel; i++ {
-						buf = append(buf, f.indent...)
-					}
-				}
-				buf = append(buf, c)
-				f.state = st0
-			}
-		case stBOLPERC:
-			switch c {
-			case 'i':
-				f.indentLevel++
-				f.state = stBOL
-			case 'u':
-				f.indentLevel--
-				f.state = stBOL
-			default:
-				if !flat {
-					for i := 0; i < f.indentLevel; i++ {
-						buf = append(buf, f.indent...)
-					}
-				}
-				buf = append(buf, '%', c)
-				f.state = st0
-			}
-		case stPERC:
-			switch c {
-			case 'i':
-				f.indentLevel++
-				f.state = st0
-			case 'u':
-				f.indentLevel--
-				f.state = st0
-			default:
-				buf = append(buf, '%', c)
-				f.state = st0
-			}
-		default:
-			panic("unexpected state")
-		}
-	}
-	switch f.state {
-	case stPERC, stBOLPERC:
-		buf = append(buf, '%')
-	}
-	return fmt.Fprintf(f, string(buf), args...)
-}
-
-// Format implements Format interface.
-func (f *indentFormatter) Format(format string, args ...any) (n int, errno error) {
-	return f.format(false, format, args...)
-}
-
-type flatFormatter indentFormatter
 
 // FlatFormatter returns a newly created Formatter with the same functionality as the one returned
 // by IndentFormatter except it allows a newline in the 'format' string argument of Format
@@ -166,30 +58,16 @@ type flatFormatter indentFormatter
 //
 //	"abc3%%e x y z\n"
 func FlatFormatter(w io.Writer) Formatter {
-	return (*flatFormatter)(IndentFormatter(w, "").(*indentFormatter))
-}
-
-// Format implements Format interface.
-func (f *flatFormatter) Format(format string, args ...any) (n int, errno error) {
-	return (*indentFormatter)(f).format(true, format, args...)
+	return pkformat.FlatFormatter(w)
 }
 
 // OutputFormat output escape character with backslash.
 func OutputFormat(s string) string {
-	var buf bytes.Buffer
-	for _, old := range s {
-		if newVal, ok := replace[old]; ok {
-			buf.WriteString(newVal)
-			continue
-		}
-		buf.WriteRune(old)
-	}
-
-	return buf.String()
+	return pkformat.OutputFormat(s)
 }
 
 // RestoreFlag mark the Restore format
-type RestoreFlags uint64
+type RestoreFlags = pkformat.RestoreFlags
 
 // Mutually exclusive group of `RestoreFlags`:
 // [RestoreStringSingleQuotes, RestoreStringDoubleQuotes]
@@ -198,173 +76,29 @@ type RestoreFlags uint64
 // [RestoreNameDoubleQuotes, RestoreNameBackQuotes]
 // The flag with the left position in each group has a higher priority.
 const (
-	RestoreStringSingleQuotes RestoreFlags = 1 << iota
-	RestoreStringDoubleQuotes
-	RestoreStringEscapeBackslash
-
-	RestoreKeyWordUppercase
-	RestoreKeyWordLowercase
-
-	RestoreNameUppercase
-	RestoreNameLowercase
-	RestoreNameDoubleQuotes
-	RestoreNameBackQuotes
-
-	RestoreSpacesAroundBinaryOperation
+	RestoreStringSingleQuotes          = pkformat.RestoreStringSingleQuotes
+	RestoreStringDoubleQuotes          = pkformat.RestoreStringDoubleQuotes
+	RestoreStringEscapeBackslash       = pkformat.RestoreStringEscapeBackslash
+	RestoreKeyWordUppercase            = pkformat.RestoreKeywordUppercase
+	RestoreKeyWordLowercase            = pkformat.RestoreKeywordLowercase
+	RestoreNameUppercase               = pkformat.RestoreNameUppercase
+	RestoreNameLowercase               = pkformat.RestoreNameLowercase
+	RestoreNameDoubleQuotes            = pkformat.RestoreNameDoubleQuotes
+	RestoreNameBackQuotes              = pkformat.RestoreNameBackQuotes
+	RestoreSpacesAroundBinaryOperation = pkformat.RestoreSpacesAroundBinaryOperation
 )
 
-const (
-	DefaultRestoreFlags = RestoreStringSingleQuotes | RestoreKeyWordUppercase | RestoreNameDoubleQuotes
-)
-
-func (rf RestoreFlags) has(flag RestoreFlags) bool {
-	return rf&flag != 0
-}
-
-// HasStringSingleQuotesFlag returns a boolean indicating when `rf` has `RestoreStringSingleQuotes` flag.
-func (rf RestoreFlags) HasStringSingleQuotesFlag() bool {
-	return rf.has(RestoreStringSingleQuotes)
-}
-
-// HasStringDoubleQuotesFlag returns a boolean indicating whether `rf` has `RestoreStringDoubleQuotes` flag.
-func (rf RestoreFlags) HasStringDoubleQuotesFlag() bool {
-	return rf.has(RestoreStringDoubleQuotes)
-}
-
-// HasStringEscapeBackslashFlag returns a boolean indicating whether `rf` has `RestoreStringEscapeBackslash` flag.
-func (rf RestoreFlags) HasStringEscapeBackslashFlag() bool {
-	return rf.has(RestoreStringEscapeBackslash)
-}
-
-// HasKeyWordUppercaseFlag returns a boolean indicating whether `rf` has `RestoreKeyWordUppercase` flag.
-func (rf RestoreFlags) HasKeyWordUppercaseFlag() bool {
-	return rf.has(RestoreKeyWordUppercase)
-}
-
-// HasKeyWordLowercaseFlag returns a boolean indicating whether `rf` has `RestoreKeyWordLowercase` flag.
-func (rf RestoreFlags) HasKeyWordLowercaseFlag() bool {
-	return rf.has(RestoreKeyWordLowercase)
-}
-
-// HasNameUppercaseFlag returns a boolean indicating whether `rf` has `RestoreNameUppercase` flag.
-func (rf RestoreFlags) HasNameUppercaseFlag() bool {
-	return rf.has(RestoreNameUppercase)
-}
-
-// HasNameLowercaseFlag returns a boolean indicating whether `rf` has `RestoreNameLowercase` flag.
-func (rf RestoreFlags) HasNameLowercaseFlag() bool {
-	return rf.has(RestoreNameLowercase)
-}
-
-// HasNameDoubleQuotesFlag returns a boolean indicating whether `rf` has `RestoreNameDoubleQuotes` flag.
-func (rf RestoreFlags) HasNameDoubleQuotesFlag() bool {
-	return rf.has(RestoreNameDoubleQuotes)
-}
-
-// HasNameBackQuotesFlag returns a boolean indicating whether `rf` has `RestoreNameBackQuotes` flag.
-func (rf RestoreFlags) HasNameBackQuotesFlag() bool {
-	return rf.has(RestoreNameBackQuotes)
-}
-
-// HasSpacesAroundBinaryOperationFlag returns a boolean indicating whether `rf` has `RestoreSpacesAroundBinaryOperation` flag.
-func (rf RestoreFlags) HasSpacesAroundBinaryOperationFlag() bool {
-	return rf.has(RestoreSpacesAroundBinaryOperation)
-}
+// DefaultRestoreFlags is the PostgreSQL default: single quoted strings, upper
+// case keywords and double quoted identifiers.
+const DefaultRestoreFlags = RestoreStringSingleQuotes | RestoreKeyWordUppercase | RestoreNameDoubleQuotes
 
 // RestoreCtx is `Restore` context to hold flags and writer.
-type RestoreCtx struct {
-	Flags     RestoreFlags
-	In        io.Writer
-	JoinLevel int
-	err       error
-}
+type RestoreCtx = pkformat.RestoreCtx
 
 // NewRestoreCtx returns a new `RestoreCtx`.
+//
+// The shared context is built with a zero DialectConfig so that quotes are only
+// emitted when the caller asks for them through the restore flags.
 func NewRestoreCtx(flags RestoreFlags, in io.Writer) *RestoreCtx {
-	return &RestoreCtx{Flags: flags, In: in}
-}
-
-// Err preserves the first output failure so successful restore paths can return it.
-func (ctx *RestoreCtx) Err() error {
-	return ctx.err
-}
-
-// WriteKeyWord writes the `keyWord` into writer.
-// `keyWord` will be converted format(uppercase and lowercase for now) according to `RestoreFlags`.
-func (ctx *RestoreCtx) WriteKeyWord(keyWord string) {
-	switch {
-	case ctx.Flags.HasKeyWordUppercaseFlag():
-		keyWord = strings.ToUpper(keyWord)
-	case ctx.Flags.HasKeyWordLowercaseFlag():
-		keyWord = strings.ToLower(keyWord)
-	}
-	ctx.WritePlain(keyWord)
-}
-
-// WriteString writes the string into writer
-// `str` may be wrapped in quotes and escaped according to RestoreFlags.
-func (ctx *RestoreCtx) WriteString(str string) {
-	if ctx.Flags.HasStringEscapeBackslashFlag() {
-		str = strings.ReplaceAll(str, `\`, `\\`)
-	}
-	quotes := ""
-	switch {
-	case ctx.Flags.HasStringSingleQuotesFlag():
-		str = strings.ReplaceAll(str, `'`, `''`)
-		quotes = `'`
-	case ctx.Flags.HasStringDoubleQuotesFlag():
-		str = strings.ReplaceAll(str, `"`, `""`)
-		quotes = `"`
-	}
-	ctx.WritePlain(quotes)
-	ctx.WritePlain(str)
-	ctx.WritePlain(quotes)
-}
-
-// WriteName writes the name into writer
-// `name` maybe wrapped in quotes and escaped according to RestoreFlags.
-func (ctx *RestoreCtx) WriteName(name string) {
-	switch {
-	case ctx.Flags.HasNameUppercaseFlag():
-		name = strings.ToUpper(name)
-	case ctx.Flags.HasNameLowercaseFlag():
-		name = strings.ToLower(name)
-	}
-	quotes := ""
-	switch {
-	case ctx.Flags.HasNameDoubleQuotesFlag():
-		name = strings.ReplaceAll(name, `"`, `""`)
-		quotes = `"`
-	case ctx.Flags.HasNameBackQuotesFlag():
-		name = strings.ReplaceAll(name, "`", "``")
-		quotes = "`"
-	}
-	ctx.WritePlain(quotes)
-	ctx.WritePlain(name)
-	ctx.WritePlain(quotes)
-}
-
-// WritePlain writes the plain text into writer without any handling.
-func (ctx *RestoreCtx) WritePlain(plainText string) {
-	if ctx.err != nil || plainText == "" {
-		return
-	}
-	if ctx.In == nil {
-		ctx.err = fmt.Errorf("restore writer is nil")
-		return
-	}
-	n, err := io.WriteString(ctx.In, plainText)
-	if err == nil && n != len(plainText) {
-		err = io.ErrShortWrite
-	}
-	if err != nil {
-		ctx.err = fmt.Errorf("write restored SQL: %w", err)
-	}
-}
-
-// WritePlainf write the plain text into writer without any handling.
-func (ctx *RestoreCtx) WritePlainf(format string, a ...any) {
-	if ctx.err == nil {
-		ctx.WritePlain(fmt.Sprintf(format, a...))
-	}
+	return pkformat.NewRestoreCtx(in, pkformat.DialectConfig{}, flags)
 }

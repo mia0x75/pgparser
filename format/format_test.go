@@ -66,7 +66,7 @@ func TestRestoreCtx(t *testing.T) {
 	for _, testCase := range testCases {
 		sb.Reset()
 		ctx := NewRestoreCtx(testCase.flag, &sb)
-		ctx.WriteKeyWord("key`.'\"Word\\")
+		ctx.WriteKeyword("key`.'\"Word\\")
 		ctx.WritePlain(" ")
 		ctx.WriteString("str`.'\"ing\\")
 		ctx.WritePlain(" ")
@@ -95,7 +95,7 @@ func TestRestoreCtxFirstError(t *testing.T) {
 	w := &errorWriter{err: writeErr}
 	ctx := NewRestoreCtx(DefaultRestoreFlags, w)
 	ctx.WriteName("name")
-	ctx.WriteKeyWord("SELECT")
+	ctx.WriteKeyword("SELECT")
 	ctx.WriteString("value")
 	ctx.WritePlain("plain")
 	ctx.WritePlainf("%d", 1)

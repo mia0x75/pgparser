@@ -18,7 +18,7 @@ type UserIdentity struct {
 // Restore implements Node interface.
 func (user *UserIdentity) Restore(ctx *format.RestoreCtx) error {
 	if user.CurrentUser {
-		ctx.WriteKeyWord("CURRENT_USER")
+		ctx.WriteKeyword("CURRENT_USER")
 	} else {
 		ctx.WriteName(user.Username)
 		if user.Hostname != "" {

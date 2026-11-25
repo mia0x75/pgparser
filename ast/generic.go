@@ -16,7 +16,7 @@ type GenericStmt struct {
 
 // Restore implements Node interface.
 func (n *GenericStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord(n.Kind)
+	ctx.WriteKeyword(n.Kind)
 	if n.Raw != "" {
 		ctx.WritePlain(" ")
 		ctx.WritePlain(n.Raw)

@@ -53,20 +53,20 @@ type CreateServerStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateServerStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CREATE SERVER ")
+	ctx.WriteKeyword("CREATE SERVER ")
 	ctx.WriteName(n.Name)
 	if n.ServerType != "" {
-		ctx.WriteKeyWord(" TYPE ")
+		ctx.WriteKeyword(" TYPE ")
 		ctx.WriteString(n.ServerType)
 	}
 	if n.Version != "" {
-		ctx.WriteKeyWord(" VERSION ")
+		ctx.WriteKeyword(" VERSION ")
 		ctx.WriteString(n.Version)
 	}
-	ctx.WriteKeyWord(" FOREIGN DATA WRAPPER ")
+	ctx.WriteKeyword(" FOREIGN DATA WRAPPER ")
 	ctx.WriteName(n.Wrapper)
 	if len(n.Options) > 0 {
-		ctx.WriteKeyWord(" OPTIONS(")
+		ctx.WriteKeyword(" OPTIONS(")
 		for i, opt := range n.Options {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -109,14 +109,14 @@ type AlterServerStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterServerStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ALTER SERVER ")
+	ctx.WriteKeyword("ALTER SERVER ")
 	ctx.WriteName(n.Name)
 	if n.Version != "" {
-		ctx.WriteKeyWord(" VERSION ")
+		ctx.WriteKeyword(" VERSION ")
 		ctx.WriteString(n.Version)
 	}
 	if len(n.Options) > 0 {
-		ctx.WriteKeyWord(" OPTIONS(")
+		ctx.WriteKeyword(" OPTIONS(")
 		for i, opt := range n.Options {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -157,9 +157,9 @@ type DropServerStmt struct {
 
 // Restore implements Node interface.
 func (n *DropServerStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DROP SERVER ")
+	ctx.WriteKeyword("DROP SERVER ")
 	if n.IfExists {
-		ctx.WriteKeyWord("IF EXISTS ")
+		ctx.WriteKeyword("IF EXISTS ")
 	}
 	ctx.WriteName(n.Name)
 	return ctx.Err()

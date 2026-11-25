@@ -6,7 +6,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/mia0x75/pgparser/ast"
+	"github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/hack"
@@ -14,48 +14,48 @@ import (
 	"github.com/mia0x75/pgparser/types"
 )
 
-// The purpose of driver package is to decompose the dependency of the parser and
-// types package.
-// It provides the NewValueExpr function for the ast package, so the ast package
-// do not depends on the concrete definition of `types.Datum`, thus get rid of
-// the dependency of the types package.
-// The parser package depends on the ast package, but not the types package.
-// The whole relationship:
-// ast imports []
-// types imports [parser/types]
-// parser imports [ast, parser/types]
-// driver imports [ast, types]
-// callers import [parser, driver]
+// NewDecimal preserves the dialect's exact decimal representation.
+func NewDecimal(str string) (any, error) {
+	dec := new(types.PgDecimal)
+	err := dec.FromString(hack.Slice(str))
+	return dec, err
+}
 
-func init() {
-	ast.NewValueExpr = newValueExpr
-	ast.NewParamMarkerExpr = newParamMarkerExpr
-	ast.NewDecimal = func(str string) (any, error) {
-		dec := new(types.PgDecimal)
-		err := dec.FromString(hack.Slice(str))
-		return dec, err
-	}
-	ast.NewHexLiteral = func(str string) (any, error) {
-		h, err := types.NewHexLiteral(str)
-		return h, err
-	}
-	ast.NewBitLiteral = func(str string) (any, error) {
-		b, err := types.NewBitLiteral(str)
-		return b, err
-	}
+// NewHexLiteral keeps dialect decoding explicit instead of globally registered.
+func NewHexLiteral(str string) (any, error) {
+	return types.NewHexLiteral(str)
+}
+
+// NewBitLiteral keeps dialect decoding explicit instead of globally registered.
+func NewBitLiteral(str string) (any, error) {
+	return types.NewBitLiteral(str)
 }
 
 var (
-	_ ast.ParamMarkerExpr = &ParamMarkerExpr{}
-	_ ast.ValueExpr       = &ValueExpr{}
+	_ ast.ExprNode = &ParamMarkerExpr{}
+	_ ast.ExprNode = &ValueExpr{}
 )
 
 // ValueExpr is the simple value expression.
 type ValueExpr struct {
-	ast.TexprNode
+	ast.BaseExpr
 	types.Datum
+	Type             types.FieldType
+	flag             uint64
 	projectionOffset int
 }
+
+// SetType preserves legacy literal metadata outside the shared syntax core.
+func (n *ValueExpr) SetType(tp *types.FieldType) { n.Type = *tp }
+
+// GetType preserves the legacy literal accessor during AST migration.
+func (n *ValueExpr) GetType() *types.FieldType { return &n.Type }
+
+// SetFlag keeps the legacy syntax cache local to the dialect.
+func (n *ValueExpr) SetFlag(flag uint64) { n.flag = flag }
+
+// GetFlag keeps the legacy syntax cache local to the dialect.
+func (n *ValueExpr) GetFlag() uint64 { return n.flag }
 
 // valueExprString returns the string rendering of a ValueExpr's value.
 // Restore and Format share this helper so the Kind-to-string mapping stays
@@ -107,7 +107,7 @@ func (n *ValueExpr) Restore(ctx *format.RestoreCtx) error {
 	if n.Kind() == types.KindString {
 		if n.Type.Charset != "" && n.Type.Charset != postgres.DefaultCharset {
 			ctx.WritePlain("_")
-			ctx.WriteKeyWord(n.Type.Charset)
+			ctx.WriteKeyword(n.Type.Charset)
 		}
 		ctx.WriteString(s)
 		return ctx.Err()
@@ -120,7 +120,7 @@ func (n *ValueExpr) Restore(ctx *format.RestoreCtx) error {
 	return ctx.Err()
 }
 
-// GetDatumString implements the ast.ValueExpr interface.
+// GetDatumString preserves the dialect ValueExpr string accessor.
 func (n *ValueExpr) GetDatumString() string {
 	return n.GetString()
 }
@@ -140,8 +140,8 @@ func (n *ValueExpr) Format(w io.Writer) {
 	_, _ = fmt.Fprint(w, s)
 }
 
-// newValueExpr creates a ValueExpr with value, and sets default field type.
-func newValueExpr(value any) ast.ValueExpr {
+// NewValueExpr retains existing literal pointers and assigns dialect defaults.
+func NewValueExpr(value any) *ValueExpr {
 	if ve, ok := value.(*ValueExpr); ok {
 		return ve
 	}
@@ -189,7 +189,8 @@ func (n *ParamMarkerExpr) Restore(ctx *format.RestoreCtx) error {
 	return ctx.Err()
 }
 
-func newParamMarkerExpr(offset int) ast.ParamMarkerExpr {
+// NewParamMarkerExpr preserves PostgreSQL's zero-based parameter numbering.
+func NewParamMarkerExpr(offset int) *ParamMarkerExpr {
 	return &ParamMarkerExpr{
 		Offset: offset,
 		Order:  offset,
@@ -211,7 +212,7 @@ func (n *ParamMarkerExpr) Accept(v ast.Visitor) (ast.Node, bool) {
 	return v.Leave(n)
 }
 
-// SetOrder implements the ast.ParamMarkerExpr interface.
+// SetOrder preserves the parser's legacy parameter ordering API.
 func (n *ParamMarkerExpr) SetOrder(order int) {
 	n.Order = order
 }

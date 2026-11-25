@@ -509,7 +509,7 @@ func commentArgsSuffix(n ast.Node) string {
 				ctx.WritePlain(", ")
 			}
 			if arg == nil {
-				ctx.WriteKeyWord("NONE")
+				ctx.WriteKeyword("NONE")
 			} else if err := arg.Restore(ctx); err != nil {
 				return ""
 			}

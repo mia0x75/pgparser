@@ -20,7 +20,7 @@
 解析器由 `parser.y` 通过 `golang.org/x/tools/cmd/goyacc` 生成：
 
 ```bash
-go run golang.org/x/tools/cmd/goyacc@v0.38.0 -o parser.go -l -p yy parser.y
+go run golang.org/x/tools/cmd/goyacc@v0.52.0 -o parser.go -l -p yy parser.y
 ```
 
 - 不要手工修改 `parser.go`。

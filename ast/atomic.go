@@ -12,7 +12,7 @@ type BeginAtomicStmt struct {
 }
 
 func (n *BeginAtomicStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("BEGIN ATOMIC ")
+	ctx.WriteKeyword("BEGIN ATOMIC ")
 	if n.List != nil {
 		for _, stmt := range n.List.Items {
 			if stmt == nil {
@@ -24,7 +24,7 @@ func (n *BeginAtomicStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain("; ")
 		}
 	}
-	ctx.WriteKeyWord("END")
+	ctx.WriteKeyword("END")
 	return ctx.Err()
 }
 

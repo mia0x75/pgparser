@@ -211,26 +211,26 @@ func (ft *FieldType) String() string {
 func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
 	if len(ft.PGName) > 0 {
 		if ft.PGSetOf {
-			ctx.WriteKeyWord("SETOF ")
+			ctx.WriteKeyword("SETOF ")
 		}
 		for i, name := range ft.PGName {
 			if i > 0 {
 				ctx.WritePlain(".")
 			}
 			if len(ft.PGName) == 1 && name == "interval" {
-				ctx.WriteKeyWord(name)
+				ctx.WriteKeyword(name)
 			} else {
 				ctx.WriteName(name)
 			}
 		}
 		if ft.PGPercentType {
-			ctx.WriteKeyWord("%TYPE")
+			ctx.WriteKeyword("%TYPE")
 		}
 		if len(ft.PGModifiers) > 0 {
 			ctx.WritePlain("(" + strings.Join(ft.PGModifiers, ", ") + ")")
 		}
 		if ft.PGInterval != "" {
-			ctx.WriteKeyWord(" " + ft.PGInterval)
+			ctx.WriteKeyword(" " + ft.PGInterval)
 		}
 		for _, bound := range ft.PGArrayBounds {
 			if bound < 0 {
@@ -241,7 +241,7 @@ func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
 		}
 		return ctx.Err()
 	}
-	ctx.WriteKeyWord(TypeToStr(ft.Tp, ft.Charset))
+	ctx.WriteKeyword(TypeToStr(ft.Tp, ft.Charset))
 
 	switch ft.Tp {
 	case postgres.TypeEnum, postgres.TypeSet:
@@ -272,22 +272,22 @@ func (ft *FieldType) Restore(ctx *format.RestoreCtx) error {
 	}
 
 	if postgres.HasUnsignedFlag(ft.Flag) {
-		ctx.WriteKeyWord(" UNSIGNED")
+		ctx.WriteKeyword(" UNSIGNED")
 	}
 	if postgres.HasZerofillFlag(ft.Flag) {
-		ctx.WriteKeyWord(" ZEROFILL")
+		ctx.WriteKeyword(" ZEROFILL")
 	}
 	if postgres.HasBinaryFlag(ft.Flag) && ft.Charset != charset.CharsetBin {
-		ctx.WriteKeyWord(" BINARY")
+		ctx.WriteKeyword(" BINARY")
 	}
 
 	if IsTypeChar(ft.Tp) || IsTypeBlob(ft.Tp) {
 		if ft.Charset != "" && ft.Charset != charset.CharsetBin {
-			ctx.WriteKeyWord(" CHARACTER SET ")
+			ctx.WriteKeyword(" CHARACTER SET ")
 			ctx.WritePlain(ft.Charset)
 		}
 		if ft.Collate != "" && ft.Collate != charset.CharsetBin {
-			ctx.WriteKeyWord(" COLLATE ")
+			ctx.WriteKeyword(" COLLATE ")
 			ctx.WritePlain(ft.Collate)
 		}
 	}
@@ -304,47 +304,47 @@ func (ft *FieldType) RestoreAsCastType(ctx *format.RestoreCtx) {
 	switch ft.Tp {
 	case postgres.TypeVarString:
 		if ft.Charset == charset.CharsetBin && ft.Collate == charset.CollationBin {
-			ctx.WriteKeyWord("BINARY")
+			ctx.WriteKeyword("BINARY")
 		} else {
-			ctx.WriteKeyWord("CHAR")
+			ctx.WriteKeyword("CHAR")
 		}
 		if ft.Flen != UnspecifiedLength {
 			ctx.WritePlainf("(%d)", ft.Flen)
 		}
 		if ft.Flag&postgres.BinaryFlag != 0 {
-			ctx.WriteKeyWord(" BINARY")
+			ctx.WriteKeyword(" BINARY")
 		}
 		if ft.Charset != charset.CharsetBin && ft.Charset != postgres.DefaultCharset {
-			ctx.WriteKeyWord(" CHARACTER SET ")
+			ctx.WriteKeyword(" CHARACTER SET ")
 			ctx.WritePlain(ft.Charset)
 		}
 	case postgres.TypeDate:
-		ctx.WriteKeyWord("DATE")
+		ctx.WriteKeyword("DATE")
 	case postgres.TypeDatetime:
-		ctx.WriteKeyWord("DATETIME")
+		ctx.WriteKeyword("DATETIME")
 		if ft.Decimal > 0 {
 			ctx.WritePlainf("(%d)", ft.Decimal)
 		}
 	case postgres.TypeNewDecimal:
-		ctx.WriteKeyWord("DECIMAL")
+		ctx.WriteKeyword("DECIMAL")
 		if ft.Flen > 0 && ft.Decimal > 0 {
 			ctx.WritePlainf("(%d, %d)", ft.Flen, ft.Decimal)
 		} else if ft.Flen > 0 {
 			ctx.WritePlainf("(%d)", ft.Flen)
 		}
 	case postgres.TypeDuration:
-		ctx.WriteKeyWord("TIME")
+		ctx.WriteKeyword("TIME")
 		if ft.Decimal > 0 {
 			ctx.WritePlainf("(%d)", ft.Decimal)
 		}
 	case postgres.TypeLonglong:
 		if ft.Flag&postgres.UnsignedFlag != 0 {
-			ctx.WriteKeyWord("UNSIGNED")
+			ctx.WriteKeyword("UNSIGNED")
 		} else {
-			ctx.WriteKeyWord("SIGNED")
+			ctx.WriteKeyword("SIGNED")
 		}
 	case postgres.TypeJSON:
-		ctx.WriteKeyWord("JSON")
+		ctx.WriteKeyword("JSON")
 	}
 }
 

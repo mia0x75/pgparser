@@ -9,6 +9,7 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 
 	"github.com/mia0x75/pgparser/auth"
+	"github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/postgres"
@@ -92,7 +93,7 @@ type AuthOption struct {
 
 // Restore implements Node interface.
 func (n *AuthOption) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("PASSWORD ")
+	ctx.WriteKeyword("PASSWORD ")
 	if n.ByAuthString {
 		ctx.WriteString(n.AuthString)
 	} else {
@@ -112,13 +113,13 @@ type ExplainForStmt struct {
 
 // Restore implements Node interface.
 func (n *ExplainForStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("EXPLAIN ")
-	ctx.WriteKeyWord("FORMAT ")
+	ctx.WriteKeyword("EXPLAIN ")
+	ctx.WriteKeyword("FORMAT ")
 	ctx.WritePlain("= ")
 	ctx.WriteString(n.Format)
 	ctx.WritePlain(" ")
-	ctx.WriteKeyWord("FOR ")
-	ctx.WriteKeyWord("CONNECTION ")
+	ctx.WriteKeyword("FOR ")
+	ctx.WriteKeyword("CONNECTION ")
 	ctx.WritePlain(strconv.FormatUint(n.ConnectionID, 10))
 	return ctx.Err()
 }
@@ -147,7 +148,7 @@ type ExplainStmt struct {
 // Restore implements Node interface.
 func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 	if showStmt, ok := n.Stmt.(*ShowStmt); ok {
-		ctx.WriteKeyWord("DESC ")
+		ctx.WriteKeyword("DESC ")
 		if err := showStmt.Table.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore ExplainStmt.ShowStmt.Table")
 		}
@@ -159,7 +160,7 @@ func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		return ctx.Err()
 	}
-	ctx.WriteKeyWord("EXPLAIN ")
+	ctx.WriteKeyword("EXPLAIN ")
 	// `EXPLAIN ANALYZE` sets both the flag and the option; write it once.
 	analyzeInOptions := false
 	for _, opt := range n.Options {
@@ -169,7 +170,7 @@ func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.Analyze && !analyzeInOptions {
-		ctx.WriteKeyWord("ANALYZE ")
+		ctx.WriteKeyword("ANALYZE ")
 	}
 	if len(n.Options) > 0 {
 		ctx.WritePlain("(")
@@ -177,11 +178,11 @@ func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 			if i > 0 {
 				ctx.WritePlain(", ")
 			}
-			ctx.WriteKeyWord(opt)
+			ctx.WriteKeyword(opt)
 		}
 		ctx.WritePlain(") ")
 	} else if !n.Analyze && n.Format != "" {
-		ctx.WriteKeyWord("FORMAT ")
+		ctx.WriteKeyword("FORMAT ")
 		ctx.WritePlain("= ")
 		ctx.WriteString(n.Format)
 		ctx.WritePlain(" ")
@@ -223,7 +224,7 @@ type PrepareStmt struct {
 
 // Restore implements Node interface.
 func (n *PrepareStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("PREPARE ")
+	ctx.WriteKeyword("PREPARE ")
 	ctx.WriteName(n.Name)
 	if len(n.Params) > 0 {
 		ctx.WritePlain(" (")
@@ -237,7 +238,7 @@ func (n *PrepareStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 		ctx.WritePlain(")")
 	}
-	ctx.WriteKeyWord(" AS ")
+	ctx.WriteKeyword(" AS ")
 	if n.Stmt != nil {
 		return n.Stmt.Restore(ctx)
 	}
@@ -288,9 +289,9 @@ type DeallocateStmt struct {
 
 // Restore implements Node interface.
 func (n *DeallocateStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DEALLOCATE PREPARE ")
+	ctx.WriteKeyword("DEALLOCATE PREPARE ")
 	if n.All {
-		ctx.WriteKeyWord("ALL")
+		ctx.WriteKeyword("ALL")
 		return ctx.Err()
 	}
 	ctx.WriteName(n.Name)
@@ -327,7 +328,7 @@ type ExecuteStmt struct {
 
 // Restore implements Node interface.
 func (n *ExecuteStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("EXECUTE ")
+	ctx.WriteKeyword("EXECUTE ")
 	ctx.WriteName(n.Name)
 	if len(n.Args) > 0 {
 		ctx.WritePlain(" (")
@@ -342,7 +343,7 @@ func (n *ExecuteStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(")")
 	}
 	if len(n.UsingVars) > 0 {
-		ctx.WriteKeyWord(" USING ")
+		ctx.WriteKeyword(" USING ")
 		for i, val := range n.UsingVars {
 			if i != 0 {
 				ctx.WritePlain(",")
@@ -390,23 +391,23 @@ type BeginStmt struct {
 
 // Restore implements Node interface.
 func (n *BeginStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("START TRANSACTION")
+	ctx.WriteKeyword("START TRANSACTION")
 	if n.IsolationLevel != "" {
-		ctx.WriteKeyWord(" ISOLATION LEVEL ")
-		ctx.WriteKeyWord(n.IsolationLevel)
+		ctx.WriteKeyword(" ISOLATION LEVEL ")
+		ctx.WriteKeyword(n.IsolationLevel)
 	}
 	if n.ReadOnly != nil {
 		if *n.ReadOnly {
-			ctx.WriteKeyWord(" READ ONLY")
+			ctx.WriteKeyword(" READ ONLY")
 		} else {
-			ctx.WriteKeyWord(" READ WRITE")
+			ctx.WriteKeyword(" READ WRITE")
 		}
 	}
 	if n.Deferrable != nil {
 		if *n.Deferrable {
-			ctx.WriteKeyWord(" DEFERRABLE")
+			ctx.WriteKeyword(" DEFERRABLE")
 		} else {
-			ctx.WriteKeyWord(" NOT DEFERRABLE")
+			ctx.WriteKeyword(" NOT DEFERRABLE")
 		}
 	}
 	return ctx.Err()
@@ -431,7 +432,7 @@ type BinlogStmt struct {
 
 // Restore implements Node interface.
 func (n *BinlogStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("BINLOG ")
+	ctx.WriteKeyword("BINLOG ")
 	ctx.WriteString(n.Str)
 	return ctx.Err()
 }
@@ -453,7 +454,7 @@ type CommitStmt struct {
 
 // Restore implements Node interface.
 func (n *CommitStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("COMMIT")
+	ctx.WriteKeyword("COMMIT")
 	return ctx.Err()
 }
 
@@ -478,9 +479,9 @@ type RollbackStmt struct {
 
 // Restore implements Node interface.
 func (n *RollbackStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ROLLBACK")
+	ctx.WriteKeyword("ROLLBACK")
 	if n.SavepointName != "" {
-		ctx.WriteKeyWord(" TO SAVEPOINT ")
+		ctx.WriteKeyword(" TO SAVEPOINT ")
 		ctx.WriteName(n.SavepointName)
 	}
 	return ctx.Err()
@@ -505,7 +506,7 @@ type SavepointStmt struct {
 
 // Restore implements Node interface.
 func (n *SavepointStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("SAVEPOINT ")
+	ctx.WriteKeyword("SAVEPOINT ")
 	ctx.WriteName(n.Name)
 	return ctx.Err()
 }
@@ -529,7 +530,7 @@ type ReleaseSavepointStmt struct {
 
 // Restore implements Node interface.
 func (n *ReleaseSavepointStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("RELEASE SAVEPOINT ")
+	ctx.WriteKeyword("RELEASE SAVEPOINT ")
 	ctx.WriteName(n.Name)
 	return ctx.Err()
 }
@@ -559,15 +560,15 @@ type XAStmt struct {
 
 // Restore implements Node interface.
 func (n *XAStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("XA ")
-	ctx.WriteKeyWord(n.Command)
+	ctx.WriteKeyword("XA ")
+	ctx.WriteKeyword(n.Command)
 	if n.XID != "" {
 		ctx.WritePlain(" ")
 		ctx.WriteString(n.XID)
 	}
 	if n.Extra != "" {
 		ctx.WritePlain(" ")
-		ctx.WriteKeyWord(n.Extra)
+		ctx.WriteKeyword(n.Extra)
 	}
 	return ctx.Err()
 }
@@ -591,7 +592,7 @@ type UseStmt struct {
 
 // Restore implements Node interface.
 func (n *UseStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("USE ")
+	ctx.WriteKeyword("USE ")
 	ctx.WriteName(n.DBName)
 	return ctx.Err()
 }
@@ -632,16 +633,16 @@ func (n *VariableAssignment) Restore(ctx *format.RestoreCtx) error {
 	if n.IsSystem {
 		ctx.WritePlain("@@")
 		if n.IsGlobal {
-			ctx.WriteKeyWord("GLOBAL")
+			ctx.WriteKeyword("GLOBAL")
 		} else {
-			ctx.WriteKeyWord("SESSION")
+			ctx.WriteKeyword("SESSION")
 		}
 		ctx.WritePlain(".")
 	} else if n.Name != SetNames {
-		ctx.WriteKeyWord("@")
+		ctx.WriteKeyword("@")
 	}
 	if n.Name == SetNames {
-		ctx.WriteKeyWord("NAMES ")
+		ctx.WriteKeyword("NAMES ")
 	} else {
 		ctx.WriteName(n.Name)
 		ctx.WritePlain("=")
@@ -650,7 +651,7 @@ func (n *VariableAssignment) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore VariableAssignment.Value")
 	}
 	if n.ExtendValue != nil {
-		ctx.WriteKeyWord(" COLLATE ")
+		ctx.WriteKeyword(" COLLATE ")
 		if err := n.ExtendValue.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore VariableAssignment.ExtendValue")
 		}
@@ -696,13 +697,13 @@ type FlushStmt struct {
 
 // Restore implements Node interface.
 func (n *FlushStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("FLUSH ")
+	ctx.WriteKeyword("FLUSH ")
 	if n.NoWriteToBinLog {
-		ctx.WriteKeyWord("NO_WRITE_TO_BINLOG ")
+		ctx.WriteKeyword("NO_WRITE_TO_BINLOG ")
 	}
 	switch n.Tp {
 	case FlushTables:
-		ctx.WriteKeyWord("TABLES")
+		ctx.WriteKeyword("TABLES")
 		for i, v := range n.Tables {
 			if i == 0 {
 				ctx.WritePlain(" ")
@@ -714,12 +715,12 @@ func (n *FlushStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 		}
 		if n.ReadLock {
-			ctx.WriteKeyWord(" WITH READ LOCK")
+			ctx.WriteKeyword(" WITH READ LOCK")
 		}
 	case FlushPrivileges:
-		ctx.WriteKeyWord("PRIVILEGES")
+		ctx.WriteKeyword("PRIVILEGES")
 	case FlushStatus:
-		ctx.WriteKeyWord("STATUS")
+		ctx.WriteKeyword("STATUS")
 	default:
 		return errors.New("Unsupported type of FlushTables")
 	}
@@ -749,9 +750,9 @@ type KillStmt struct {
 
 // Restore implements Node interface.
 func (n *KillStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("KILL")
+	ctx.WriteKeyword("KILL")
 	if n.Query {
-		ctx.WriteKeyWord(" QUERY")
+		ctx.WriteKeyword(" QUERY")
 	}
 	ctx.WritePlainf(" %d", n.ConnectionID)
 	return ctx.Err()
@@ -776,7 +777,7 @@ type SetStmt struct {
 
 // Restore implements Node interface.
 func (n *SetStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("SET ")
+	ctx.WriteKeyword("SET ")
 	for i, v := range n.Variables {
 		if i != 0 {
 			ctx.WritePlain(", ")
@@ -835,9 +836,9 @@ type SetPwdStmt struct {
 
 // Restore implements Node interface.
 func (n *SetPwdStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("SET PASSWORD")
+	ctx.WriteKeyword("SET PASSWORD")
 	if n.User != nil {
-		ctx.WriteKeyWord(" FOR ")
+		ctx.WriteKeyword(" FOR ")
 		if err := n.User.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore SetPwdStmt.User")
 		}
@@ -884,16 +885,16 @@ type SetRoleStmt struct {
 
 // Restore implements Node interface.
 func (n *SetRoleStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("SET ROLE")
+	ctx.WriteKeyword("SET ROLE")
 	switch n.SetRoleOpt {
 	case SetRoleDefault:
-		ctx.WriteKeyWord(" DEFAULT")
+		ctx.WriteKeyword(" DEFAULT")
 	case SetRoleNone:
-		ctx.WriteKeyWord(" NONE")
+		ctx.WriteKeyword(" NONE")
 	case SetRoleAll:
-		ctx.WriteKeyWord(" ALL")
+		ctx.WriteKeyword(" ALL")
 	case SetRoleAllExcept:
-		ctx.WriteKeyWord(" ALL EXCEPT")
+		ctx.WriteKeyword(" ALL EXCEPT")
 	}
 	for i, role := range n.RoleList {
 		ctx.WritePlain(" ")
@@ -929,12 +930,12 @@ type SetDefaultRoleStmt struct {
 
 // Restore implements Node interface.
 func (n *SetDefaultRoleStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("SET DEFAULT ROLE")
+	ctx.WriteKeyword("SET DEFAULT ROLE")
 	switch n.SetRoleOpt {
 	case SetRoleNone:
-		ctx.WriteKeyWord(" NONE")
+		ctx.WriteKeyword(" NONE")
 	case SetRoleAll:
-		ctx.WriteKeyWord(" ALL")
+		ctx.WriteKeyword(" ALL")
 	default:
 	}
 	for i, role := range n.RoleList {
@@ -1033,19 +1034,19 @@ type TslOption struct {
 func (t *TslOption) Restore(ctx *format.RestoreCtx) error {
 	switch t.Type {
 	case TslNone:
-		ctx.WriteKeyWord("NONE")
+		ctx.WriteKeyword("NONE")
 	case Ssl:
-		ctx.WriteKeyWord("SSL")
+		ctx.WriteKeyword("SSL")
 	case X509:
-		ctx.WriteKeyWord("X509")
+		ctx.WriteKeyword("X509")
 	case Cipher:
-		ctx.WriteKeyWord("CIPHER ")
+		ctx.WriteKeyword("CIPHER ")
 		ctx.WriteString(t.Value)
 	case Issuer:
-		ctx.WriteKeyWord("ISSUER ")
+		ctx.WriteKeyword("ISSUER ")
 		ctx.WriteString(t.Value)
 	case Subject:
-		ctx.WriteKeyWord("CIPHER")
+		ctx.WriteKeyword("CIPHER")
 		ctx.WriteString(t.Value)
 	default:
 		return errors.Errorf("Unsupported TslOption.Type %d", t.Type)
@@ -1071,13 +1072,13 @@ type ResourceOption struct {
 func (r *ResourceOption) Restore(ctx *format.RestoreCtx) error {
 	switch r.Type {
 	case MaxQueriesPerHour:
-		ctx.WriteKeyWord("MAX_QUERIES_PER_HOUR ")
+		ctx.WriteKeyword("MAX_QUERIES_PER_HOUR ")
 	case MaxUpdatesPerHour:
-		ctx.WriteKeyWord("MAX_UPDATES_PER_HOUR ")
+		ctx.WriteKeyword("MAX_UPDATES_PER_HOUR ")
 	case MaxConnectionsPerHour:
-		ctx.WriteKeyWord("MAX_CONNECTIONS_PER_HOUR ")
+		ctx.WriteKeyword("MAX_CONNECTIONS_PER_HOUR ")
 	case MaxUserConnections:
-		ctx.WriteKeyWord("MAX_USER_CONNECTIONS ")
+		ctx.WriteKeyword("MAX_USER_CONNECTIONS ")
 	default:
 		return errors.Errorf("Unsupported ResourceOption.Type %d", r.Type)
 	}
@@ -1105,19 +1106,19 @@ type PasswordOrLockOption struct {
 func (p *PasswordOrLockOption) Restore(ctx *format.RestoreCtx) error {
 	switch p.Type {
 	case PasswordExpire:
-		ctx.WriteKeyWord("PASSWORD EXPIRE")
+		ctx.WriteKeyword("PASSWORD EXPIRE")
 	case PasswordExpireDefault:
-		ctx.WriteKeyWord("PASSWORD EXPIRE DEFAULT")
+		ctx.WriteKeyword("PASSWORD EXPIRE DEFAULT")
 	case PasswordExpireNever:
-		ctx.WriteKeyWord("PASSWORD EXPIRE NEVER")
+		ctx.WriteKeyword("PASSWORD EXPIRE NEVER")
 	case PasswordExpireInterval:
-		ctx.WriteKeyWord("PASSWORD EXPIRE NEVER")
+		ctx.WriteKeyword("PASSWORD EXPIRE NEVER")
 		ctx.WritePlainf(" %d", p.Count)
-		ctx.WriteKeyWord(" DAY")
+		ctx.WriteKeyword(" DAY")
 	case Lock:
-		ctx.WriteKeyWord("ACCOUNT LOCK")
+		ctx.WriteKeyword("ACCOUNT LOCK")
 	case Unlock:
-		ctx.WriteKeyWord("ACCOUNT UNLOCK")
+		ctx.WriteKeyword("ACCOUNT UNLOCK")
 	default:
 		return errors.Errorf("Unsupported PasswordOrLockOption.Type %d", p.Type)
 	}
@@ -1144,12 +1145,12 @@ func (n *CreateUserStmt) Restore(ctx *format.RestoreCtx) error {
 		return restoreRoleStatement(ctx, n.IsCreateRole, false, n.Role, n.RoleOptions)
 	}
 	if n.IsCreateRole {
-		ctx.WriteKeyWord("CREATE ROLE ")
+		ctx.WriteKeyword("CREATE ROLE ")
 	} else {
-		ctx.WriteKeyWord("CREATE USER ")
+		ctx.WriteKeyword("CREATE USER ")
 	}
 	if n.IfNotExists {
-		ctx.WriteKeyWord("IF NOT EXISTS ")
+		ctx.WriteKeyword("IF NOT EXISTS ")
 	}
 	for i, v := range n.Specs {
 		if i != 0 {
@@ -1163,13 +1164,13 @@ func (n *CreateUserStmt) Restore(ctx *format.RestoreCtx) error {
 	tslOptionLen := len(n.TslOptions)
 
 	if tslOptionLen != 0 {
-		ctx.WriteKeyWord(" REQUIRE ")
+		ctx.WriteKeyword(" REQUIRE ")
 	}
 
 	// Restore `tslOptions` reversely to keep order the same with original sql
 	for i := tslOptionLen; i > 0; i-- {
 		if i != tslOptionLen {
-			ctx.WriteKeyWord(" AND ")
+			ctx.WriteKeyword(" AND ")
 		}
 		if err := n.TslOptions[i-1].Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore CreateUserStmt.TslOptions[%d]", i)
@@ -1177,7 +1178,7 @@ func (n *CreateUserStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 
 	if len(n.ResourceOptions) != 0 {
-		ctx.WriteKeyWord(" WITH")
+		ctx.WriteKeyword(" WITH")
 	}
 
 	for i, v := range n.ResourceOptions {
@@ -1249,15 +1250,15 @@ func (n *AlterUserStmt) Restore(ctx *format.RestoreCtx) error {
 		return restoreRoleStatement(ctx, n.IsAlterRole, true, n.Role, n.RoleOptions)
 	}
 	if n.IsAlterRole {
-		ctx.WriteKeyWord("ALTER ROLE ")
+		ctx.WriteKeyword("ALTER ROLE ")
 	} else {
-		ctx.WriteKeyWord("ALTER USER ")
+		ctx.WriteKeyword("ALTER USER ")
 	}
 	if n.IfExists {
-		ctx.WriteKeyWord("IF EXISTS ")
+		ctx.WriteKeyword("IF EXISTS ")
 	}
 	if n.CurrentAuth != nil {
-		ctx.WriteKeyWord("USER")
+		ctx.WriteKeyword("USER")
 		ctx.WritePlain("() ")
 		if err := n.CurrentAuth.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore AlterUserStmt.CurrentAuth")
@@ -1321,12 +1322,12 @@ type DropUserStmt struct {
 // Restore implements Node interface.
 func (n *DropUserStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IsDropRole {
-		ctx.WriteKeyWord("DROP ROLE ")
+		ctx.WriteKeyword("DROP ROLE ")
 	} else {
-		ctx.WriteKeyWord("DROP USER ")
+		ctx.WriteKeyword("DROP USER ")
 	}
 	if n.IfExists {
-		ctx.WriteKeyWord("IF EXISTS ")
+		ctx.WriteKeyword("IF EXISTS ")
 	}
 	for i, v := range n.UserList {
 		if i != 0 {
@@ -1364,12 +1365,12 @@ func (n *DoStmt) Restore(ctx *format.RestoreCtx) error {
 	if len(n.Exprs) == 0 {
 		return errors.New("DO statement has no code")
 	}
-	ctx.WriteKeyWord("DO ")
+	ctx.WriteKeyword("DO ")
 	if err := n.Exprs[0].Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore DoStmt.Exprs[0]")
 	}
 	if n.Language != "" {
-		ctx.WriteKeyWord(" LANGUAGE ")
+		ctx.WriteKeyword(" LANGUAGE ")
 		ctx.WriteName(n.Language)
 	}
 	return ctx.Err()
@@ -1413,7 +1414,7 @@ func (n *PrivElem) Restore(ctx *format.RestoreCtx) error {
 		switch strings.ToLower(n.Name) {
 		case "all", "select", "insert", "update", "delete", "truncate", "references", "trigger", "maintain",
 			"usage", "create", "connect", "temporary", "temp", "execute", "set", "alter system":
-			ctx.WriteKeyWord(n.Name)
+			ctx.WriteKeyword(n.Name)
 		default:
 			return errors.New("unsupported privilege name")
 		}
@@ -1422,53 +1423,53 @@ func (n *PrivElem) Restore(ctx *format.RestoreCtx) error {
 		case 0:
 			return errors.New("unsupported privilege type")
 		case postgres.AllPriv:
-			ctx.WriteKeyWord("ALL")
+			ctx.WriteKeyword("ALL")
 		case postgres.AlterPriv:
-			ctx.WriteKeyWord("ALTER")
+			ctx.WriteKeyword("ALTER")
 		case postgres.CreatePriv:
-			ctx.WriteKeyWord("CREATE")
+			ctx.WriteKeyword("CREATE")
 		case postgres.CreateUserPriv:
-			ctx.WriteKeyWord("CREATE USER")
+			ctx.WriteKeyword("CREATE USER")
 		case postgres.CreateRolePriv:
-			ctx.WriteKeyWord("CREATE ROLE")
+			ctx.WriteKeyword("CREATE ROLE")
 		case postgres.TriggerPriv:
-			ctx.WriteKeyWord("TRIGGER")
+			ctx.WriteKeyword("TRIGGER")
 		case postgres.DeletePriv:
-			ctx.WriteKeyWord("DELETE")
+			ctx.WriteKeyword("DELETE")
 		case postgres.DropPriv:
-			ctx.WriteKeyWord("DROP")
+			ctx.WriteKeyword("DROP")
 		case postgres.ProcessPriv:
-			ctx.WriteKeyWord("PROCESS")
+			ctx.WriteKeyword("PROCESS")
 		case postgres.ExecutePriv:
-			ctx.WriteKeyWord("EXECUTE")
+			ctx.WriteKeyword("EXECUTE")
 		case postgres.IndexPriv:
-			ctx.WriteKeyWord("INDEX")
+			ctx.WriteKeyword("INDEX")
 		case postgres.InsertPriv:
-			ctx.WriteKeyWord("INSERT")
+			ctx.WriteKeyword("INSERT")
 		case postgres.SelectPriv:
-			ctx.WriteKeyWord("SELECT")
+			ctx.WriteKeyword("SELECT")
 		case postgres.SuperPriv:
-			ctx.WriteKeyWord("SUPER")
+			ctx.WriteKeyword("SUPER")
 		case postgres.ShowDBPriv:
-			ctx.WriteKeyWord("SHOW DATABASES")
+			ctx.WriteKeyword("SHOW DATABASES")
 		case postgres.UpdatePriv:
-			ctx.WriteKeyWord("UPDATE")
+			ctx.WriteKeyword("UPDATE")
 		case postgres.GrantPriv:
-			ctx.WriteKeyWord("GRANT OPTION")
+			ctx.WriteKeyword("GRANT OPTION")
 		case postgres.ReferencesPriv:
-			ctx.WriteKeyWord("REFERENCES")
+			ctx.WriteKeyword("REFERENCES")
 		case postgres.CreateViewPriv:
-			ctx.WriteKeyWord("CREATE VIEW")
+			ctx.WriteKeyword("CREATE VIEW")
 		case postgres.ShowViewPriv:
-			ctx.WriteKeyWord("SHOW VIEW")
+			ctx.WriteKeyword("SHOW VIEW")
 		case postgres.UsagePriv:
-			ctx.WriteKeyWord("USAGE")
+			ctx.WriteKeyword("USAGE")
 		case postgres.ConnectPriv:
-			ctx.WriteKeyWord("CONNECT")
+			ctx.WriteKeyword("CONNECT")
 		case postgres.TemporaryPriv:
-			ctx.WriteKeyWord("TEMPORARY")
+			ctx.WriteKeyword("TEMPORARY")
 		case postgres.TruncatePriv:
-			ctx.WriteKeyWord("TRUNCATE")
+			ctx.WriteKeyword("TRUNCATE")
 		default:
 			return errors.New("Undefined privilege type")
 		}
@@ -1539,43 +1540,43 @@ func (n ObjectTypeType) Restore(ctx *format.RestoreCtx) error {
 	case ObjectTypeNone:
 		// do nothing
 	case ObjectTypeTable:
-		ctx.WriteKeyWord("TABLE")
+		ctx.WriteKeyword("TABLE")
 	case ObjectTypeSequence:
-		ctx.WriteKeyWord("SEQUENCE")
+		ctx.WriteKeyword("SEQUENCE")
 	case ObjectTypeFunction:
-		ctx.WriteKeyWord("FUNCTION")
+		ctx.WriteKeyword("FUNCTION")
 	case ObjectTypeProcedure:
-		ctx.WriteKeyWord("PROCEDURE")
+		ctx.WriteKeyword("PROCEDURE")
 	case ObjectTypeSchema:
-		ctx.WriteKeyWord("SCHEMA")
+		ctx.WriteKeyword("SCHEMA")
 	case ObjectTypeDatabase:
-		ctx.WriteKeyWord("DATABASE")
+		ctx.WriteKeyword("DATABASE")
 	case ObjectTypeUserType:
-		ctx.WriteKeyWord("TYPE")
+		ctx.WriteKeyword("TYPE")
 	case ObjectTypeTablespace:
-		ctx.WriteKeyWord("TABLESPACE")
+		ctx.WriteKeyword("TABLESPACE")
 	case ObjectTypeLanguage:
-		ctx.WriteKeyWord("LANGUAGE")
+		ctx.WriteKeyword("LANGUAGE")
 	case ObjectTypeDomain:
-		ctx.WriteKeyWord("DOMAIN")
+		ctx.WriteKeyword("DOMAIN")
 	case ObjectTypeForeignDataWrapper:
-		ctx.WriteKeyWord("FOREIGN DATA WRAPPER")
+		ctx.WriteKeyword("FOREIGN DATA WRAPPER")
 	case ObjectTypeForeignServer:
-		ctx.WriteKeyWord("FOREIGN SERVER")
+		ctx.WriteKeyword("FOREIGN SERVER")
 	case ObjectTypeRoutine:
-		ctx.WriteKeyWord("ROUTINE")
+		ctx.WriteKeyword("ROUTINE")
 	case ObjectTypeLargeObject:
-		ctx.WriteKeyWord("LARGE OBJECT")
+		ctx.WriteKeyword("LARGE OBJECT")
 	case ObjectTypeAllTablesInSchema:
-		ctx.WriteKeyWord("ALL TABLES IN SCHEMA")
+		ctx.WriteKeyword("ALL TABLES IN SCHEMA")
 	case ObjectTypeAllSequencesInSchema:
-		ctx.WriteKeyWord("ALL SEQUENCES IN SCHEMA")
+		ctx.WriteKeyword("ALL SEQUENCES IN SCHEMA")
 	case ObjectTypeAllFunctionsInSchema:
-		ctx.WriteKeyWord("ALL FUNCTIONS IN SCHEMA")
+		ctx.WriteKeyword("ALL FUNCTIONS IN SCHEMA")
 	case ObjectTypeAllProceduresInSchema:
-		ctx.WriteKeyWord("ALL PROCEDURES IN SCHEMA")
+		ctx.WriteKeyword("ALL PROCEDURES IN SCHEMA")
 	case ObjectTypeAllRoutinesInSchema:
-		ctx.WriteKeyWord("ALL ROUTINES IN SCHEMA")
+		ctx.WriteKeyword("ALL ROUTINES IN SCHEMA")
 	default:
 		return errors.New("Unsupported object type")
 	}
@@ -1644,9 +1645,9 @@ type RevokeStmt struct {
 
 // Restore implements Node interface.
 func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("REVOKE ")
+	ctx.WriteKeyword("REVOKE ")
 	if n.GrantOption {
-		ctx.WriteKeyWord("GRANT OPTION FOR ")
+		ctx.WriteKeyword("GRANT OPTION FOR ")
 	}
 	for i, v := range n.Privs {
 		if i != 0 {
@@ -1656,7 +1657,7 @@ func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore RevokeStmt.Privs[%d]", i)
 		}
 	}
-	ctx.WriteKeyWord(" ON ")
+	ctx.WriteKeyword(" ON ")
 	if n.ObjectType != ObjectTypeNone {
 		if err := n.ObjectType.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore RevokeStmt.ObjectType")
@@ -1666,7 +1667,7 @@ func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 	if err := writeGrantTargets(ctx, n.Objects, n.Level, n.TargetNodes); err != nil {
 		return errors.Annotate(err, "An error occurred while restore RevokeStmt.Objects")
 	}
-	ctx.WriteKeyWord(" FROM ")
+	ctx.WriteKeyword(" FROM ")
 	for i, v := range n.Users {
 		if i != 0 {
 			ctx.WritePlain(", ")
@@ -1676,16 +1677,16 @@ func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.Grantor != nil {
-		ctx.WriteKeyWord(" GRANTED BY ")
+		ctx.WriteKeyword(" GRANTED BY ")
 		if err := n.Grantor.Restore(ctx); err != nil {
 			return err
 		}
 	}
 	switch n.Behavior {
 	case DROP_CASCADE:
-		ctx.WriteKeyWord(" CASCADE")
+		ctx.WriteKeyword(" CASCADE")
 	case DROP_RESTRICT:
-		ctx.WriteKeyWord(" RESTRICT")
+		ctx.WriteKeyword(" RESTRICT")
 	}
 	return ctx.Err()
 }
@@ -1753,33 +1754,33 @@ func (n *RevokeRoleStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Roles == nil || n.Users == nil {
 		return errors.New("role revoke has no roles or grantees")
 	}
-	ctx.WriteKeyWord("REVOKE ")
+	ctx.WriteKeyword("REVOKE ")
 	if n.GrantOption != "" {
 		switch strings.ToLower(n.GrantOption) {
 		case "admin", "inherit", "set":
 		default:
 			return errors.New("unsupported role revoke option")
 		}
-		ctx.WriteKeyWord(n.GrantOption + " OPTION FOR ")
+		ctx.WriteKeyword(n.GrantOption + " OPTION FOR ")
 	}
 	if err := n.Roles.Restore(ctx); err != nil {
 		return err
 	}
-	ctx.WriteKeyWord(" FROM ")
+	ctx.WriteKeyword(" FROM ")
 	if err := n.Users.Restore(ctx); err != nil {
 		return err
 	}
 	if n.Grantor != nil {
-		ctx.WriteKeyWord(" GRANTED BY ")
+		ctx.WriteKeyword(" GRANTED BY ")
 		if err := n.Grantor.Restore(ctx); err != nil {
 			return err
 		}
 	}
 	switch n.Behavior {
 	case DROP_CASCADE:
-		ctx.WriteKeyWord(" CASCADE")
+		ctx.WriteKeyword(" CASCADE")
 	case DROP_RESTRICT:
-		ctx.WriteKeyWord(" RESTRICT")
+		ctx.WriteKeyword(" RESTRICT")
 	}
 	return ctx.Err()
 }
@@ -1861,7 +1862,7 @@ type GrantStmt struct {
 
 // Restore implements Node interface.
 func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("GRANT ")
+	ctx.WriteKeyword("GRANT ")
 	for i, v := range n.Privs {
 		if i != 0 {
 			ctx.WritePlain(", ")
@@ -1870,7 +1871,7 @@ func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.Annotatef(err, "An error occurred while restore GrantStmt.Privs[%d]", i)
 		}
 	}
-	ctx.WriteKeyWord(" ON ")
+	ctx.WriteKeyword(" ON ")
 	if n.ObjectType != ObjectTypeNone {
 		if err := n.ObjectType.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore GrantStmt.ObjectType")
@@ -1880,7 +1881,7 @@ func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 	if err := writeGrantTargets(ctx, n.Objects, n.Level, n.TargetNodes); err != nil {
 		return errors.Annotate(err, "An error occurred while restore GrantStmt.Objects")
 	}
-	ctx.WriteKeyWord(" TO ")
+	ctx.WriteKeyword(" TO ")
 	for i, v := range n.Users {
 		if i != 0 {
 			ctx.WritePlain(", ")
@@ -1890,10 +1891,10 @@ func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.WithGrant || n.GrantOption {
-		ctx.WriteKeyWord(" WITH GRANT OPTION")
+		ctx.WriteKeyword(" WITH GRANT OPTION")
 	}
 	if n.Grantor != nil {
-		ctx.WriteKeyWord(" GRANTED BY ")
+		ctx.WriteKeyword(" GRANTED BY ")
 		if err := n.Grantor.Restore(ctx); err != nil {
 			return err
 		}
@@ -1903,7 +1904,7 @@ func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 
 // SecureText implements SensitiveStatement interface.
 func (n *GrantStmt) SecureText() string {
-	text := n.text
+	text := n.Text()
 	// Filter "identified by xxx" because it would expose password information.
 	idx := strings.Index(strings.ToLower(text), "identified")
 	if idx > 0 {
@@ -2012,16 +2013,16 @@ func (n *GrantRoleStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Roles == nil || n.Users == nil {
 		return errors.New("role grant has no roles or grantees")
 	}
-	ctx.WriteKeyWord("GRANT ")
+	ctx.WriteKeyword("GRANT ")
 	if err := n.Roles.Restore(ctx); err != nil {
 		return err
 	}
-	ctx.WriteKeyWord(" TO ")
+	ctx.WriteKeyword(" TO ")
 	if err := n.Users.Restore(ctx); err != nil {
 		return err
 	}
 	if n.Options != nil && len(n.Options.Items) > 0 {
-		ctx.WriteKeyWord(" WITH ")
+		ctx.WriteKeyword(" WITH ")
 		for i, item := range n.Options.Items {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -2035,14 +2036,14 @@ func (n *GrantRoleStmt) Restore(ctx *format.RestoreCtx) error {
 			default:
 				return errors.New("unsupported role grant option")
 			}
-			ctx.WriteKeyWord(option.Defname + " ")
+			ctx.WriteKeyword(option.Defname + " ")
 			if err := option.Arg.Restore(ctx); err != nil {
 				return err
 			}
 		}
 	}
 	if n.Grantor != nil {
-		ctx.WriteKeyWord(" GRANTED BY ")
+		ctx.WriteKeyword(" GRANTED BY ")
 		if err := n.Grantor.Restore(ctx); err != nil {
 			return err
 		}
@@ -2052,7 +2053,7 @@ func (n *GrantRoleStmt) Restore(ctx *format.RestoreCtx) error {
 
 // SecureText implements SensitiveStatement interface.
 func (n *GrantRoleStmt) SecureText() string {
-	text := n.text
+	text := n.Text()
 	// Filter "identified by xxx" because it would expose password information.
 	idx := strings.Index(strings.ToLower(text), "identified")
 	if idx > 0 {
@@ -2163,7 +2164,7 @@ type TableOptimizerHint struct {
 
 // Restore implements Node interface.
 func (n *TableOptimizerHint) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord(n.HintName.String())
+	ctx.WriteKeyword(n.HintName.String())
 	ctx.WritePlain("(")
 	if n.HintName.L == "max_execution_time" {
 		ctx.WritePlainf("%d", n.MaxExecutionTime)
@@ -2190,10 +2191,16 @@ func (n *TableOptimizerHint) Accept(v Visitor) (Node, bool) {
 }
 
 // NewDecimal creates a types.Decimal value, it's provided by parser driver.
-var NewDecimal func(string) (any, error)
+func NewDecimal(str string) (any, error) {
+	return driver.NewDecimal(str)
+}
 
 // NewHexLiteral creates a types.HexLiteral value, it's provided by parser driver.
-var NewHexLiteral func(string) (any, error)
+func NewHexLiteral(str string) (any, error) {
+	return driver.NewHexLiteral(str)
+}
 
 // NewBitLiteral creates a types.BitLiteral value, it's provided by parser driver.
-var NewBitLiteral func(string) (any, error)
+func NewBitLiteral(str string) (any, error) {
+	return driver.NewBitLiteral(str)
+}

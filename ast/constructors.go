@@ -76,7 +76,7 @@ type ArrayExpr struct {
 
 // Restore implements Node interface.
 func (n *ArrayExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ARRAY[")
+	ctx.WriteKeyword("ARRAY[")
 	for i, e := range n.Elements {
 		if i != 0 {
 			ctx.WritePlain(",")
@@ -96,7 +96,7 @@ func (n *ArrayExpr) Format(w io.Writer) {
 		if i != 0 {
 			_, _ = io.WriteString(w, ",")
 		}
-		e.Format(w)
+		FormatExpr(e, w)
 	}
 	_, _ = io.WriteString(w, "]")
 }

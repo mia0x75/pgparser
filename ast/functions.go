@@ -290,7 +290,7 @@ func writeFuncName(ctx *format.RestoreCtx, parts []string, dotted string) {
 		parts = strings.Split(dotted, ".")
 	}
 	if len(parts) == 1 && !NeedsQuotedFuncName(parts[0]) {
-		ctx.WriteKeyWord(parts[0])
+		ctx.WriteKeyword(parts[0])
 		return
 	}
 	writeNameParts(ctx, parts)
@@ -330,13 +330,13 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 	keywordForm := n.keywordFormName()
 	if keywordForm {
 		// The grammar's keyword forms (EXTRACT/POSITION/TRIM) must stay bare.
-		ctx.WriteKeyWord(n.FnName.O)
+		ctx.WriteKeyword(n.FnName.O)
 	} else {
 		writeFuncName(ctx, n.FnNameParts, n.FnName.O)
 	}
 	ctx.WritePlain("(")
 	if n.Distinct {
-		ctx.WriteKeyWord("DISTINCT ")
+		ctx.WriteKeyword("DISTINCT ")
 	}
 	switch {
 	case keywordForm:
@@ -363,14 +363,14 @@ func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 	if n.WithinGroup != nil {
-		ctx.WriteKeyWord(" WITHIN GROUP (")
+		ctx.WriteKeyword(" WITHIN GROUP (")
 		if err := n.WithinGroup.Restore(ctx); err != nil {
 			return err
 		}
 		ctx.WritePlain(")")
 	}
 	if n.Filter != nil {
-		ctx.WriteKeyWord(" FILTER (WHERE ")
+		ctx.WriteKeyword(" FILTER (WHERE ")
 		if err := n.Filter.Restore(ctx); err != nil {
 			return err
 		}
@@ -413,14 +413,14 @@ func (n *FuncCallExpr) keywordFormName() bool {
 func (n *FuncCallExpr) restoreKeywordForm(ctx *format.RestoreCtx) error {
 	switch n.FnName.L {
 	case "extract":
-		ctx.WriteKeyWord(n.Args[0].(ValueExpr).GetString())
-		ctx.WriteKeyWord(" FROM ")
+		ctx.WriteKeyword(n.Args[0].(ValueExpr).GetString())
+		ctx.WriteKeyword(" FROM ")
 		return n.Args[1].Restore(ctx)
 	case "position":
 		if err := n.Args[0].Restore(ctx); err != nil {
 			return err
 		}
-		ctx.WriteKeyWord(" IN ")
+		ctx.WriteKeyword(" IN ")
 		return n.Args[1].Restore(ctx)
 	case "trim":
 		switch len(n.Args) {
@@ -430,18 +430,18 @@ func (n *FuncCallExpr) restoreKeywordForm(ctx *format.RestoreCtx) error {
 			if err := n.Args[1].Restore(ctx); err != nil {
 				return err
 			}
-			ctx.WriteKeyWord(" FROM ")
+			ctx.WriteKeyword(" FROM ")
 			return n.Args[0].Restore(ctx)
 		case 3:
 			direction := n.Args[2].(ValueExpr)
 			from := n.Args[1].(ValueExpr)
 			switch fmt.Sprint(direction.GetValue()) {
 			case "3":
-				ctx.WriteKeyWord("TRAILING ")
+				ctx.WriteKeyword("TRAILING ")
 			case "2":
-				ctx.WriteKeyWord("LEADING ")
+				ctx.WriteKeyword("LEADING ")
 			case "0", "1":
-				ctx.WriteKeyWord("BOTH ")
+				ctx.WriteKeyword("BOTH ")
 			}
 			if from.GetValue() != nil {
 				if err := n.Args[1].Restore(ctx); err != nil {
@@ -449,7 +449,7 @@ func (n *FuncCallExpr) restoreKeywordForm(ctx *format.RestoreCtx) error {
 				}
 				ctx.WritePlain(" ")
 			}
-			ctx.WriteKeyWord("FROM ")
+			ctx.WriteKeyword("FROM ")
 			return n.Args[0].Restore(ctx)
 		}
 	}
@@ -463,7 +463,7 @@ func (n *FuncCallExpr) Format(w io.Writer) {
 		_, _ = fmt.Fprint(w, "*")
 	} else {
 		for i, arg := range n.Args {
-			arg.Format(w)
+			FormatExpr(arg, w)
 			if i != len(n.Args)-1 {
 				_, _ = fmt.Fprint(w, ", ")
 			}
@@ -537,16 +537,16 @@ type FuncCastExpr struct {
 func (n *FuncCastExpr) Restore(ctx *format.RestoreCtx) error {
 	switch n.FunctionType {
 	case CastFunction:
-		ctx.WriteKeyWord("CAST")
+		ctx.WriteKeyword("CAST")
 		ctx.WritePlain("(")
 		if err := n.Expr.Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore FuncCastExpr.Expr")
 		}
-		ctx.WriteKeyWord(" AS ")
+		ctx.WriteKeyword(" AS ")
 		n.Tp.RestoreAsCastType(ctx)
 		ctx.WritePlain(")")
 	case CastConvertFunction:
-		ctx.WriteKeyWord("CONVERT")
+		ctx.WriteKeyword("CONVERT")
 		ctx.WritePlain("(")
 		if err := n.Expr.Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore FuncCastExpr.Expr")
@@ -555,7 +555,7 @@ func (n *FuncCastExpr) Restore(ctx *format.RestoreCtx) error {
 		n.Tp.RestoreAsCastType(ctx)
 		ctx.WritePlain(")")
 	case CastBinaryOperator:
-		ctx.WriteKeyWord("BINARY ")
+		ctx.WriteKeyword("BINARY ")
 		if err := n.Expr.Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore FuncCastExpr.Expr")
 		}
@@ -568,19 +568,19 @@ func (n *FuncCastExpr) Format(w io.Writer) {
 	switch n.FunctionType {
 	case CastFunction:
 		_, _ = fmt.Fprint(w, "CAST(")
-		n.Expr.Format(w)
+		FormatExpr(n.Expr, w)
 		_, _ = fmt.Fprint(w, " AS ")
 		n.Tp.FormatAsCastType(w)
 		_, _ = fmt.Fprint(w, ")")
 	case CastConvertFunction:
 		_, _ = fmt.Fprint(w, "CONVERT(")
-		n.Expr.Format(w)
+		FormatExpr(n.Expr, w)
 		_, _ = fmt.Fprint(w, ", ")
 		n.Tp.FormatAsCastType(w)
 		_, _ = fmt.Fprint(w, ")")
 	case CastBinaryOperator:
 		_, _ = fmt.Fprint(w, "BINARY ")
-		n.Expr.Format(w)
+		FormatExpr(n.Expr, w)
 	}
 }
 
@@ -679,7 +679,7 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 	writeFuncName(ctx, n.FnNameParts, n.F)
 	ctx.WritePlain("(")
 	if n.Distinct {
-		ctx.WriteKeyWord("DISTINCT ")
+		ctx.WriteKeyword("DISTINCT ")
 	}
 	if n.Star {
 		ctx.WritePlain("*")
@@ -700,14 +700,14 @@ func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 	if n.WithinGroup != nil {
-		ctx.WriteKeyWord(" WITHIN GROUP (")
+		ctx.WriteKeyword(" WITHIN GROUP (")
 		if err := n.WithinGroup.Restore(ctx); err != nil {
 			return err
 		}
 		ctx.WritePlain(")")
 	}
 	if n.Filter != nil {
-		ctx.WriteKeyWord(" FILTER (WHERE ")
+		ctx.WriteKeyword(" FILTER (WHERE ")
 		if err := n.Filter.Restore(ctx); err != nil {
 			return err
 		}
@@ -729,7 +729,7 @@ func (n *AggregateFuncExpr) Format(w io.Writer) {
 			if i != 0 {
 				_, _ = fmt.Fprint(w, ", ")
 			}
-			arg.Format(w)
+			FormatExpr(arg, w)
 		}
 	}
 	if n.OrderBy != nil {
@@ -744,7 +744,7 @@ func (n *AggregateFuncExpr) Format(w io.Writer) {
 	}
 	if n.Filter != nil {
 		_, _ = fmt.Fprint(w, " FILTER (WHERE ")
-		n.Filter.Format(w)
+		FormatExpr(n.Filter, w)
 		_, _ = fmt.Fprint(w, ")")
 	}
 }
@@ -847,7 +847,7 @@ func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
 		if i != 0 {
 			ctx.WritePlain(", ")
 		} else if n.Distinct {
-			ctx.WriteKeyWord("DISTINCT ")
+			ctx.WriteKeyword("DISTINCT ")
 		}
 		if err := v.Restore(ctx); err != nil {
 			return errors.Annotatef(err, "An error occurred while restore WindowFuncExpr.Args[%d]", i)
@@ -861,26 +861,26 @@ func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 	if n.WithinGroup != nil {
-		ctx.WriteKeyWord(" WITHIN GROUP (")
+		ctx.WriteKeyword(" WITHIN GROUP (")
 		if err := n.WithinGroup.Restore(ctx); err != nil {
 			return err
 		}
 		ctx.WritePlain(")")
 	}
 	if n.Filter != nil {
-		ctx.WriteKeyWord(" FILTER (WHERE ")
+		ctx.WriteKeyword(" FILTER (WHERE ")
 		if err := n.Filter.Restore(ctx); err != nil {
 			return err
 		}
 		ctx.WritePlain(")")
 	}
 	if n.FromLast {
-		ctx.WriteKeyWord(" FROM LAST")
+		ctx.WriteKeyword(" FROM LAST")
 	}
 	if n.IgnoreNull {
-		ctx.WriteKeyWord(" IGNORE NULLS")
+		ctx.WriteKeyword(" IGNORE NULLS")
 	}
-	ctx.WriteKeyWord(" OVER ")
+	ctx.WriteKeyword(" OVER ")
 	if err := n.Spec.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore WindowFuncExpr.Spec")
 	}
@@ -898,12 +898,12 @@ func (n *WindowFuncExpr) Format(w io.Writer) {
 		if i != 0 {
 			_, _ = fmt.Fprint(w, ", ")
 		}
-		arg.Format(w)
+		FormatExpr(arg, w)
 	}
 	_, _ = fmt.Fprint(w, ")")
 	if n.Filter != nil {
 		_, _ = fmt.Fprint(w, " FILTER (WHERE ")
-		n.Filter.Format(w)
+		FormatExpr(n.Filter, w)
 		_, _ = fmt.Fprint(w, ")")
 	}
 	if n.WithinGroup != nil {

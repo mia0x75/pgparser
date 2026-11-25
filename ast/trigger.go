@@ -38,16 +38,16 @@ func restoreTrigger(ctx *format.RestoreCtx, n *CreateTrigStmt) error {
 	default:
 		return fmt.Errorf("invalid trigger timing %d", n.Timing)
 	}
-	ctx.WriteKeyWord("CREATE ")
+	ctx.WriteKeyword("CREATE ")
 	if n.Replace {
-		ctx.WriteKeyWord("OR REPLACE ")
+		ctx.WriteKeyword("OR REPLACE ")
 	}
 	if n.IsConstraint {
-		ctx.WriteKeyWord("CONSTRAINT ")
+		ctx.WriteKeyword("CONSTRAINT ")
 	}
-	ctx.WriteKeyWord("TRIGGER ")
+	ctx.WriteKeyword("TRIGGER ")
 	ctx.WriteName(n.Trigname)
-	ctx.WriteKeyWord(" " + timing + " ")
+	ctx.WriteKeyword(" " + timing + " ")
 	written := false
 	for _, event := range []struct {
 		mask int16
@@ -62,12 +62,12 @@ func restoreTrigger(ctx *format.RestoreCtx, n *CreateTrigStmt) error {
 			continue
 		}
 		if written {
-			ctx.WriteKeyWord(" OR ")
+			ctx.WriteKeyword(" OR ")
 		}
 		written = true
-		ctx.WriteKeyWord(event.name)
+		ctx.WriteKeyword(event.name)
 		if event.mask == TRIGGER_TYPE_UPDATE && n.Columns != nil {
-			ctx.WriteKeyWord(" OF ")
+			ctx.WriteKeyword(" OF ")
 			for i, item := range n.Columns.Items {
 				column, ok := item.(*String)
 				if !ok || column == nil || column.Str == "" {
@@ -80,24 +80,24 @@ func restoreTrigger(ctx *format.RestoreCtx, n *CreateTrigStmt) error {
 			}
 		}
 	}
-	ctx.WriteKeyWord(" ON ")
+	ctx.WriteKeyword(" ON ")
 	if err := n.Relation.Restore(ctx); err != nil {
 		return err
 	}
 	if n.Constrrel != nil {
-		ctx.WriteKeyWord(" FROM ")
+		ctx.WriteKeyword(" FROM ")
 		if err := n.Constrrel.Restore(ctx); err != nil {
 			return err
 		}
 	}
 	if n.Deferrable {
-		ctx.WriteKeyWord(" DEFERRABLE")
+		ctx.WriteKeyword(" DEFERRABLE")
 	}
 	if n.Initdeferred {
-		ctx.WriteKeyWord(" INITIALLY DEFERRED")
+		ctx.WriteKeyword(" INITIALLY DEFERRED")
 	}
 	if n.TransitionRels != nil {
-		ctx.WriteKeyWord(" REFERENCING")
+		ctx.WriteKeyword(" REFERENCING")
 		for _, item := range n.TransitionRels.Items {
 			transition, ok := item.(*TriggerTransition)
 			if !ok || transition == nil {
@@ -110,18 +110,18 @@ func restoreTrigger(ctx *format.RestoreCtx, n *CreateTrigStmt) error {
 		}
 	}
 	if n.Row {
-		ctx.WriteKeyWord(" FOR EACH ROW")
+		ctx.WriteKeyword(" FOR EACH ROW")
 	} else {
-		ctx.WriteKeyWord(" FOR EACH STATEMENT")
+		ctx.WriteKeyword(" FOR EACH STATEMENT")
 	}
 	if n.WhenClause != nil {
-		ctx.WriteKeyWord(" WHEN (")
+		ctx.WriteKeyword(" WHEN (")
 		if err := n.WhenClause.Restore(ctx); err != nil {
 			return err
 		}
 		ctx.WritePlain(")")
 	}
-	ctx.WriteKeyWord(" EXECUTE FUNCTION ")
+	ctx.WriteKeyword(" EXECUTE FUNCTION ")
 	if err := restoreNameList(ctx, n.Funcname); err != nil {
 		return err
 	}

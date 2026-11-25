@@ -47,7 +47,7 @@ func (n *ResourceGroupVCPU) Accept(v Visitor) (Node, bool) {
 }
 
 func restoreVCPUList(ctx *format.RestoreCtx, vcpu []*ResourceGroupVCPU) error {
-	ctx.WriteKeyWord(" VCPU = ")
+	ctx.WriteKeyword(" VCPU = ")
 	for i, v := range vcpu {
 		if i > 0 {
 			ctx.WritePlain(",")
@@ -61,14 +61,14 @@ func restoreVCPUList(ctx *format.RestoreCtx, vcpu []*ResourceGroupVCPU) error {
 
 func restoreResourceGroupOptional(ctx *format.RestoreCtx, tp *int, state int) {
 	if tp != nil {
-		ctx.WriteKeyWord(" THREAD_PRIORITY = ")
+		ctx.WriteKeyword(" THREAD_PRIORITY = ")
 		ctx.WritePlainf("%d", *tp)
 	}
 	switch state {
 	case ResourceGroupStateEnable:
-		ctx.WriteKeyWord(" ENABLE")
+		ctx.WriteKeyword(" ENABLE")
 	case ResourceGroupStateDisable:
-		ctx.WriteKeyWord(" DISABLE")
+		ctx.WriteKeyword(" DISABLE")
 	}
 }
 
@@ -85,13 +85,13 @@ type CreateResourceGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CREATE RESOURCE GROUP ")
+	ctx.WriteKeyword("CREATE RESOURCE GROUP ")
 	ctx.WriteName(n.Name)
-	ctx.WriteKeyWord(" TYPE = ")
+	ctx.WriteKeyword(" TYPE = ")
 	if n.IsSystem {
-		ctx.WriteKeyWord("SYSTEM")
+		ctx.WriteKeyword("SYSTEM")
 	} else {
-		ctx.WriteKeyWord("USER")
+		ctx.WriteKeyword("USER")
 	}
 	if len(n.VCPU) > 0 {
 		if err := restoreVCPUList(ctx, n.VCPU); err != nil {
@@ -131,7 +131,7 @@ type AlterResourceGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ALTER RESOURCE GROUP ")
+	ctx.WriteKeyword("ALTER RESOURCE GROUP ")
 	ctx.WriteName(n.Name)
 	if len(n.VCPU) > 0 {
 		if err := restoreVCPUList(ctx, n.VCPU); err != nil {
@@ -169,10 +169,10 @@ type DropResourceGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *DropResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DROP RESOURCE GROUP ")
+	ctx.WriteKeyword("DROP RESOURCE GROUP ")
 	ctx.WriteName(n.Name)
 	if n.Force {
-		ctx.WriteKeyWord(" FORCE")
+		ctx.WriteKeyword(" FORCE")
 	}
 	return ctx.Err()
 }

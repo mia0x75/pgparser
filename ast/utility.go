@@ -39,7 +39,7 @@ type VacuumStmt struct {
 
 // Restore implements Node interface.
 func (n *VacuumStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("VACUUM")
+	ctx.WriteKeyword("VACUUM")
 	if err := restoreUtilityOptions(ctx, n.Options); err != nil {
 		return err
 	}
@@ -81,17 +81,17 @@ type ReindexStmt struct {
 
 // Restore implements Node interface.
 func (n *ReindexStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("REINDEX")
+	ctx.WriteKeyword("REINDEX")
 	if n.Verbose {
 		ctx.WritePlain(" (VERBOSE)")
 	}
 	if n.ObjectType != "" {
 		ctx.WritePlain(" ")
-		ctx.WriteKeyWord(n.ObjectType)
+		ctx.WriteKeyword(n.ObjectType)
 	}
 	// The grammar places CONCURRENTLY between the object type and the name.
 	if n.Concurrently {
-		ctx.WriteKeyWord(" CONCURRENTLY")
+		ctx.WriteKeyword(" CONCURRENTLY")
 	}
 	if n.Name != "" {
 		ctx.WritePlain(" ")
@@ -121,9 +121,9 @@ type ClusterStmt struct {
 
 // Restore implements Node interface.
 func (n *ClusterStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CLUSTER")
+	ctx.WriteKeyword("CLUSTER")
 	if n.Verbose {
-		ctx.WriteKeyWord(" VERBOSE")
+		ctx.WriteKeyword(" VERBOSE")
 	}
 	if n.Table != nil {
 		ctx.WritePlain(" ")
@@ -132,7 +132,7 @@ func (n *ClusterStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.Index != nil {
-		ctx.WriteKeyWord(" USING ")
+		ctx.WriteKeyword(" USING ")
 		if err := n.Index.Restore(ctx); err != nil {
 			return err
 		}
@@ -176,18 +176,18 @@ type RefreshMatViewStmt struct {
 
 // Restore implements Node interface.
 func (n *RefreshMatViewStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("REFRESH MATERIALIZED VIEW ")
+	ctx.WriteKeyword("REFRESH MATERIALIZED VIEW ")
 	if n.Concurrently {
-		ctx.WriteKeyWord("CONCURRENTLY ")
+		ctx.WriteKeyword("CONCURRENTLY ")
 	}
 	if err := n.Table.Restore(ctx); err != nil {
 		return err
 	}
 	if n.DataSpecified {
 		if n.NoData {
-			ctx.WriteKeyWord(" WITH NO DATA")
+			ctx.WriteKeyword(" WITH NO DATA")
 		} else {
-			ctx.WriteKeyWord(" WITH DATA")
+			ctx.WriteKeyword(" WITH DATA")
 		}
 	}
 	return ctx.Err()
@@ -213,7 +213,7 @@ type CheckpointStmt struct{ stmtNode }
 
 // Restore implements Node interface.
 func (n *CheckpointStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CHECKPOINT")
+	ctx.WriteKeyword("CHECKPOINT")
 	return ctx.Err()
 }
 
@@ -235,8 +235,8 @@ type DiscardStmt struct {
 
 // Restore implements Node interface.
 func (n *DiscardStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DISCARD ")
-	ctx.WriteKeyWord(n.Mode)
+	ctx.WriteKeyword("DISCARD ")
+	ctx.WriteKeyword(n.Mode)
 	return ctx.Err()
 }
 
@@ -258,7 +258,7 @@ type LoadStmt struct {
 
 // Restore implements Node interface.
 func (n *LoadStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("LOAD ")
+	ctx.WriteKeyword("LOAD ")
 	ctx.WriteString(n.Path)
 	return ctx.Err()
 }
@@ -284,16 +284,16 @@ type SecurityLabelStmt struct {
 
 // Restore implements Node interface.
 func (n *SecurityLabelStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("SECURITY LABEL")
+	ctx.WriteKeyword("SECURITY LABEL")
 	if n.Provider != "" {
-		ctx.WriteKeyWord(" FOR ")
+		ctx.WriteKeyword(" FOR ")
 		ctx.WriteName(n.Provider)
 	}
-	ctx.WriteKeyWord(" ON ")
-	ctx.WriteKeyWord(n.ObjectType)
+	ctx.WriteKeyword(" ON ")
+	ctx.WriteKeyword(n.ObjectType)
 	ctx.WritePlain(" ")
 	ctx.WriteName(n.ObjectName)
-	ctx.WriteKeyWord(" IS ")
+	ctx.WriteKeyword(" IS ")
 	ctx.WriteString(n.Label)
 	return ctx.Err()
 }
@@ -322,7 +322,7 @@ type ImportForeignSchemaStmt struct {
 
 // Restore implements Node interface.
 func (n *ImportForeignSchemaStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("IMPORT FOREIGN SCHEMA ")
+	ctx.WriteKeyword("IMPORT FOREIGN SCHEMA ")
 	ctx.WriteName(n.RemoteSchema)
 	switch n.ListType {
 	case FDW_IMPORT_SCHEMA_ALL:
@@ -331,9 +331,9 @@ func (n *ImportForeignSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 			return errors.New("foreign schema import has no table list")
 		}
 		if n.ListType == FDW_IMPORT_SCHEMA_LIMIT_TO {
-			ctx.WriteKeyWord(" LIMIT TO (")
+			ctx.WriteKeyword(" LIMIT TO (")
 		} else {
-			ctx.WriteKeyWord(" EXCEPT (")
+			ctx.WriteKeyword(" EXCEPT (")
 		}
 		if err := n.TableList.Restore(ctx); err != nil {
 			return err
@@ -342,9 +342,9 @@ func (n *ImportForeignSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.New("invalid foreign schema import selection")
 	}
-	ctx.WriteKeyWord(" FROM SERVER ")
+	ctx.WriteKeyword(" FROM SERVER ")
 	ctx.WriteName(n.Server)
-	ctx.WriteKeyWord(" INTO ")
+	ctx.WriteKeyword(" INTO ")
 	ctx.WriteName(n.Into)
 	if n.OptionDefs != nil {
 		ctx.WritePlain(" ")
@@ -352,7 +352,7 @@ func (n *ImportForeignSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	for _, opt := range n.Options {
 		ctx.WritePlain(" ")
-		ctx.WriteKeyWord(opt)
+		ctx.WriteKeyword(opt)
 	}
 	return ctx.Err()
 }
@@ -386,9 +386,9 @@ type ReassignOwnedStmt struct {
 
 // Restore implements Node interface.
 func (n *ReassignOwnedStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("REASSIGN OWNED BY ")
+	ctx.WriteKeyword("REASSIGN OWNED BY ")
 	restoreRoleList(ctx, n.Roles)
-	ctx.WriteKeyWord(" TO ")
+	ctx.WriteKeyword(" TO ")
 	ctx.WriteName(n.NewRole.Username)
 	return ctx.Err()
 }
@@ -412,10 +412,10 @@ type DropOwnedStmt struct {
 
 // Restore implements Node interface.
 func (n *DropOwnedStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DROP OWNED BY ")
+	ctx.WriteKeyword("DROP OWNED BY ")
 	restoreRoleList(ctx, n.Roles)
 	if n.Cascade {
-		ctx.WriteKeyWord(" CASCADE")
+		ctx.WriteKeyword(" CASCADE")
 	}
 	return ctx.Err()
 }
@@ -438,7 +438,7 @@ type CallStmt struct {
 
 // Restore implements Node interface.
 func (n *CallStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CALL ")
+	ctx.WriteKeyword("CALL ")
 	if err := n.Proc.Restore(ctx); err != nil {
 		return err
 	}
@@ -473,26 +473,26 @@ type FetchCursorStmt struct {
 // Restore implements Node interface.
 func (n *FetchCursorStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IsMove {
-		ctx.WriteKeyWord("MOVE ")
+		ctx.WriteKeyword("MOVE ")
 	} else {
-		ctx.WriteKeyWord("FETCH ")
+		ctx.WriteKeyword("FETCH ")
 	}
 	switch n.Direction {
 	case "NEXT", "PRIOR", "FIRST", "LAST":
 		// Count is always 1 for these directions; writing it would produce
 		// SQL the grammar does not accept, which breaks restore stability.
-		ctx.WriteKeyWord(n.Direction + " ")
+		ctx.WriteKeyword(n.Direction + " ")
 	case "ALL":
-		ctx.WriteKeyWord("ALL ")
+		ctx.WriteKeyword("ALL ")
 	default:
 		if n.Direction != "" {
-			ctx.WriteKeyWord(n.Direction)
+			ctx.WriteKeyword(n.Direction)
 			ctx.WritePlain(" ")
 		}
 		switch {
 		// The ALL sentinel maps back to the ALL keyword, not an integer.
 		case n.Count == FETCH_ALL:
-			ctx.WriteKeyWord("ALL ")
+			ctx.WriteKeyword("ALL ")
 		case n.Count > 0 || n.Direction == "ABSOLUTE" || n.Direction == "RELATIVE":
 			// ABSOLUTE and RELATIVE accept 0 as a meaningful quantity, so
 			// the count is written unconditionally for them.
@@ -500,7 +500,7 @@ func (n *FetchCursorStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain(" ")
 		}
 	}
-	ctx.WriteKeyWord("FROM ")
+	ctx.WriteKeyword("FROM ")
 	ctx.WriteName(n.Name)
 	return ctx.Err()
 }
@@ -524,9 +524,9 @@ type CloseCursorStmt struct {
 
 // Restore implements Node interface.
 func (n *CloseCursorStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CLOSE ")
+	ctx.WriteKeyword("CLOSE ")
 	if n.All {
-		ctx.WriteKeyWord("ALL")
+		ctx.WriteKeyword("ALL")
 	} else {
 		ctx.WriteName(n.Name)
 	}
@@ -551,7 +551,7 @@ type ListenStmt struct {
 
 // Restore implements Node interface.
 func (n *ListenStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("LISTEN ")
+	ctx.WriteKeyword("LISTEN ")
 	ctx.WriteName(n.Channel)
 	return ctx.Err()
 }
@@ -575,7 +575,7 @@ type NotifyStmt struct {
 
 // Restore implements Node interface.
 func (n *NotifyStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("NOTIFY ")
+	ctx.WriteKeyword("NOTIFY ")
 	ctx.WriteName(n.Channel)
 	if n.Payload != "" {
 		ctx.WritePlain(", ")
@@ -603,7 +603,7 @@ type UnlistenStmt struct {
 
 // Restore implements Node interface.
 func (n *UnlistenStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("UNLISTEN ")
+	ctx.WriteKeyword("UNLISTEN ")
 	if n.All {
 		ctx.WritePlain("*")
 	} else {
@@ -653,7 +653,7 @@ func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.Std && n.FileName != "" {
 		return errors.New("COPY has both a file and a standard stream")
 	}
-	ctx.WriteKeyWord("COPY ")
+	ctx.WriteKeyword("COPY ")
 	switch {
 	case n.Query != nil:
 		ctx.WritePlain("(")
@@ -684,23 +684,23 @@ func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(")")
 	}
 	if n.IsFrom {
-		ctx.WriteKeyWord(" FROM ")
+		ctx.WriteKeyword(" FROM ")
 	} else {
-		ctx.WriteKeyWord(" TO ")
+		ctx.WriteKeyword(" TO ")
 	}
 	if n.Program {
-		ctx.WriteKeyWord("PROGRAM ")
+		ctx.WriteKeyword("PROGRAM ")
 	}
 	switch {
 	case n.Std && n.IsFrom:
-		ctx.WriteKeyWord("STDIN")
+		ctx.WriteKeyword("STDIN")
 	case n.Std:
-		ctx.WriteKeyWord("STDOUT")
+		ctx.WriteKeyword("STDOUT")
 	default:
 		ctx.WriteString(n.FileName)
 	}
 	if len(n.Options) > 0 {
-		ctx.WriteKeyWord(" WITH (")
+		ctx.WriteKeyword(" WITH (")
 		for i, option := range n.Options {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -712,7 +712,7 @@ func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(")")
 	}
 	if n.WhereClause != nil {
-		ctx.WriteKeyWord(" WHERE ")
+		ctx.WriteKeyword(" WHERE ")
 		if err := n.WhereClause.Restore(ctx); err != nil {
 			return errors.Annotate(err, "COPY filter")
 		}
@@ -744,9 +744,9 @@ func restoreUtilityOptions(ctx *format.RestoreCtx, options *List) error {
 // writeBoolKeyword writes TRUE or FALSE.
 func writeBoolKeyword(ctx *format.RestoreCtx, b bool) {
 	if b {
-		ctx.WriteKeyWord("TRUE")
+		ctx.WriteKeyword("TRUE")
 	} else {
-		ctx.WriteKeyWord("FALSE")
+		ctx.WriteKeyword("FALSE")
 	}
 }
 
@@ -791,7 +791,7 @@ func restoreUtilityOption(ctx *format.RestoreCtx, option *DefElem) error {
 	case "format", "freeze", "delimiter", "null", "default", "header", "quote", "escape",
 		"force_quote", "force_not_null", "force_null", "encoding", "on_error", "reject_limit", "log_verbosity",
 		"full", "verbose", "analyze", "parallel", "buffer_usage_limit":
-		ctx.WriteKeyWord(option.Defname)
+		ctx.WriteKeyword(option.Defname)
 	default:
 		ctx.WriteName(option.Defname)
 	}

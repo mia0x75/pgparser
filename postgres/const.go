@@ -719,11 +719,11 @@ func (n *PriorityEnum) Restore(ctx *format.RestoreCtx) error {
 	case NoPriority:
 		return ctx.Err()
 	case LowPriority:
-		ctx.WriteKeyWord("LOW_PRIORITY")
+		ctx.WriteKeyword("LOW_PRIORITY")
 	case HighPriority:
-		ctx.WriteKeyWord("HIGH_PRIORITY")
+		ctx.WriteKeyword("HIGH_PRIORITY")
 	case DelayedPriority:
-		ctx.WriteKeyWord("DELAYED")
+		ctx.WriteKeyword("DELAYED")
 	default:
 		return fmt.Errorf("undefined PriorityEnum Type[%d]", *n)
 	}

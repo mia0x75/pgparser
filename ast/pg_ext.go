@@ -21,14 +21,14 @@ func (n *CollateExpr) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Expr.Restore(ctx); err != nil {
 		return err
 	}
-	ctx.WriteKeyWord(" COLLATE ")
+	ctx.WriteKeyword(" COLLATE ")
 	ctx.WriteName(n.Collation)
 	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
 func (n *CollateExpr) Format(w io.Writer) {
-	n.Expr.Format(w)
+	FormatExpr(n.Expr, w)
 }
 
 // Accept implements Node Accept interface.
@@ -76,19 +76,19 @@ func (n *GroupingSet) Restore(ctx *format.RestoreCtx) error {
 	case GroupingSetEmpty:
 		ctx.WritePlain("()")
 	case GroupingSetRollup:
-		ctx.WriteKeyWord("ROLLUP (")
+		ctx.WriteKeyword("ROLLUP (")
 		if err := restoreExprList(ctx, n.Sets[0]); err != nil {
 			return err
 		}
 		ctx.WritePlain(")")
 	case GroupingSetCube:
-		ctx.WriteKeyWord("CUBE (")
+		ctx.WriteKeyword("CUBE (")
 		if err := restoreExprList(ctx, n.Sets[0]); err != nil {
 			return err
 		}
 		ctx.WritePlain(")")
 	case GroupingSetSets:
-		ctx.WriteKeyWord("GROUPING SETS (")
+		ctx.WriteKeyword("GROUPING SETS (")
 		for i, set := range n.Sets {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -153,9 +153,9 @@ type XMLTableExpr struct {
 
 // Restore implements Node interface.
 func (n *XMLTableExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("XMLTABLE(")
+	ctx.WriteKeyword("XMLTABLE(")
 	if len(n.Namespaces) > 0 {
-		ctx.WriteKeyWord("XMLNAMESPACES(")
+		ctx.WriteKeyword("XMLNAMESPACES(")
 		for i, namespace := range n.Namespaces {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -171,14 +171,14 @@ func (n *XMLTableExpr) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	ctx.WriteKeyWord(" PASSING ")
+	ctx.WriteKeyword(" PASSING ")
 	if n.DocExpr == nil {
 		return fmt.Errorf("XMLTABLE has no document expression")
 	}
 	if err := n.DocExpr.Restore(ctx); err != nil {
 		return err
 	}
-	ctx.WriteKeyWord(" COLUMNS ")
+	ctx.WriteKeyword(" COLUMNS ")
 	for i, col := range n.Columns {
 		if i > 0 {
 			ctx.WritePlain(", ")
@@ -261,22 +261,22 @@ func (n *XMLTableColumn) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.ForOrdinality {
-		ctx.WriteKeyWord(" FOR ORDINALITY")
+		ctx.WriteKeyword(" FOR ORDINALITY")
 	}
 	if n.PathExpr != nil {
-		ctx.WriteKeyWord(" PATH ")
+		ctx.WriteKeyword(" PATH ")
 		if err := n.PathExpr.Restore(ctx); err != nil {
 			return err
 		}
 	}
 	if n.DefaultExpr != nil {
-		ctx.WriteKeyWord(" DEFAULT ")
+		ctx.WriteKeyword(" DEFAULT ")
 		if err := n.DefaultExpr.Restore(ctx); err != nil {
 			return err
 		}
 	}
 	if n.IsNotNull {
-		ctx.WriteKeyWord(" NOT NULL")
+		ctx.WriteKeyword(" NOT NULL")
 	}
 	return ctx.Err()
 }
@@ -318,7 +318,7 @@ type XMLTableNamespace struct {
 // Restore implements Node interface.
 func (n *XMLTableNamespace) Restore(ctx *format.RestoreCtx) error {
 	if n.Name == "" {
-		ctx.WriteKeyWord("DEFAULT ")
+		ctx.WriteKeyword("DEFAULT ")
 	}
 	if n.Expr != nil {
 		if err := n.Expr.Restore(ctx); err != nil {
@@ -326,7 +326,7 @@ func (n *XMLTableNamespace) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.Name != "" {
-		ctx.WriteKeyWord(" AS ")
+		ctx.WriteKeyword(" AS ")
 		ctx.WriteName(n.Name)
 	}
 	return ctx.Err()
@@ -367,7 +367,7 @@ type JSONTableExpr struct {
 
 // Restore implements Node interface.
 func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("JSON_TABLE(")
+	ctx.WriteKeyword("JSON_TABLE(")
 	if n.ContextItem != nil {
 		if err := n.ContextItem.Restore(ctx); err != nil {
 			return err
@@ -383,7 +383,7 @@ func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
 	if len(n.Passing) > 0 {
 		return fmt.Errorf("%w: JSON_TABLE PASSING", ErrUnsupportedRestore)
 	}
-	ctx.WriteKeyWord(" COLUMNS(")
+	ctx.WriteKeyword(" COLUMNS(")
 	for i, col := range n.Columns {
 		if i > 0 {
 			ctx.WritePlain(", ")
@@ -398,7 +398,7 @@ func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
 		if err := n.OnError.Restore(ctx); err != nil {
 			return err
 		}
-		ctx.WriteKeyWord(" ON ERROR")
+		ctx.WriteKeyword(" ON ERROR")
 	}
 	ctx.WritePlain(")")
 	return ctx.Err()
@@ -471,7 +471,7 @@ func (n *JSONTablePathSpec) Restore(ctx *format.RestoreCtx) error {
 		return err
 	}
 	if n.Name != "" {
-		ctx.WriteKeyWord(" AS ")
+		ctx.WriteKeyword(" AS ")
 		ctx.WriteName(n.Name)
 	}
 	return ctx.Err()
@@ -522,14 +522,14 @@ type JSONTableColumn struct {
 // Restore implements Node interface.
 func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
 	if n.ColType == "nested" {
-		ctx.WriteKeyWord("NESTED PATH ")
+		ctx.WriteKeyword("NESTED PATH ")
 		if n.PathSpec == nil {
 			return fmt.Errorf("nested JSON_TABLE column has no path")
 		}
 		if err := n.PathSpec.Restore(ctx); err != nil {
 			return err
 		}
-		ctx.WriteKeyWord(" COLUMNS (")
+		ctx.WriteKeyword(" COLUMNS (")
 		for i, column := range n.Columns {
 			if i > 0 {
 				ctx.WritePlain(", ")
@@ -543,7 +543,7 @@ func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteName(n.Name)
 	if n.ColType == "ordinality" {
-		ctx.WriteKeyWord(" FOR ORDINALITY")
+		ctx.WriteKeyword(" FOR ORDINALITY")
 		return ctx.Err()
 	}
 	if n.ColType == "formatted" || n.Format != nil {
@@ -556,38 +556,38 @@ func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	if n.ColType == "exists" {
-		ctx.WriteKeyWord(" EXISTS")
+		ctx.WriteKeyword(" EXISTS")
 	}
 	if n.PathSpec != nil {
-		ctx.WriteKeyWord(" PATH ")
+		ctx.WriteKeyword(" PATH ")
 		if err := n.PathSpec.Restore(ctx); err != nil {
 			return err
 		}
 	}
 	switch n.Wrapper {
 	case "conditional":
-		ctx.WriteKeyWord(" WITH CONDITIONAL WRAPPER")
+		ctx.WriteKeyword(" WITH CONDITIONAL WRAPPER")
 	case "unconditional":
-		ctx.WriteKeyWord(" WITH UNCONDITIONAL WRAPPER")
+		ctx.WriteKeyword(" WITH UNCONDITIONAL WRAPPER")
 	case "none":
-		ctx.WriteKeyWord(" WITHOUT WRAPPER")
+		ctx.WriteKeyword(" WITHOUT WRAPPER")
 	}
 	if n.Quotes != "" {
-		ctx.WriteKeyWord(" " + n.Quotes + " QUOTES")
+		ctx.WriteKeyword(" " + n.Quotes + " QUOTES")
 	}
 	if n.OnEmpty != nil {
 		ctx.WritePlain(" ")
 		if err := n.OnEmpty.Restore(ctx); err != nil {
 			return err
 		}
-		ctx.WriteKeyWord(" ON EMPTY")
+		ctx.WriteKeyword(" ON EMPTY")
 	}
 	if n.OnError != nil {
 		ctx.WritePlain(" ")
 		if err := n.OnError.Restore(ctx); err != nil {
 			return err
 		}
-		ctx.WriteKeyWord(" ON ERROR")
+		ctx.WriteKeyword(" ON ERROR")
 	}
 	return ctx.Err()
 }
@@ -651,7 +651,7 @@ type RowsFromExpr struct {
 
 // Restore implements Node interface.
 func (n *RowsFromExpr) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("ROWS FROM(")
+	ctx.WriteKeyword("ROWS FROM(")
 	for i, fn := range n.Functions {
 		if i > 0 {
 			ctx.WritePlain(", ")
@@ -662,7 +662,7 @@ func (n *RowsFromExpr) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlain(")")
 	if n.WithOrdinality {
-		ctx.WriteKeyWord(" WITH ORDINALITY")
+		ctx.WriteKeyword(" WITH ORDINALITY")
 	}
 	return ctx.Err()
 }

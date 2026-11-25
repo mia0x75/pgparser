@@ -23,13 +23,13 @@ type CreateSequenceStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateSequenceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("CREATE ")
+	ctx.WriteKeyword("CREATE ")
 	if n.Temporary {
-		ctx.WriteKeyWord("TEMPORARY ")
+		ctx.WriteKeyword("TEMPORARY ")
 	}
-	ctx.WriteKeyWord("SEQUENCE ")
+	ctx.WriteKeyword("SEQUENCE ")
 	if n.IfNotExists {
-		ctx.WriteKeyWord("IF NOT EXISTS ")
+		ctx.WriteKeyword("IF NOT EXISTS ")
 	}
 	if err := n.Name.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while splicing CreateSequenceStmt Name")
@@ -69,9 +69,9 @@ type DropSequenceStmt struct {
 
 // Restore implements Node interface.
 func (n *DropSequenceStmt) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyWord("DROP SEQUENCE ")
+	ctx.WriteKeyword("DROP SEQUENCE ")
 	if n.IfExists {
-		ctx.WriteKeyWord("IF EXISTS ")
+		ctx.WriteKeyword("IF EXISTS ")
 	}
 	for i, name := range n.Names {
 		if i > 0 {

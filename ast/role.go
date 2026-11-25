@@ -11,14 +11,14 @@ func restoreRoleStatement(ctx *format.RestoreCtx, role, alter bool, target *Role
 		return fmt.Errorf("role statement has no target")
 	}
 	if alter {
-		ctx.WriteKeyWord("ALTER ")
+		ctx.WriteKeyword("ALTER ")
 	} else {
-		ctx.WriteKeyWord("CREATE ")
+		ctx.WriteKeyword("CREATE ")
 	}
 	if role {
-		ctx.WriteKeyWord("ROLE ")
+		ctx.WriteKeyword("ROLE ")
 	} else {
-		ctx.WriteKeyWord("USER ")
+		ctx.WriteKeyword("USER ")
 	}
 	if err := target.Restore(ctx); err != nil {
 		return err
@@ -54,31 +54,31 @@ func restoreRoleOption(ctx *format.RestoreCtx, option *DefElem) error {
 			return fmt.Errorf("invalid boolean role option %s", name)
 		}
 		if !value.Boolval {
-			ctx.WriteKeyWord("NO")
+			ctx.WriteKeyword("NO")
 		}
-		ctx.WriteKeyWord(name)
+		ctx.WriteKeyword(name)
 	case "password", "validUntil", "connectionlimit", "sysid":
 		switch name {
 		case "validUntil":
-			ctx.WriteKeyWord("VALID UNTIL ")
+			ctx.WriteKeyword("VALID UNTIL ")
 		case "connectionlimit":
-			ctx.WriteKeyWord("CONNECTION LIMIT ")
+			ctx.WriteKeyword("CONNECTION LIMIT ")
 		default:
-			ctx.WriteKeyWord(name + " ")
+			ctx.WriteKeyword(name + " ")
 		}
 		if option.Arg == nil {
-			ctx.WriteKeyWord("NULL")
+			ctx.WriteKeyword("NULL")
 			return ctx.Err()
 		}
 		return option.Arg.Restore(ctx)
 	case "rolemembers", "adminmembers", "addroleto":
 		switch name {
 		case "rolemembers":
-			ctx.WriteKeyWord("ROLE ")
+			ctx.WriteKeyword("ROLE ")
 		case "adminmembers":
-			ctx.WriteKeyWord("ADMIN ")
+			ctx.WriteKeyword("ADMIN ")
 		case "addroleto":
-			ctx.WriteKeyWord("IN ROLE ")
+			ctx.WriteKeyword("IN ROLE ")
 		}
 		list, ok := option.Arg.(*List)
 		if !ok {
