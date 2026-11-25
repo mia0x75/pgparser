@@ -8,6 +8,7 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 
 	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/lex"
 
 	"github.com/mia0x75/pgparser/auth"
 	"github.com/mia0x75/pgparser/format"
@@ -189,11 +190,8 @@ func (n *Join) Accept(v Visitor) (Node, bool) {
 
 // TableName represents a table name.
 type TableName struct {
-	resultSetNode
+	pkast.BaseTableRef
 
-	Catalog model.CIStr
-	Schema  model.CIStr
-	Name    model.CIStr
 	// Relpersistence is the persistence of a temporary table ('t' or 'u').
 	Relpersistence byte
 
@@ -201,20 +199,22 @@ type TableName struct {
 	TableInfo *model.TableInfo
 
 	IndexHints     []*IndexHint
-	PartitionNames []model.CIStr
+	PartitionNames []lex.Ident
+}
+
+// TableRefCore lets role-based parents check for a missing table before dispatch.
+func (n *TableName) TableRefCore() *pkast.BaseTableRef {
+	if n == nil {
+		return nil
+	}
+	return &n.BaseTableRef
 }
 
 // Restore implements Node interface.
 func (n *TableName) Restore(ctx *format.RestoreCtx) error {
-	if n.Catalog.O != "" {
-		ctx.WriteName(n.Catalog.O)
-		ctx.WritePlain(".")
+	if err := restoreQualifiedName(ctx, n.Name); err != nil {
+		return errors.Annotate(err, "An error occurred while restore TableName.Name")
 	}
-	if n.Schema.String() != "" {
-		ctx.WriteName(n.Schema.String())
-		ctx.WritePlain(".")
-	}
-	ctx.WriteName(n.Name.String())
 	if len(n.PartitionNames) > 0 {
 		ctx.WriteKeyword(" PARTITION")
 		ctx.WritePlain("(")
@@ -222,7 +222,7 @@ func (n *TableName) Restore(ctx *format.RestoreCtx) error {
 			if i != 0 {
 				ctx.WritePlain(", ")
 			}
-			ctx.WriteName(v.String())
+			ctx.WriteIdent(v)
 		}
 		ctx.WritePlain(")")
 	}

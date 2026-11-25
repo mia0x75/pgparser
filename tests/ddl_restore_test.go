@@ -3,8 +3,9 @@ package parser_test
 import (
 	"testing"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/model"
 )
 
 func TestRestoreRoutineDropTargets(t *testing.T) {
@@ -33,7 +34,7 @@ func TestRoutineDropVisitor(t *testing.T) {
 				case *ast.TableName:
 					names++
 					copy := *child
-					copy.Name = model.NewCIStr("renamed_" + child.Name.O)
+					copy.Name = pkast.QualifiedName{Parts: []pkast.Ident{{Name: "renamed_" + child.Name.Parts[0].Name}}}
 					return &copy
 				case *ast.DataType:
 					arguments++

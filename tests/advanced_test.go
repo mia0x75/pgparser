@@ -375,16 +375,16 @@ func TestParseSQLAlterTableStructuredSpecsAST(t *testing.T) {
 		}},
 		{`ALTER TABLE t CLUSTER ON ix;`, ast.AlterTableSetCluster, func(s *ast.AlterTableSpec) bool { return s.Name == "ix" }},
 		{`ALTER TABLE t SET WITHOUT CLUSTER;`, ast.AlterTableSetWithoutCluster, func(s *ast.AlterTableSpec) bool { return true }},
-		{`ALTER TABLE t INHERIT p;`, ast.AlterTableInherit, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.L == "p" }},
-		{`ALTER TABLE t OF typ;`, ast.AlterTableOf, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.L == "typ" }},
+		{`ALTER TABLE t INHERIT p;`, ast.AlterTableInherit, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.Parts[0].Name == "p" }},
+		{`ALTER TABLE t OF typ;`, ast.AlterTableOf, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.Parts[0].Name == "typ" }},
 		{`ALTER TABLE t REPLICA IDENTITY USING INDEX ix;`, ast.AlterTableReplicaIdentity, func(s *ast.AlterTableSpec) bool { return s.Name == "ix" }},
 		{`ALTER TABLE t FORCE ROW LEVEL SECURITY;`, ast.AlterTableRowLevelSecurity, func(s *ast.AlterTableSpec) bool { return s.RowLevelSecurity == "FORCE" }},
 		{`ALTER TABLE t RENAME CONSTRAINT a TO b;`, ast.AlterTableRenameConstraint, func(s *ast.AlterTableSpec) bool { return s.Name == "a" && s.NewColumnName.Name.L == "b" }},
 		{`ALTER TABLE t ALTER CONSTRAINT c DEFERRABLE INITIALLY DEFERRED;`, ast.AlterTableAlterConstraint, func(s *ast.AlterTableSpec) bool { return s.ConstraintOptions == "DEFERRABLE initially deferred" }},
 		{`ALTER TABLE t ATTACH PARTITION p FOR VALUES FROM (1) TO (10);`, ast.AlterTableAttachPartition, func(s *ast.AlterTableSpec) bool {
-			return s.NewTable.Name.L == "p" && s.PartitionBound.BoundType == "FROM" && len(s.PartitionBound.From) == 1 && len(s.PartitionBound.To) == 1
+			return s.NewTable.Name.Parts[0].Name == "p" && s.PartitionBound.BoundType == "FROM" && len(s.PartitionBound.From) == 1 && len(s.PartitionBound.To) == 1
 		}},
-		{`ALTER TABLE t DETACH PARTITION p;`, ast.AlterTableDetachPartition, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.L == "p" }},
+		{`ALTER TABLE t DETACH PARTITION p;`, ast.AlterTableDetachPartition, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.Parts[0].Name == "p" }},
 		{`ALTER TABLE t DISABLE RULE r;`, ast.AlterTableDisableRule, func(s *ast.AlterTableSpec) bool { return s.Name == "r" && s.TriggerMode == "RULE" }},
 		{`ALTER TABLE t SET WITHOUT OIDS;`, ast.AlterTableSetOption, func(s *ast.AlterTableSpec) bool { return s.Name == "without" && s.SetValue == "oids" }},
 	}

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mia0x75/parserkit/loc"
+
 	"github.com/mia0x75/pgparser/ast"
 )
 
@@ -18,6 +20,7 @@ type Scanner struct {
 	haveLookahead    bool
 	lookaheadToken   Token
 	lookaheadTokType int
+	lookaheadSpan    loc.Span
 }
 
 func (s *Scanner) reset(input string) {
@@ -27,6 +30,7 @@ func (s *Scanner) reset(input string) {
 	s.haveLookahead = false
 	s.lookaheadToken = Token{}
 	s.lookaheadTokType = 0
+	s.lookaheadSpan = loc.InvalidSpan()
 }
 
 func (s *Scanner) Lex(lval *yySymType) int {
@@ -36,9 +40,11 @@ func (s *Scanner) Lex(lval *yySymType) int {
 		tok = s.lookaheadToken
 		tokType = s.lookaheadTokType
 		s.haveLookahead = false
+		lval.span = s.lookaheadSpan
 	} else {
 		tok = s.lexer.NextToken()
 		tokType = s.mapTokenType(tok)
+		lval.span = loc.Span{Start: loc.ByteOffset(s.lexer.start), End: loc.ByteOffset(s.lexer.pos)}
 	}
 	if s.lexer.Err != nil {
 		s.Error(s.lexer.Err.Error())
@@ -51,6 +57,7 @@ func (s *Scanner) Lex(lval *yySymType) int {
 		s.haveLookahead = true
 		s.lookaheadToken = nextTok
 		s.lookaheadTokType = nextTokType
+		s.lookaheadSpan = loc.Span{Start: loc.ByteOffset(s.lexer.start), End: loc.ByteOffset(s.lexer.pos)}
 		tokType = s.applyLookahead(tokType, nextTokType)
 	}
 	switch tokType {

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	parser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
@@ -214,11 +216,11 @@ func (v *auditVisitor) Enter(n ast.Node) (ast.Node, bool) {
 	if col, ok := n.(*ast.ColumnName); ok && col.Name.O == "source" {
 		v.seen++
 	}
-	if ref, ok := n.(*ast.TableName); ok && ref.Name.O == "saved" {
+	if ref, ok := n.(*ast.TableName); ok && ref.Name.Parts[0].Name == "saved" {
 		v.seen++
 		if v.replace {
 			copy := *ref
-			copy.Name.O = "renamed"
+			copy.Name = pkast.QualifiedName{Parts: []pkast.Ident{{Name: "renamed"}}}
 			return &copy, false
 		}
 	}

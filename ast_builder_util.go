@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mia0x75/parserkit/lex"
+
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/auth"
 	"github.com/mia0x75/pgparser/format"
@@ -46,29 +48,13 @@ func tableNameFromList(l *ast.List) *ast.TableName {
 	if l == nil {
 		return name
 	}
-	switch len(l.Items) {
-	case 1:
-		if s, ok := l.Items[0].(*ast.String); ok {
-			name.Name = model.NewCIStr(s.Str)
-		}
-	case 2:
-		if s, ok := l.Items[0].(*ast.String); ok {
-			name.Schema = model.NewCIStr(s.Str)
-		}
-		if s, ok := l.Items[1].(*ast.String); ok {
-			name.Name = model.NewCIStr(s.Str)
-		}
-	case 3:
-		if s, ok := l.Items[0].(*ast.String); ok {
-			name.Catalog = model.NewCIStr(s.Str)
-		}
-		if s, ok := l.Items[1].(*ast.String); ok {
-			name.Schema = model.NewCIStr(s.Str)
-		}
-		if s, ok := l.Items[2].(*ast.String); ok {
-			name.Name = model.NewCIStr(s.Str)
+	parts := make([]lex.Ident, 0, len(l.Items))
+	for _, item := range l.Items {
+		if s, ok := item.(*ast.String); ok {
+			parts = append(parts, lex.Ident{Name: s.Str})
 		}
 	}
+	name.Name = syntaxName(parts...)
 	return name
 }
 
@@ -83,14 +69,11 @@ func tableNamesFromList(l *ast.List) []*ast.TableName {
 		case *ast.TableName:
 			result = append(result, v)
 		case *ast.String:
-			result = append(result, &ast.TableName{Name: model.NewCIStr(v.Str)})
+			result = append(result, syntaxTableName(nameFromString(v.Str)))
 		case *ast.List:
 			result = append(result, tableNameFromList(v))
 		case *ast.RangeVar:
-			result = append(result, &ast.TableName{
-				Schema: model.NewCIStr(v.Schemaname),
-				Name:   model.NewCIStr(v.Relname),
-			})
+			result = append(result, syntaxTableName(nameFromParts(v.Schemaname, v.Relname)))
 		case *ast.TableSource:
 			if name, ok := v.Source.(*ast.TableName); ok {
 				result = append(result, name)
@@ -105,10 +88,7 @@ func tableNamesFromList(l *ast.List) []*ast.TableName {
 // nameFromList returns the name of a qualified name list.
 func nameFromList(l *ast.List) string {
 	name := tableNameFromList(l)
-	if name.Schema.String() != "" {
-		return name.Schema.String() + "." + name.Name.String()
-	}
-	return name.Name.String()
+	return nameString(name.Name)
 }
 
 // indexName returns the index name of a cluster index specification.
@@ -116,7 +96,7 @@ func indexName(name string) *ast.TableName {
 	if name == "" {
 		return nil
 	}
-	return &ast.TableName{Name: model.NewCIStr(name)}
+	return syntaxTableName(nameFromString(name))
 }
 
 // reindexObjectName returns the object name of a reindex target type.
@@ -185,12 +165,9 @@ func relationName(n ast.Node) *ast.TableName {
 			return name
 		}
 	case *ast.RangeVar:
-		return &ast.TableName{
-			Catalog:        model.NewCIStr(v.Catalogname),
-			Schema:         model.NewCIStr(v.Schemaname),
-			Name:           model.NewCIStr(v.Relname),
-			Relpersistence: v.Relpersistence,
-		}
+		table := syntaxTableName(nameFromParts(v.Catalogname, v.Schemaname, v.Relname))
+		table.Relpersistence = v.Relpersistence
+		return table
 	}
 	return nil
 }
@@ -479,9 +456,9 @@ func commentNameParts(n ast.Node) []string {
 	case *ast.String:
 		return []string{v.Str}
 	case *ast.TableName:
-		parts := []string{v.Name.String()}
-		if v.Schema.String() != "" {
-			parts = append([]string{v.Schema.String()}, parts...)
+		parts := []string{}
+		for _, part := range v.Name.Parts {
+			parts = append(parts, part.Name)
 		}
 		return parts
 	case *ast.Integer:
@@ -538,9 +515,9 @@ func tableNamesFromNameList(l *ast.List) []*ast.TableName {
 	for _, item := range l.Items {
 		switch v := item.(type) {
 		case *ast.String:
-			result = append(result, &ast.TableName{Name: model.NewCIStr(v.Str)})
+			result = append(result, syntaxTableName(nameFromString(v.Str)))
 		case *ast.DataType:
-			result = append(result, &ast.TableName{Name: model.NewCIStr(v.Type.String())})
+			result = append(result, syntaxTableName(nameFromString(v.Type.String())))
 		case *ast.List:
 			result = append(result, tableNameFromList(v))
 		}
@@ -770,12 +747,9 @@ func inheritTableNames(l *ast.List) []*ast.TableName {
 	for _, item := range l.Items {
 		switch v := item.(type) {
 		case *ast.RangeVar:
-			result = append(result, &ast.TableName{
-				Schema: model.NewCIStr(v.Schemaname),
-				Name:   model.NewCIStr(v.Relname),
-			})
+			result = append(result, syntaxTableName(nameFromParts(v.Schemaname, v.Relname)))
 		case *ast.String:
-			result = append(result, &ast.TableName{Name: model.NewCIStr(v.Str)})
+			result = append(result, syntaxTableName(nameFromString(v.Str)))
 		}
 	}
 	return result
@@ -984,7 +958,7 @@ func dropObjectStmt(removeType int, objects []*ast.TableName, ifExists bool, beh
 		if len(objects) > 0 {
 			return &ast.DropIndexStmt{
 				IfExists:  ifExists,
-				IndexName: objects[0].Name.O,
+				IndexName: indexNameFromTableName(objects[0]),
 			}
 		}
 	case ast.OBJECT_FUNCTION:
@@ -1243,18 +1217,11 @@ func objectWithArgsNames(l *ast.List) []*ast.TableName {
 		case 0:
 			continue
 		case 1:
-			names = append(names, &ast.TableName{Name: model.NewCIStr(parts[0])})
+			names = append(names, syntaxTableName(nameFromString(parts[0])))
 		case 3:
-			names = append(names, &ast.TableName{
-				Catalog: model.NewCIStr(parts[0]),
-				Schema:  model.NewCIStr(parts[1]),
-				Name:    model.NewCIStr(parts[2]),
-			})
+			names = append(names, syntaxTableName(nameFromParts(parts[0], parts[1], parts[2])))
 		default:
-			names = append(names, &ast.TableName{
-				Schema: model.NewCIStr(parts[0]),
-				Name:   model.NewCIStr(parts[1]),
-			})
+			names = append(names, syntaxTableName(nameFromParts(parts[0], parts[1])))
 		}
 	}
 	return names
@@ -1399,14 +1366,11 @@ func dropTriggerStmt(ifExists bool, name string, table ast.Node) ast.Node {
 	}
 	switch v := table.(type) {
 	case *ast.RangeVar:
-		stmt.Table = &ast.TableName{
-			Schema: model.NewCIStr(v.Schemaname),
-			Name:   model.NewCIStr(v.Relname),
-		}
+		stmt.Table = syntaxTableName(nameFromParts(v.Schemaname, v.Relname))
 	case *ast.List:
 		stmt.Table = tableNameFromList(v)
 	}
-	stmt.Name = &ast.TableName{Name: model.NewCIStr(name)}
+	stmt.Name = syntaxTableName(nameFromString(name))
 	return stmt
 }
 
@@ -1425,10 +1389,11 @@ func firstName(l *ast.List) string {
 
 // indexNameFromList returns the index name of a name list.
 func indexNameFromList(l *ast.List) string {
-	if l == nil {
+	name := tableNameFromList(l)
+	if len(name.Name.Parts) == 0 {
 		return ""
 	}
-	return nameFromList(l)
+	return name.Name.Parts[len(name.Name.Parts)-1].Name
 }
 
 // columnNameListFromStrings returns the column names of a string list.

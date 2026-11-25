@@ -8,6 +8,8 @@ import (
 	"math"
 	"strings"
 
+	"github.com/mia0x75/parserkit/loc"
+
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
@@ -16,6 +18,7 @@ import (
 
 type yySymType struct {
 	yys         int
+	span        loc.Span
 	node        ast.Node
 	expr        ast.ExprNode
 	exprs       []ast.ExprNode
@@ -17902,6 +17905,12 @@ yydefault:
 		yyS = nyys
 	}
 	yyVAL = yyS[yyp+1]
+	// parserkit/yaccspan: begin
+	yyVAL.span = loc.InvalidSpan()
+	for yyi := yyp + 1; yyi <= yypt; yyi++ {
+		yyVAL.span = loc.Cover(yyVAL.span, yyS[yyi].span)
+	}
+	// parserkit/yaccspan: end
 
 	/* consult goto table to find next state */
 	yyn = int(yyR1[yyn])
@@ -22442,7 +22451,7 @@ yydefault:
 			rv := relationName(makeRangeVar(yyDollar[5].list))
 			rv.Relpersistence = relpersistenceForTemp(yyDollar[2].ival)
 			cte := &ast.CommonTableExpression{
-				Name:     model.NewCIStr(rv.Name.O),
+				Name:     model.NewCIStr(nameString(rv.Name)),
 				ColNames: columnNameStrings(yyDollar[7].list),
 				Query:    yyDollar[11].node.(ast.StmtNode),
 			}
@@ -22456,7 +22465,7 @@ yydefault:
 					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
-					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
+					Left: &ast.TableSource{Source: syntaxTableName(rv.Name)},
 				}},
 				With: wc,
 			}
@@ -22476,7 +22485,7 @@ yydefault:
 			rv := relationName(makeRangeVar(yyDollar[7].list))
 			rv.Relpersistence = relpersistenceForTemp(yyDollar[4].ival)
 			cte := &ast.CommonTableExpression{
-				Name:     model.NewCIStr(rv.Name.O),
+				Name:     model.NewCIStr(nameString(rv.Name)),
 				ColNames: columnNameStrings(yyDollar[9].list),
 				Query:    yyDollar[13].node.(ast.StmtNode),
 			}
@@ -22490,7 +22499,7 @@ yydefault:
 					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
-					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
+					Left: &ast.TableSource{Source: syntaxTableName(rv.Name)},
 				}},
 				With: wc,
 			}

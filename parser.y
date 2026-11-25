@@ -12,6 +12,8 @@ import (
 	"math"
 	"strings"
 
+	"github.com/mia0x75/parserkit/loc"
+
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
@@ -22,6 +24,7 @@ import (
 
 // Union type for semantic values
 %union {
+	span      loc.Span
 	node      ast.Node
 	expr      ast.ExprNode
 	exprs     []ast.ExprNode
@@ -4543,7 +4546,7 @@ ViewStmt:
 			rv := relationName(makeRangeVar($5))
 			rv.Relpersistence = relpersistenceForTemp($2)
 			cte := &ast.CommonTableExpression{
-				Name:     model.NewCIStr(rv.Name.O),
+				Name:     model.NewCIStr(nameString(rv.Name)),
 				ColNames: columnNameStrings($7),
 				Query:    $11.(ast.StmtNode),
 			}
@@ -4557,7 +4560,7 @@ ViewStmt:
 					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
-					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
+					Left: &ast.TableSource{Source: syntaxTableName(rv.Name)},
 				}},
 				With: wc,
 			}
@@ -4577,7 +4580,7 @@ ViewStmt:
 			rv := relationName(makeRangeVar($7))
 			rv.Relpersistence = relpersistenceForTemp($4)
 			cte := &ast.CommonTableExpression{
-				Name:     model.NewCIStr(rv.Name.O),
+				Name:     model.NewCIStr(nameString(rv.Name)),
 				ColNames: columnNameStrings($9),
 				Query:    $13.(ast.StmtNode),
 			}
@@ -4591,7 +4594,7 @@ ViewStmt:
 					{WildCard: &ast.WildCardField{}},
 				}},
 				From: &ast.TableRefsClause{TableRefs: &ast.Join{
-					Left: &ast.TableSource{Source: &ast.TableName{Name: model.NewCIStr(rv.Name.O)}},
+					Left: &ast.TableSource{Source: syntaxTableName(rv.Name)},
 				}},
 				With: wc,
 			}

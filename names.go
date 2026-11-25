@@ -1,0 +1,54 @@
+package parser
+
+import (
+	"strings"
+
+	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/lex"
+	"github.com/mia0x75/parserkit/loc"
+
+	"github.com/mia0x75/pgparser/ast"
+)
+
+func syntaxName(parts ...lex.Ident) ast.QualifiedName {
+	name := ast.QualifiedName{Parts: parts, Span: loc.InvalidSpan()}
+	for _, part := range parts {
+		name.Span = loc.Cover(name.Span, part.Span)
+	}
+	return name
+}
+
+func nameFromString(name string) ast.QualifiedName {
+	return nameFromParts(name)
+}
+
+func nameFromParts(parts ...string) ast.QualifiedName {
+	idents := make([]lex.Ident, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			idents = append(idents, lex.Ident{Name: part})
+		}
+	}
+	return syntaxName(idents...)
+}
+
+func nameString(name ast.QualifiedName) string {
+	parts := make([]string, 0, len(name.Parts))
+	for _, part := range name.Parts {
+		parts = append(parts, part.Name)
+	}
+	return strings.Join(parts, ".")
+}
+
+func syntaxTableName(name ast.QualifiedName) *ast.TableName {
+	table := &ast.TableName{BaseTableRef: pkast.BaseTableRef{Name: name}}
+	table.SetSpan(name.Span)
+	return table
+}
+
+func indexNameFromTableName(table *ast.TableName) string {
+	if table == nil || len(table.Name.Parts) == 0 {
+		return ""
+	}
+	return table.Name.Parts[len(table.Name.Parts)-1].Name
+}

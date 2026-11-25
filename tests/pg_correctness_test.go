@@ -7,6 +7,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
@@ -630,7 +632,7 @@ func TestTypeNameMetadataPreserved(t *testing.T) {
 			switch stmt := mustParseOne(t, tc.sql).(type) {
 			case *ast.DropStmt:
 				for _, object := range stmt.Objects {
-					got = append(got, object.Name.O)
+					got = append(got, object.Name.Parts[len(object.Name.Parts)-1].Name)
 				}
 			case *ast.CommentStmt:
 				if stmt.Suffix != "" {
@@ -649,7 +651,7 @@ func TestTypeNameMetadataPreserved(t *testing.T) {
 }
 
 func TestRestoreRejectsInvalidAST(t *testing.T) {
-	table := &ast.TableName{Name: model.NewCIStr("t")}
+	table := &ast.TableName{BaseTableRef: pkast.BaseTableRef{Name: pkast.QualifiedName{Parts: []pkast.Ident{{Name: "t"}}}}}
 	column := &ast.ColumnName{Name: model.NewCIStr("c")}
 	for _, tc := range []struct {
 		name string

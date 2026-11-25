@@ -10,6 +10,7 @@ build:
 generate:
 	go run ./internal/astgen
 	$(GOYACC) -o parser.go -l -p yy parser.y
+	go run github.com/mia0x75/parserkit/cmd/yaccspan parser.go
 
 generate-check:
 	$(MAKE) generate

@@ -182,18 +182,15 @@ func applyLocking(n *ast.SelectStmt, locking ast.Node) {
 			for _, rel := range lock.LockedRels.Items {
 				switch v := rel.(type) {
 				case *ast.String:
-					n.LockedTables = append(n.LockedTables, &ast.TableName{Name: model.NewCIStr(v.Str)})
+					n.LockedTables = append(n.LockedTables, syntaxTableName(nameFromString(v.Str)))
 				case *ast.List:
 					for _, item := range v.Items {
 						if s, ok := item.(*ast.String); ok {
-							n.LockedTables = append(n.LockedTables, &ast.TableName{Name: model.NewCIStr(s.Str)})
+							n.LockedTables = append(n.LockedTables, syntaxTableName(nameFromString(s.Str)))
 						}
 					}
 				case *ast.RangeVar:
-					n.LockedTables = append(n.LockedTables, &ast.TableName{
-						Schema: model.NewCIStr(v.Schemaname),
-						Name:   model.NewCIStr(v.Relname),
-					})
+					n.LockedTables = append(n.LockedTables, syntaxTableName(nameFromParts(v.Schemaname, v.Relname)))
 				}
 			}
 		}

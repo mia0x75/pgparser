@@ -60,7 +60,7 @@ func TestParseSQLSimpleSelect(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected TableSource, got %T", st.From.TableRefs.Left)
 	}
-	if got := left.Source.(*ast.TableName).Name.O; got != "users" {
+	if got := left.Source.(*ast.TableName).Name.Parts[0].Name; got != "users" {
 		t.Fatalf("table = %q, want users", got)
 	}
 	if st.Where == nil {
@@ -84,7 +84,7 @@ WHERE o.created_at > $1 AND c.active = true;`
 	if !ok {
 		t.Fatalf("expected left TableSource, got %T", st.From.TableRefs.Left)
 	}
-	if got := left.Source.(*ast.TableName).Name.O; got != "orders" {
+	if got := left.Source.(*ast.TableName).Name.Parts[0].Name; got != "orders" {
 		t.Fatalf("left table = %q, want orders", got)
 	}
 	if got := left.AsName.O; got != "o" {
@@ -94,7 +94,7 @@ WHERE o.created_at > $1 AND c.active = true;`
 	if !ok {
 		t.Fatalf("expected right TableSource, got %T", st.From.TableRefs.Right)
 	}
-	if got := right.Source.(*ast.TableName).Name.O; got != "customers" {
+	if got := right.Source.(*ast.TableName).Name.Parts[0].Name; got != "customers" {
 		t.Fatalf("right table = %q, want customers", got)
 	}
 	if got := right.AsName.O; got != "c" {
@@ -358,8 +358,8 @@ func TestParseSQLAlterTable(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *ast.AlterTableStmt, got %T", mustParseOne(t, "ALTER TABLE s.foo ADD COLUMN bar INT;"))
 	}
-	if stmt.Table.Schema.O != "s" || stmt.Table.Name.O != "foo" {
-		t.Fatalf("table = %s.%s, want s.foo", stmt.Table.Schema.O, stmt.Table.Name.O)
+	if stmt.Table.Name.Parts[0].Name != "s" || stmt.Table.Name.Parts[1].Name != "foo" {
+		t.Fatalf("table = %s.%s, want s.foo", stmt.Table.Name.Parts[0].Name, stmt.Table.Name.Parts[1].Name)
 	}
 	if len(stmt.Specs) != 2 {
 		t.Fatalf("specs = %d, want 2", len(stmt.Specs))
@@ -372,7 +372,7 @@ func TestParseSQLAlterTable(t *testing.T) {
 	}
 	// RENAME TO is a separate statement in PostgreSQL.
 	rename, ok := mustParseOne(t, "ALTER TABLE s.foo RENAME TO qux;").(*ast.RenameStmt)
-	if !ok || rename.Relation == nil || rename.Relation.Name.O != "foo" || rename.Newname != "qux" {
+	if !ok || rename.Relation == nil || rename.Relation.Name.Parts[len(rename.Relation.Name.Parts)-1].Name != "foo" || rename.Newname != "qux" {
 		t.Fatalf("unexpected rename: %#v", mustParseOne(t, "ALTER TABLE s.foo RENAME TO qux;"))
 	}
 }
@@ -382,7 +382,7 @@ func TestParseSQLDropAndTruncate(t *testing.T) {
 	if !ok {
 		t.Fatal("expected *ast.DropTableStmt")
 	}
-	if !dropTable.IfExists || len(dropTable.Tables) != 2 || dropTable.Tables[1].Schema.O != "s" {
+	if !dropTable.IfExists || len(dropTable.Tables) != 2 || dropTable.Tables[1].Name.Parts[0].Name != "s" {
 		t.Fatalf("unexpected drop table: %#v", dropTable)
 	}
 
@@ -397,14 +397,14 @@ func TestParseSQLDropAndTruncate(t *testing.T) {
 	}
 
 	truncate, ok := mustParseOne(t, "TRUNCATE TABLE s.t;").(*ast.TruncateTableStmt)
-	if !ok || truncate.Table.Schema.O != "s" || truncate.Table.Name.O != "t" {
+	if !ok || truncate.Table.Name.Parts[0].Name != "s" || truncate.Table.Name.Parts[1].Name != "t" {
 		t.Fatalf("unexpected truncate: %#v", truncate)
 	}
 }
 
 func TestParseSQLCreateIndexAndView(t *testing.T) {
 	idx, ok := mustParseOne(t, "CREATE UNIQUE INDEX IF NOT EXISTS ix ON s.t (a, b);").(*ast.CreateIndexStmt)
-	if !ok || !idx.Unique || idx.IndexName != "ix" || idx.Table.Schema.O != "s" {
+	if !ok || !idx.Unique || idx.IndexName != "ix" || idx.Table.Name.Parts[0].Name != "s" {
 		t.Fatalf("unexpected create index: %#v", idx)
 	}
 	if len(idx.IndexColNames) != 2 {
@@ -412,7 +412,7 @@ func TestParseSQLCreateIndexAndView(t *testing.T) {
 	}
 
 	view, ok := mustParseOne(t, "CREATE OR REPLACE VIEW v (a, b) AS SELECT a, b FROM t;").(*ast.CreateViewStmt)
-	if !ok || !view.OrReplace || view.ViewName.Name.O != "v" {
+	if !ok || !view.OrReplace || view.ViewName.Name.Parts[0].Name != "v" {
 		t.Fatalf("unexpected create view: %#v", view)
 	}
 	if len(view.Cols) != 2 || view.Cols[0].O != "a" {
@@ -425,7 +425,7 @@ func TestParseSQLCreateIndexAndView(t *testing.T) {
 
 func TestParseSQLSequence(t *testing.T) {
 	create, ok := mustParseOne(t, "CREATE SEQUENCE IF NOT EXISTS s.seq;").(*ast.CreateSequenceStmt)
-	if !ok || !create.IfNotExists || create.Name.Schema.O != "s" || create.Name.Name.O != "seq" {
+	if !ok || !create.IfNotExists || create.Name.Name.Parts[0].Name != "s" || create.Name.Name.Parts[1].Name != "seq" {
 		t.Fatalf("unexpected create sequence: %#v", create)
 	}
 	drop, ok := mustParseOne(t, "DROP SEQUENCE IF EXISTS seq;").(*ast.DropSequenceStmt)
@@ -450,7 +450,7 @@ func TestParseSQLWithClause(t *testing.T) {
 
 func TestParseSQLInsertSelectAndReturning(t *testing.T) {
 	ins, ok := mustParseOne(t, "INSERT INTO s.t (a, b) SELECT a, b FROM u RETURNING a;").(*ast.InsertStmt)
-	if !ok || ins.Table.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Schema.O != "s" {
+	if !ok || ins.Table.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.Parts[0].Name != "s" {
 		t.Fatalf("unexpected insert: %#v", ins)
 	}
 	if len(ins.Columns) != 2 || ins.Select == nil || ins.Returning == nil {
@@ -978,7 +978,7 @@ func countParams(n ast.Node) int {
 
 func hasTable(tables []*ast.TableName, schema, name string) bool {
 	for _, tbl := range tables {
-		if tbl.Name.L == name && (schema == "" || tbl.Schema.L == schema) {
+		if tbl.Name.Parts[len(tbl.Name.Parts)-1].Name == name && (schema == "" || (len(tbl.Name.Parts) > 1 && tbl.Name.Parts[0].Name == schema)) {
 			return true
 		}
 	}
@@ -1069,7 +1069,7 @@ SELECT COUNT(*) FROM expanded e1 JOIN expanded e2 ON e2.payload >= e1.payload;`)
 	}
 	refs := 0
 	for _, tbl := range all {
-		if tbl.Name.L == "expanded" && tbl.Schema.L == "" {
+		if tbl.Name.Parts[len(tbl.Name.Parts)-1].Name == "expanded" && len(tbl.Name.Parts) == 1 {
 			refs++
 		}
 	}
@@ -1110,7 +1110,7 @@ WHEN MATCHED THEN DELETE;`).(*ast.MergeStmt)
 		t.Fatalf("expected target TableSource, got %T", st.Table.TableRefs.Left)
 	}
 	target, ok := left.Source.(*ast.TableName)
-	if !ok || target.Name.L != "customers" || left.AsName.L != "c" {
+	if !ok || target.Name.Parts[0].Name != "customers" || left.AsName.L != "c" {
 		t.Fatalf("unexpected MERGE target: %#v", left)
 	}
 	src, ok := st.Source.TableRefs.Left.(*ast.TableSource)
@@ -1500,10 +1500,10 @@ func TestParseSQLSavepointAndRoutineStatements(t *testing.T) {
 	if st, ok := mustParseOne(t, "DO $$ BEGIN NULL; END $$;").(*ast.DoStmt); !ok || len(st.Exprs) != 1 {
 		t.Fatalf("do = %#v", mustParseOne(t, "DO $$ BEGIN NULL; END $$;"))
 	}
-	if st, ok := mustParseOne(t, "DROP FUNCTION IF EXISTS public.f(int);").(*ast.DropFunctionStmt); !ok || !st.IfExists || st.Name.Name.O != "f" {
+	if st, ok := mustParseOne(t, "DROP FUNCTION IF EXISTS public.f(int);").(*ast.DropFunctionStmt); !ok || !st.IfExists || st.Name.Name.Parts[len(st.Name.Name.Parts)-1].Name != "f" {
 		t.Fatalf("drop function = %#v", mustParseOne(t, "DROP FUNCTION IF EXISTS public.f(int);"))
 	}
-	if st, ok := mustParseOne(t, "DROP PROCEDURE p();").(*ast.DropProcedureStmt); !ok || st.Name.Name.O != "p" {
+	if st, ok := mustParseOne(t, "DROP PROCEDURE p();").(*ast.DropProcedureStmt); !ok || st.Name.Name.Parts[len(st.Name.Name.Parts)-1].Name != "p" {
 		t.Fatalf("drop procedure = %#v", mustParseOne(t, "DROP PROCEDURE p();"))
 	}
 	if st, ok := mustParseOne(t, "DROP TRIGGER IF EXISTS trg ON t;").(*ast.DropTriggerStmt); !ok || !st.IfExists {

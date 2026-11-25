@@ -3,8 +3,9 @@ package parser_test
 import (
 	"testing"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/model"
 )
 
 func TestRestoreForeignColumnOptions(t *testing.T) {
@@ -57,7 +58,7 @@ func TestForeignOptionsVisitor(t *testing.T) {
 					return &ast.String{Str: "MOCK_REWRITTEN"}
 				case *ast.TableName:
 					copy := *child
-					copy.Name = model.NewCIStr("renamed")
+					copy.Name = pkast.QualifiedName{Parts: []pkast.Ident{{Name: "renamed"}}}
 					return &copy
 				}
 				return n
