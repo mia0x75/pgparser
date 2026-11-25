@@ -1576,7 +1576,7 @@ func (n *ValuesStmt) Restore(ctx *format.RestoreCtx) error {
 			ctx.WritePlain(", ")
 		}
 		ctx.WritePlain("(")
-		for j, value := range row.Values {
+		for j, value := range row.Items {
 			if j > 0 {
 				ctx.WritePlain(", ")
 			}

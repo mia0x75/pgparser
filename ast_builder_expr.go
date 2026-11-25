@@ -74,7 +74,7 @@ func negateExpr(e ast.ExprNode) ast.ExprNode {
 // rowValues returns the values of a row expression.
 func rowValues(n ast.ExprNode) []ast.ExprNode {
 	if r, ok := n.(*ast.RowExpr); ok {
-		return r.Values
+		return r.Items
 	}
 	return []ast.ExprNode{n}
 }
@@ -304,7 +304,7 @@ func groupingSetExprs(e ast.ExprNode) []ast.ExprNode {
 		e = paren.Expr
 	}
 	if row, ok := e.(*ast.RowExpr); ok {
-		return row.Values
+		return row.Items
 	}
 	return []ast.ExprNode{e}
 }

@@ -18603,7 +18603,7 @@ yydefault:
 			n.Table = &ast.TableRefsClause{TableRefs: &ast.Join{Left: yyDollar[4].node.(*ast.TableSource)}}
 			if vals, ok := n.Select.(*ast.ValuesStmt); ok {
 				for _, row := range vals.Rows {
-					n.Lists = append(n.Lists, row.Values)
+					n.Lists = append(n.Lists, row.Items)
 				}
 				n.Select = nil
 			}
@@ -25617,13 +25617,13 @@ yydefault:
 	case 1099:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.node = &ast.ValuesStmt{Rows: []*ast.RowExpr{{Values: yyDollar[3].exprs}}}
+			yyVAL.node = &ast.ValuesStmt{Rows: []*ast.RowExpr{{Items: yyDollar[3].exprs}}}
 		}
 	case 1100:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
 			n := yyDollar[1].node.(*ast.ValuesStmt)
-			n.Rows = append(n.Rows, &ast.RowExpr{Values: yyDollar[4].exprs})
+			n.Rows = append(n.Rows, &ast.RowExpr{Items: yyDollar[4].exprs})
 			yyVAL.node = n
 		}
 	case 1101:
@@ -27176,12 +27176,12 @@ yydefault:
 	case 1368:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = &ast.RowExpr{Values: yyDollar[1].exprs}
+			yyVAL.expr = &ast.RowExpr{Items: yyDollar[1].exprs}
 		}
 	case 1369:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.RowExpr{Values: yyDollar[3].exprs}
+			yyVAL.expr = &ast.RowExpr{Items: yyDollar[3].exprs}
 		}
 	case 1370:
 		yyDollar = yyS[yypt-3 : yypt+1]
@@ -27369,7 +27369,7 @@ yydefault:
 	case 1405:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = &ast.RowExpr{Values: yyDollar[1].exprs}
+			yyVAL.expr = &ast.RowExpr{Items: yyDollar[1].exprs}
 		}
 	case 1406:
 		yyDollar = yyS[yypt-4 : yypt+1]

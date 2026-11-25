@@ -1123,7 +1123,7 @@ InsertStmt:
 			n.Table = &ast.TableRefsClause{TableRefs: &ast.Join{Left: $4.(*ast.TableSource)}}
 			if vals, ok := n.Select.(*ast.ValuesStmt); ok {
 				for _, row := range vals.Rows {
-					n.Lists = append(n.Lists, row.Values)
+					n.Lists = append(n.Lists, row.Items)
 				}
 				n.Select = nil
 			}
@@ -7382,12 +7382,12 @@ simple_select:
 values_clause:
 	VALUES '(' expr_list ')'
 		{
-			$$ = &ast.ValuesStmt{Rows: []*ast.RowExpr{{Values: $3}}}
+			$$ = &ast.ValuesStmt{Rows: []*ast.RowExpr{{Items: $3}}}
 		}
 	| values_clause ',' '(' expr_list ')'
 		{
 			n := $1.(*ast.ValuesStmt)
-			n.Rows = append(n.Rows, &ast.RowExpr{Values: $4})
+			n.Rows = append(n.Rows, &ast.RowExpr{Items: $4})
 			$$ = n
 		}
 	;
@@ -8663,14 +8663,14 @@ row:
 		}
 	| implicit_row
 		{
-			$$ = &ast.RowExpr{Values: $1}
+			$$ = &ast.RowExpr{Items: $1}
 		}
 	;
 
 explicit_row:
 	ROW '(' expr_list ')'
 		{
-			$$ = &ast.RowExpr{Values: $3}
+			$$ = &ast.RowExpr{Items: $3}
 		}
 	| ROW '(' ')'
 		{
@@ -8816,7 +8816,7 @@ c_expr:
 		}
 	| implicit_row
 		{
-			$$ = &ast.RowExpr{Values: $1}
+			$$ = &ast.RowExpr{Items: $1}
 		}
 	;
 

@@ -153,25 +153,21 @@ func (n *BetweenExpr) Accept(v Visitor) (Node, bool) {
 
 // BinaryOperationExpr is for binary operation like `1 + 1`, `1 - 1`, etc.
 type BinaryOperationExpr struct {
-	exprNode
+	pkast.BaseBinaryExpr
 	// Op is the operator code for BinaryOperation.
 	Op opcode.Op
 	// OpName overrides Op during formatting and restoration to preserve textual operators.
 	OpName string
-	// L is the left expression in BinaryOperation.
-	L ExprNode
-	// R is the right expression in BinaryOperation.
-	R ExprNode
 }
 
 // Restore implements Node interface.
 func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
-	if err := n.L.Restore(ctx); err != nil {
+	if err := n.Left.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.L")
 	}
 	// Word operators such as IS DISTINCT FROM need spaces even when the caller
 	// asked for compact output: "FROM1" would lex as one identifier.
-	pad := ctx.Flags.HasSpacesAroundBinaryOperationFlag() || wordOperator(n.OpName) || endsWithStar(n.L)
+	pad := ctx.Flags.HasSpacesAroundBinaryOperationFlag() || wordOperator(n.OpName) || endsWithStar(n.Left)
 	if pad {
 		ctx.WritePlain(" ")
 	}
@@ -184,18 +180,18 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlain(" ")
 	}
 	// Adjacent operator characters can become a different token or a comment.
-	if !pad && startsWithSymbol(n.R) {
+	if !pad && startsWithSymbol(n.Right) {
 		ctx.WritePlain(" ")
 	}
 	// Subquery-style ANY/ALL/SOME comparisons require the right side in
 	// parentheses, so keep the wrapping when the operator carries it.
 	if strings.HasSuffix(n.OpName, "ANY") || strings.HasSuffix(n.OpName, "ALL") {
 		ctx.WritePlain("(")
-		if err := n.R.Restore(ctx); err != nil {
+		if err := n.Right.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.R")
 		}
 		ctx.WritePlain(")")
-	} else if err := n.R.Restore(ctx); err != nil {
+	} else if err := n.Right.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.R")
 	}
 
@@ -204,7 +200,7 @@ func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Format the ExprNode into a Writer.
 func (n *BinaryOperationExpr) Format(w io.Writer) {
-	FormatExpr(n.L, w)
+	FormatExpr(n.Left, w)
 	_, _ = fmt.Fprint(w, " ")
 	if n.OpName != "" {
 		_, _ = fmt.Fprint(w, n.OpName)
@@ -214,10 +210,10 @@ func (n *BinaryOperationExpr) Format(w io.Writer) {
 	_, _ = fmt.Fprint(w, " ")
 	if strings.HasSuffix(n.OpName, "ANY") || strings.HasSuffix(n.OpName, "ALL") {
 		_, _ = fmt.Fprint(w, "(")
-		FormatExpr(n.R, w)
+		FormatExpr(n.Right, w)
 		_, _ = fmt.Fprint(w, ")")
 	} else {
-		FormatExpr(n.R, w)
+		FormatExpr(n.Right, w)
 	}
 }
 
@@ -234,7 +230,7 @@ func wordOperator(name string) bool {
 func startsWithSymbol(expr ExprNode) bool {
 	switch n := expr.(type) {
 	case *BinaryOperationExpr:
-		return startsWithSymbol(n.L)
+		return startsWithSymbol(n.Left)
 	case *CollateExpr:
 		return startsWithSymbol(n.Expr)
 	case *UnaryOperationExpr:
@@ -262,9 +258,9 @@ func endsWithStar(expr ExprNode) bool {
 			return star
 		}
 	case *BinaryOperationExpr:
-		return endsWithStar(n.R)
+		return endsWithStar(n.Right)
 	case *UnaryOperationExpr:
-		return endsWithStar(n.V)
+		return endsWithStar(n.Expr)
 	}
 	return false
 }
@@ -277,17 +273,17 @@ func (n *BinaryOperationExpr) Accept(v Visitor) (Node, bool) {
 	}
 
 	n = newNode.(*BinaryOperationExpr)
-	node, ok := n.L.Accept(v)
+	node, ok := n.Left.Accept(v)
 	if !ok {
 		return n, false
 	}
-	n.L = node.(ExprNode)
+	n.Left = node.(ExprNode)
 
-	node, ok = n.R.Accept(v)
+	node, ok = n.Right.Accept(v)
 	if !ok {
 		return n, false
 	}
-	n.R = node.(ExprNode)
+	n.Right = node.(ExprNode)
 
 	return v.Leave(n)
 }
@@ -1247,21 +1243,27 @@ func (n *PatternRegexpExpr) Accept(v Visitor) (Node, bool) {
 
 // RowExpr is the expression for row constructor.
 type RowExpr struct {
-	exprNode
+	pkast.BaseRowExpr
+}
 
-	Values []ExprNode
+// RowCore lets role-based parents check for a missing row before dispatch.
+func (n *RowExpr) RowCore() *pkast.BaseRowExpr {
+	if n == nil {
+		return nil
+	}
+	return &n.BaseRowExpr
 }
 
 // Restore implements Node interface.
 func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyword("ROW")
 	ctx.WritePlain("(")
-	for i, v := range n.Values {
+	for i, v := range n.Items {
 		if i != 0 {
 			ctx.WritePlain(",")
 		}
 		if err := v.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred when restore RowExpr.Values[%v]", i)
+			return errors.Annotatef(err, "An error occurred when restore RowExpr.Items[%v]", i)
 		}
 	}
 	ctx.WritePlain(")")
@@ -1271,7 +1273,7 @@ func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
 // Format the ExprNode into a Writer.
 func (n *RowExpr) Format(w io.Writer) {
 	_, _ = fmt.Fprint(w, "(")
-	for i, val := range n.Values {
+	for i, val := range n.Items {
 		if i != 0 {
 			_, _ = fmt.Fprint(w, ", ")
 		}
@@ -1287,25 +1289,23 @@ func (n *RowExpr) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*RowExpr)
-	for i, val := range n.Values {
+	for i, val := range n.Items {
 		node, ok := val.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Values[i] = node.(ExprNode)
+		n.Items[i] = node.(ExprNode)
 	}
 	return v.Leave(n)
 }
 
 // UnaryOperationExpr is the expression for unary operator.
 type UnaryOperationExpr struct {
-	exprNode
+	pkast.BaseUnaryExpr
 	// Op is the operator opcode.
 	Op opcode.Op
 	// OpName overrides Op during formatting and restoration to preserve textual operators.
 	OpName string
-	// V is the unary expression.
-	V ExprNode
 }
 
 // Restore implements Node interface.
@@ -1323,10 +1323,10 @@ func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 			return errors.Trace(err)
 		}
 	}
-	if startsWithSymbol(n) && startsWithSymbol(n.V) {
+	if startsWithSymbol(n) && startsWithSymbol(n.Expr) {
 		ctx.WritePlain(" ")
 	}
-	if err := n.V.Restore(ctx); err != nil {
+	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Trace(err)
 	}
 	return ctx.Err()
@@ -1345,10 +1345,10 @@ func (n *UnaryOperationExpr) Format(w io.Writer) {
 	default:
 		n.Op.Format(w)
 	}
-	if startsWithSymbol(n) && startsWithSymbol(n.V) {
+	if startsWithSymbol(n) && startsWithSymbol(n.Expr) {
 		_, _ = fmt.Fprint(w, " ")
 	}
-	FormatExpr(n.V, w)
+	FormatExpr(n.Expr, w)
 }
 
 // Accept implements Node Accept interface.
@@ -1358,11 +1358,11 @@ func (n *UnaryOperationExpr) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*UnaryOperationExpr)
-	node, ok := n.V.Accept(v)
+	node, ok := n.Expr.Accept(v)
 	if !ok {
 		return n, false
 	}
-	n.V = node.(ExprNode)
+	n.Expr = node.(ExprNode)
 	return v.Leave(n)
 }
 

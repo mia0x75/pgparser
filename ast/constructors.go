@@ -4,6 +4,8 @@ import (
 	"io"
 	"strings"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
@@ -24,22 +26,22 @@ func NewColumnNameExpr(schema, table, name string) *ColumnNameExpr {
 
 // NewBinaryOperationExpr returns a BinaryOperationExpr for the given opcode.
 func NewBinaryOperationExpr(op opcode.Op, l, r ExprNode) *BinaryOperationExpr {
-	return &BinaryOperationExpr{Op: op, L: l, R: r}
+	return &BinaryOperationExpr{Op: op, BaseBinaryExpr: pkast.BaseBinaryExpr{Left: l, Right: r}}
 }
 
 // NewBinaryOperationExprByName preserves an operator's text without requiring an opcode.
 func NewBinaryOperationExprByName(name string, l, r ExprNode) *BinaryOperationExpr {
-	return &BinaryOperationExpr{OpName: name, L: l, R: r}
+	return &BinaryOperationExpr{OpName: name, BaseBinaryExpr: pkast.BaseBinaryExpr{Left: l, Right: r}}
 }
 
 // NewUnaryOperationExpr returns a UnaryOperationExpr for the given opcode.
 func NewUnaryOperationExpr(op opcode.Op, v ExprNode) *UnaryOperationExpr {
-	return &UnaryOperationExpr{Op: op, V: v}
+	return &UnaryOperationExpr{Op: op, BaseUnaryExpr: pkast.BaseUnaryExpr{Expr: v}}
 }
 
 // NewUnaryOperationExprByName preserves an operator's text without requiring an opcode.
 func NewUnaryOperationExprByName(name string, v ExprNode) *UnaryOperationExpr {
-	return &UnaryOperationExpr{OpName: name, V: v}
+	return &UnaryOperationExpr{OpName: name, BaseUnaryExpr: pkast.BaseUnaryExpr{Expr: v}}
 }
 
 // NewFuncCallExpr returns a FuncCallExpr for the given function name.

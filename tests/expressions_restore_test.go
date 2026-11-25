@@ -118,7 +118,7 @@ func TestPreservedExpressionFormat(t *testing.T) {
 func TestRestoreNegativeZeroOperand(t *testing.T) {
 	stmt := mustParseOne(t, `SELECT 2 - 0`).(*ast.SelectStmt)
 	expr := stmt.Fields.Fields[0].Expr.(*ast.BinaryOperationExpr)
-	expr.R = ast.NewValueExpr(math.Copysign(0, -1))
+	expr.Right = ast.NewValueExpr(math.Copysign(0, -1))
 	if got := restoreString(t, stmt); got != `SELECT 2- -0e+00` {
 		t.Fatalf("restore = %q, want SELECT 2- -0e+00", got)
 	}

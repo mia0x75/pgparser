@@ -54,7 +54,7 @@ func ExprFlag(expr ExprNode) uint64 {
 	case *BetweenExpr:
 		return ExprFlag(x.Expr) | ExprFlag(x.Left) | ExprFlag(x.Right)
 	case *BinaryOperationExpr:
-		return ExprFlag(x.L) | ExprFlag(x.R)
+		return ExprFlag(x.Left) | ExprFlag(x.Right)
 	case *CaseExpr:
 		var flag uint64
 		if x.Value != nil {
@@ -126,14 +126,14 @@ func ExprFlag(expr ExprNode) uint64 {
 		return FlagHasReference
 	case *RowExpr:
 		var flag uint64
-		for _, val := range x.Values {
+		for _, val := range x.Items {
 			flag |= ExprFlag(val)
 		}
 		return flag
 	case *SubqueryExpr:
 		return FlagHasSubquery
 	case *UnaryOperationExpr:
-		return ExprFlag(x.V)
+		return ExprFlag(x.Expr)
 	case *VariableExpr:
 		if x.Value == nil {
 			return FlagHasVariable
