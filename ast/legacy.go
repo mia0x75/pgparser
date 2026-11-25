@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 
+	pkast "github.com/mia0x75/parserkit/ast"
+
 	"github.com/mia0x75/pgparser/format"
 )
 
@@ -46,8 +48,13 @@ func ExprFlag(expr ExprNode) uint64 {
 		}
 		flag |= functionOptionFlags(nil, x.Spec.OrderBy, nil)
 		if x.Spec.Frame != nil {
-			for _, bound := range []*FrameBound{&x.Spec.Frame.Extent.Start, &x.Spec.Frame.Extent.End} {
-				flag |= expressionFlags(bound.Expr, bound.Unit)
+			core := x.Spec.Frame.WindowFrameClauseCore()
+			if core != nil {
+				for _, bound := range []pkast.WindowFrameBoundNode{core.Extent.Start, core.Extent.End} {
+					if bound != nil && bound.WindowFrameBoundCore() != nil {
+						flag |= ExprFlag(bound.WindowFrameBoundCore().Expr)
+					}
+				}
 			}
 		}
 		return flag | functionOptionFlags(x.Filter, x.OrderBy, x.WithinGroup)

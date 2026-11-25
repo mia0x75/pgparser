@@ -782,6 +782,7 @@ func TestRestoreAdditionalPostgreSQLSyntax(t *testing.T) {
 		{"groups exclusion", `SELECT sum(i) OVER (ORDER BY i GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE TIES) FROM t`, []string{`GROUPS BETWEEN 1 PRECEDING AND CURRENT ROW EXCLUDE TIES`}},
 		{"rows exclusion", `SELECT sum(i) OVER (ROWS UNBOUNDED PRECEDING EXCLUDE CURRENT ROW) FROM t`, []string{`EXCLUDE CURRENT ROW`}},
 		{"range exclusion", `SELECT sum(i) OVER (RANGE UNBOUNDED PRECEDING EXCLUDE GROUP) FROM t`, []string{`EXCLUDE GROUP`}},
+		{"no others exclusion", `SELECT sum(i) OVER (ROWS UNBOUNDED PRECEDING EXCLUDE NO OTHERS) FROM t`, []string{`EXCLUDE NO OTHERS`}},
 		{"default insert", `INSERT INTO t DEFAULT VALUES RETURNING i`, []string{`DEFAULT VALUES RETURNING`}},
 		{"index metadata", `CREATE INDEX i ON t ((a + 1) COLLATE "C" s.ops (distance = 2) DESC NULLS LAST)`, []string{`COLLATE "C" "s"."ops"`, `("distance" = 2) DESC NULLS LAST`}},
 		{"empty table", `CREATE TABLE t ()`, []string{`CREATE TABLE "t" ()`}},

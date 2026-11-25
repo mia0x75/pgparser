@@ -3682,26 +3682,29 @@ func (n *PartitionByClause) Accept(v Visitor) (Node, bool) {
 }
 
 // FrameType is the type of window function frame.
-type FrameType int
+type FrameType = pkast.WindowFrameType
 
 // Window function frame types: ROWS, RANGE and GROUPS.
 const (
-	Rows = iota
-	Ranges
-	Groups
+	Rows   = pkast.WindowFrameRows
+	Ranges = pkast.WindowFrameRange
+	Groups = pkast.WindowFrameGroups
 )
 
 // FrameClause represents frame clause.
 type FrameClause struct {
-	node
-
-	Type      FrameType
-	Extent    FrameExtent
-	Exclusion int64
+	pkast.BaseWindowFrameClause
 }
 
 // Restore implements Node interface.
 func (n *FrameClause) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return errors.New("restore FrameClause: nil frame")
+	}
+	if n.Extent.Start == nil || n.Extent.Start.WindowFrameBoundCore() == nil ||
+		n.Extent.End == nil || n.Extent.End.WindowFrameBoundCore() == nil {
+		return errors.New("window frame requires start and end bounds")
+	}
 	switch n.Type {
 	case Rows:
 		ctx.WriteKeyword("ROWS")
@@ -3721,13 +3724,15 @@ func (n *FrameClause) Restore(ctx *format.RestoreCtx) error {
 		return errors.Annotate(err, "An error occurred while restore FrameClause.Extent.End")
 	}
 	switch n.Exclusion {
-	case 0:
-	case int64(FRAMEOPTION_EXCLUDE_CURRENT_ROW):
+	case pkast.WindowFrameExcludeNone:
+	case pkast.WindowFrameExcludeCurrentRow:
 		ctx.WriteKeyword(" EXCLUDE CURRENT ROW")
-	case int64(FRAMEOPTION_EXCLUDE_GROUP):
+	case pkast.WindowFrameExcludeGroup:
 		ctx.WriteKeyword(" EXCLUDE GROUP")
-	case int64(FRAMEOPTION_EXCLUDE_TIES):
+	case pkast.WindowFrameExcludeTies:
 		ctx.WriteKeyword(" EXCLUDE TIES")
+	case pkast.WindowFrameExcludeNoOthers:
+		ctx.WriteKeyword(" EXCLUDE NO OTHERS")
 	default:
 		return errors.New("invalid window frame exclusion")
 	}
@@ -3746,17 +3751,19 @@ func (n *FrameClause) Format(w io.Writer) {
 		_, _ = fmt.Fprint(w, "GROUPS")
 	}
 	_, _ = fmt.Fprint(w, " BETWEEN ")
-	n.Extent.Start.Format(w)
+	formatFrameBound(w, n.Extent.Start)
 	_, _ = fmt.Fprint(w, " AND ")
-	n.Extent.End.Format(w)
+	formatFrameBound(w, n.Extent.End)
 	switch n.Exclusion {
-	case 0:
-	case int64(FRAMEOPTION_EXCLUDE_CURRENT_ROW):
+	case pkast.WindowFrameExcludeNone:
+	case pkast.WindowFrameExcludeCurrentRow:
 		_, _ = fmt.Fprint(w, " EXCLUDE CURRENT ROW")
-	case int64(FRAMEOPTION_EXCLUDE_GROUP):
+	case pkast.WindowFrameExcludeGroup:
 		_, _ = fmt.Fprint(w, " EXCLUDE GROUP")
-	case int64(FRAMEOPTION_EXCLUDE_TIES):
+	case pkast.WindowFrameExcludeTies:
 		_, _ = fmt.Fprint(w, " EXCLUDE TIES")
+	case pkast.WindowFrameExcludeNoOthers:
+		_, _ = fmt.Fprint(w, " EXCLUDE NO OTHERS")
 	}
 }
 
@@ -3767,57 +3774,79 @@ func (n *FrameClause) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*FrameClause)
-	node, ok := n.Extent.Start.Accept(v)
-	if !ok {
-		return n, false
+	if n.Extent.Start != nil {
+		node, ok := n.Extent.Start.Accept(v)
+		if !ok {
+			return n, false
+		}
+		bound, ok := node.(pkast.WindowFrameBoundNode)
+		if !ok || bound == nil || bound.WindowFrameBoundCore() == nil {
+			return n, false
+		}
+		n.Extent.Start = bound
 	}
-	n.Extent.Start = *node.(*FrameBound)
-	node, ok = n.Extent.End.Accept(v)
-	if !ok {
-		return n, false
+	if n.Extent.End != nil {
+		node, ok := n.Extent.End.Accept(v)
+		if !ok {
+			return n, false
+		}
+		bound, ok := node.(pkast.WindowFrameBoundNode)
+		if !ok || bound == nil || bound.WindowFrameBoundCore() == nil {
+			return n, false
+		}
+		n.Extent.End = bound
 	}
-	n.Extent.End = *node.(*FrameBound)
 	return v.Leave(n)
 }
 
 // FrameExtent represents frame extent.
-type FrameExtent struct {
-	Start FrameBound
-	End   FrameBound
+type FrameExtent = pkast.WindowFrameExtent
+
+func formatFrameBound(w io.Writer, bound pkast.WindowFrameBoundNode) {
+	if b, ok := bound.(*FrameBound); ok {
+		b.Format(w)
+	}
 }
 
 // BoundType is the type of window function frame bound.
-type BoundType int
+type BoundType = pkast.WindowFrameBoundType
 
 // Frame bound types.
 const (
-	Following = iota
-	Preceding
-	CurrentRow
+	Following  = pkast.WindowFrameFollowing
+	Preceding  = pkast.WindowFramePreceding
+	CurrentRow = pkast.WindowFrameCurrentRow
 )
 
 // FrameBound represents frame bound.
 type FrameBound struct {
-	node
+	pkast.BaseWindowFrameBound
+}
 
-	Type      BoundType
-	UnBounded bool
-	Expr      ExprNode
-	// `Unit` is used to indicate the units in which the `Expr` should be interpreted.
-	// For example: '2:30' MINUTE_SECOND.
-	Unit ExprNode
+// WindowFrameBoundCore reports a missing bound before role-based dispatch.
+func (n *FrameBound) WindowFrameBoundCore() *pkast.BaseWindowFrameBound {
+	if n == nil {
+		return nil
+	}
+	return &n.BaseWindowFrameBound
 }
 
 // Restore implements Node interface.
 func (n *FrameBound) Restore(ctx *format.RestoreCtx) error {
-	if n.UnBounded {
+	if n == nil {
+		return errors.New("restore FrameBound: nil bound")
+	}
+	if n.Type != CurrentRow && n.Type != Preceding && n.Type != Following {
+		return errors.New("invalid window frame bound type")
+	}
+	if n.Unbounded {
 		ctx.WriteKeyword("UNBOUNDED")
 	}
 	switch n.Type {
 	case CurrentRow:
 		ctx.WriteKeyword("CURRENT ROW")
 	case Preceding, Following:
-		if n.Unit != nil {
+		if n.Unit.Present() {
 			ctx.WriteKeyword("INTERVAL ")
 		}
 		if n.Expr != nil {
@@ -3825,15 +3854,9 @@ func (n *FrameBound) Restore(ctx *format.RestoreCtx) error {
 				return errors.Annotate(err, "An error occurred while restore FrameBound.Expr")
 			}
 		}
-		if n.Unit != nil {
-			// Here the Unit string should not be quoted.
-			// TODO: This is a temporary workaround that should be changed once something like "Keyword Expression" is implemented.
-			var sb strings.Builder
-			if err := n.Unit.Restore(format.NewRestoreCtx(0, &sb)); err != nil {
-				return errors.Annotate(err, "An error occurred while restore FrameBound.Unit")
-			}
+		if n.Unit.Present() {
 			ctx.WritePlain(" ")
-			ctx.WriteKeyword(sb.String())
+			ctx.WriteKeyword(n.Unit.Name)
 		}
 		if n.Type == Preceding {
 			ctx.WriteKeyword(" PRECEDING")
@@ -3846,22 +3869,22 @@ func (n *FrameBound) Restore(ctx *format.RestoreCtx) error {
 
 // Format formats the FrameBound into a Writer.
 func (n *FrameBound) Format(w io.Writer) {
-	if n.UnBounded {
+	if n.Unbounded {
 		_, _ = fmt.Fprint(w, "UNBOUNDED ")
 	}
 	switch n.Type {
 	case CurrentRow:
 		_, _ = fmt.Fprint(w, "CURRENT ROW")
 	case Preceding, Following:
-		if n.Unit != nil {
+		if n.Unit.Present() {
 			_, _ = fmt.Fprint(w, "INTERVAL ")
 		}
 		if n.Expr != nil {
 			FormatExpr(n.Expr, w)
 		}
-		if n.Unit != nil {
+		if n.Unit.Present() {
 			_, _ = fmt.Fprint(w, " ")
-			FormatExpr(n.Unit, w)
+			_, _ = fmt.Fprint(w, n.Unit.Name)
 		}
 		if n.Type == Preceding {
 			_, _ = fmt.Fprint(w, " PRECEDING")
@@ -3884,13 +3907,6 @@ func (n *FrameBound) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		n.Expr = node.(ExprNode)
-	}
-	if n.Unit != nil {
-		node, ok := n.Unit.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Unit = node.(ExprNode)
 	}
 	return v.Leave(n)
 }

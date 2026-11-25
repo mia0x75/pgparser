@@ -286,6 +286,19 @@ func TestSharedConstructors(t *testing.T) {
 	}
 }
 
+// TestWindowFrameRestoreRejectsMissingBounds checks the interface bound slots
+// that replaced the old value fields: a hand-built frame must fail cleanly
+// instead of panicking during restore.
+func TestWindowFrameRestoreRejectsMissingBounds(t *testing.T) {
+	t.Parallel()
+
+	var sb strings.Builder
+	ctx := format.NewRestoreCtx(&sb, format.DialectConfig{}, 0)
+	if err := (&ast.FrameClause{}).Restore(ctx); err == nil {
+		t.Fatal("expected an error for a frame without bounds")
+	}
+}
+
 // TestSharedBasesDoNotDispatch checks that shared bases never gain Node methods.
 func TestSharedBasesDoNotDispatch(t *testing.T) {
 	t.Parallel()

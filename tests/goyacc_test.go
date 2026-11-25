@@ -756,7 +756,9 @@ func TestParseSQLDistinctOnAndWindowFrame(t *testing.T) {
 	if !ok || wf.Spec.Frame == nil || wf.Spec.Frame.Type != ast.Rows {
 		t.Fatalf("unexpected window frame: %#v", w.Fields.Fields[0].Expr)
 	}
-	if !wf.Spec.Frame.Extent.Start.UnBounded || wf.Spec.Frame.Extent.End.Type != ast.CurrentRow {
+	start := wf.Spec.Frame.Extent.Start.WindowFrameBoundCore()
+	end := wf.Spec.Frame.Extent.End.WindowFrameBoundCore()
+	if !start.Unbounded || end.Type != ast.CurrentRow {
 		t.Fatalf("unexpected frame extent: %#v", wf.Spec.Frame.Extent)
 	}
 }

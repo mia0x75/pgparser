@@ -12,6 +12,7 @@ import (
 	"math"
 	"strings"
 
+	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
@@ -48,6 +49,7 @@ import (
 	iqual      *importQualification
 	frame      ast.FrameExtent
 	bound      *ast.FrameBound
+	exclusion  pkast.WindowFrameExclusion
 	ctes       []*ast.CommonTableExpression
 	colnames   []*ast.ColumnName
 	colopts    []*ast.ColumnOption
@@ -199,7 +201,7 @@ import (
 %type <bound>  frame_bound
 %type <str>   opt_existing_window_name
 %type <exprs>  opt_partition_clause
-%type <ival>  opt_window_exclusion_clause
+%type <exclusion> opt_window_exclusion_clause
 %type <node>  within_group_clause
 %type <expr>  filter_clause
 %type <node>  func_expr_windowless
@@ -8935,15 +8937,15 @@ opt_partition_clause:
 opt_frame_clause:
 	RANGE frame_extent opt_window_exclusion_clause
 		{
-			$$ = &ast.FrameClause{Type: ast.Ranges, Extent: $2, Exclusion: $3}
+			$$ = &ast.FrameClause{BaseWindowFrameClause: pkast.BaseWindowFrameClause{Type: ast.Ranges, Extent: $2, Exclusion: $3}}
 		}
 	| ROWS frame_extent opt_window_exclusion_clause
 		{
-			$$ = &ast.FrameClause{Type: ast.Rows, Extent: $2, Exclusion: $3}
+			$$ = &ast.FrameClause{BaseWindowFrameClause: pkast.BaseWindowFrameClause{Type: ast.Rows, Extent: $2, Exclusion: $3}}
 		}
 	| GROUPS frame_extent opt_window_exclusion_clause
 		{
-			$$ = &ast.FrameClause{Type: ast.Groups, Extent: $2, Exclusion: $3}
+			$$ = &ast.FrameClause{BaseWindowFrameClause: pkast.BaseWindowFrameClause{Type: ast.Groups, Extent: $2, Exclusion: $3}}
 		}
 	| /* EMPTY */
 		{
@@ -8954,19 +8956,19 @@ opt_frame_clause:
 frame_extent:
 	frame_bound
 		{
-			$$ = ast.FrameExtent{Start: *$1, End: ast.FrameBound{Type: ast.CurrentRow}}
+			$$ = ast.FrameExtent{Start: $1, End: &ast.FrameBound{Type: ast.CurrentRow}}
 		}
 	| BETWEEN frame_bound AND frame_bound
 		{
-			$$ = ast.FrameExtent{Start: *$2, End: *$4}
+			$$ = ast.FrameExtent{Start: $2, End: $4}
 		}
 	;
 
 frame_bound:
 	UNBOUNDED PRECEDING
-		{ $$ = &ast.FrameBound{Type: ast.Preceding, UnBounded: true} }
+		{ $$ = &ast.FrameBound{Type: ast.Preceding, Unbounded: true} }
 	| UNBOUNDED FOLLOWING
-		{ $$ = &ast.FrameBound{Type: ast.Following, UnBounded: true} }
+		{ $$ = &ast.FrameBound{Type: ast.Following, Unbounded: true} }
 	| CURRENT_P ROW
 		{ $$ = &ast.FrameBound{Type: ast.CurrentRow} }
 	| a_expr PRECEDING
@@ -8976,11 +8978,11 @@ frame_bound:
 	;
 
 opt_window_exclusion_clause:
-	EXCLUDE CURRENT_P ROW		{ $$ = int64(ast.FRAMEOPTION_EXCLUDE_CURRENT_ROW) }
-	| EXCLUDE GROUP_P			{ $$ = int64(ast.FRAMEOPTION_EXCLUDE_GROUP) }
-	| EXCLUDE TIES				{ $$ = int64(ast.FRAMEOPTION_EXCLUDE_TIES) }
-	| EXCLUDE NO OTHERS			{ $$ = 0 }
-	| /* EMPTY */				{ $$ = 0 }
+	EXCLUDE CURRENT_P ROW		{ $$ = pkast.WindowFrameExcludeCurrentRow }
+	| EXCLUDE GROUP_P			{ $$ = pkast.WindowFrameExcludeGroup }
+	| EXCLUDE TIES				{ $$ = pkast.WindowFrameExcludeTies }
+	| EXCLUDE NO OTHERS			{ $$ = pkast.WindowFrameExcludeNoOthers }
+	| /* EMPTY */				{ $$ = pkast.WindowFrameExcludeNone }
 	;
 
 func_application:

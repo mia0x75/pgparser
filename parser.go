@@ -8,6 +8,7 @@ import (
 	"math"
 	"strings"
 
+	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
@@ -42,6 +43,7 @@ type yySymType struct {
 	iqual       *importQualification
 	frame       ast.FrameExtent
 	bound       *ast.FrameBound
+	exclusion   pkast.WindowFrameExclusion
 	ctes        []*ast.CommonTableExpression
 	colnames    []*ast.ColumnName
 	colopts     []*ast.ColumnOption
@@ -27529,17 +27531,17 @@ yydefault:
 	case 1429:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.node = &ast.FrameClause{Type: ast.Ranges, Extent: yyDollar[2].frame, Exclusion: yyDollar[3].ival}
+			yyVAL.node = &ast.FrameClause{BaseWindowFrameClause: pkast.BaseWindowFrameClause{Type: ast.Ranges, Extent: yyDollar[2].frame, Exclusion: yyDollar[3].exclusion}}
 		}
 	case 1430:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.node = &ast.FrameClause{Type: ast.Rows, Extent: yyDollar[2].frame, Exclusion: yyDollar[3].ival}
+			yyVAL.node = &ast.FrameClause{BaseWindowFrameClause: pkast.BaseWindowFrameClause{Type: ast.Rows, Extent: yyDollar[2].frame, Exclusion: yyDollar[3].exclusion}}
 		}
 	case 1431:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.node = &ast.FrameClause{Type: ast.Groups, Extent: yyDollar[2].frame, Exclusion: yyDollar[3].ival}
+			yyVAL.node = &ast.FrameClause{BaseWindowFrameClause: pkast.BaseWindowFrameClause{Type: ast.Groups, Extent: yyDollar[2].frame, Exclusion: yyDollar[3].exclusion}}
 		}
 	case 1432:
 		yyDollar = yyS[yypt-0 : yypt+1]
@@ -27549,22 +27551,22 @@ yydefault:
 	case 1433:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.frame = ast.FrameExtent{Start: *yyDollar[1].bound, End: ast.FrameBound{Type: ast.CurrentRow}}
+			yyVAL.frame = ast.FrameExtent{Start: yyDollar[1].bound, End: &ast.FrameBound{Type: ast.CurrentRow}}
 		}
 	case 1434:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.frame = ast.FrameExtent{Start: *yyDollar[2].bound, End: *yyDollar[4].bound}
+			yyVAL.frame = ast.FrameExtent{Start: yyDollar[2].bound, End: yyDollar[4].bound}
 		}
 	case 1435:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.bound = &ast.FrameBound{Type: ast.Preceding, UnBounded: true}
+			yyVAL.bound = &ast.FrameBound{Type: ast.Preceding, Unbounded: true}
 		}
 	case 1436:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.bound = &ast.FrameBound{Type: ast.Following, UnBounded: true}
+			yyVAL.bound = &ast.FrameBound{Type: ast.Following, Unbounded: true}
 		}
 	case 1437:
 		yyDollar = yyS[yypt-2 : yypt+1]
@@ -27584,27 +27586,27 @@ yydefault:
 	case 1440:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.ival = int64(ast.FRAMEOPTION_EXCLUDE_CURRENT_ROW)
+			yyVAL.exclusion = pkast.WindowFrameExcludeCurrentRow
 		}
 	case 1441:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.ival = int64(ast.FRAMEOPTION_EXCLUDE_GROUP)
+			yyVAL.exclusion = pkast.WindowFrameExcludeGroup
 		}
 	case 1442:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.ival = int64(ast.FRAMEOPTION_EXCLUDE_TIES)
+			yyVAL.exclusion = pkast.WindowFrameExcludeTies
 		}
 	case 1443:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.ival = 0
+			yyVAL.exclusion = pkast.WindowFrameExcludeNoOthers
 		}
 	case 1444:
 		yyDollar = yyS[yypt-0 : yypt+1]
 		{
-			yyVAL.ival = 0
+			yyVAL.exclusion = pkast.WindowFrameExcludeNone
 		}
 	case 1445:
 		yyDollar = yyS[yypt-3 : yypt+1]
