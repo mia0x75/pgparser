@@ -1,11 +1,103 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/mia0x75/parserkit/lex"
 
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/auth"
+	"github.com/mia0x75/pgparser/postgres"
 )
+
+// userSpecs returns the user specifications of a grantee list.
+func userSpecs(l *ast.List) []*ast.UserSpec {
+	if l == nil {
+		return nil
+	}
+	var result []*ast.UserSpec
+	for _, item := range l.Items {
+		switch v := item.(type) {
+		case *ast.RoleSpec:
+			result = append(result, &ast.UserSpec{
+				User:   &auth.UserIdentity{Username: v.Rolename.Name},
+				IsRole: true,
+				Role:   v,
+			})
+		case *ast.String:
+			result = append(result, &ast.UserSpec{
+				User:   &auth.UserIdentity{Username: v.Str},
+				IsRole: true,
+			})
+		}
+	}
+	return result
+}
+
+// Role membership uses privilege_list grammar, but the names are identifiers.
+func grantRoleNames(l *ast.List, lexer yyLexer) *ast.List {
+	if l == nil {
+		return nil
+	}
+	for i, item := range l.Items {
+		priv, ok := item.(*ast.AccessPriv)
+		if !ok || priv.Cols != nil {
+			lexer.Error("invalid role name list")
+			return nil
+		}
+		l.Items[i] = &ast.RoleSpec{Roletype: int(ast.ROLESPEC_CSTRING), Rolename: syntaxIdent(lexer, priv.PrivName, priv.Span())}
+	}
+	return l
+}
+
+// PostgreSQL's grammar uses nil or an unnamed privilege for ALL.
+func privElems(l *ast.List) []*ast.PrivElem {
+	if l == nil {
+		return []*ast.PrivElem{{Priv: postgres.AllPriv, Name: "all"}}
+	}
+	var result []*ast.PrivElem
+	for _, item := range l.Items {
+		priv, ok := item.(*ast.AccessPriv)
+		if !ok {
+			continue
+		}
+		name := priv.PrivName
+		if name == "" {
+			name = "all"
+		}
+		elem := &ast.PrivElem{Priv: privilegeType(name), Name: name}
+		if priv.Cols != nil {
+			elem.Cols = columnNamesFromList(priv.Cols)
+		}
+		result = append(result, elem)
+	}
+	return result
+}
+
+// privilegeType returns the privilege type of a privilege name.
+func privilegeType(name string) postgres.PrivilegeType {
+	switch strings.ToUpper(name) {
+	case "SELECT":
+		return postgres.SelectPriv
+	case "INSERT":
+		return postgres.InsertPriv
+	case "UPDATE":
+		return postgres.UpdatePriv
+	case "DELETE":
+		return postgres.DeletePriv
+	case "ALL":
+		return postgres.AllPriv
+	case "CREATE":
+		return postgres.CreatePriv
+	case "DROP":
+		return postgres.DropPriv
+	case "INDEX":
+		return postgres.IndexPriv
+	case "ALTER":
+		return postgres.AlterPriv
+	}
+	return postgres.PrivilegeType(0)
+}
 
 // createUserStmt returns the create user statement of a role.
 func createUserStmt(role bool, name lex.Ident, options *ast.List) ast.Node {
