@@ -162,12 +162,12 @@ import (
 %type <expr>  where_clause where_or_current_clause
 %type <list>  func_name
 %type <froms>  from_clause
-%type <node>  table_ref relation_expr joined_table
+%type <node>  table_ref relation_expr JoinTable
 %type <node>  func_table tablesample_clause
 %type <boolean>  opt_ordinality resource_group_type opt_force
 %type <boolean>  opt_table
 %type <expr>  opt_repeatable_clause
-%type <jtype>  join_type
+%type <jtype>  JoinType
 %type <list>  stmtmulti
 %type <fields>  opt_target_list
 %type <fields>  target_list
@@ -175,9 +175,9 @@ import (
 %type <grpclause> group_clause
 %type <list>  group_by_list
 %type <node>  group_by_item
-%type <expr>  having_clause
+%type <expr>  HavingClause
 %type <node>  empty_grouping_set cube_clause rollup_clause grouping_sets_clause
-%type <node>  sort_clause opt_sort_clause
+%type <node>  OrderBy OrderByOptional
 %type <list>  sortby_list
 %type <exprs>  expr_list
 %type <list>  opt_indirection indirection func_arg_list func_arg_list_opt
@@ -196,9 +196,9 @@ import (
 %type <ival>   set_quantifier
 %type <exprs>  distinct_clause
 %type <exprs>
-%type <node>  with_clause opt_with_clause common_table_expr
+%type <node>  WithClause opt_with_clause WithClauseItem
 %type <ival>  opt_materialized
-%type <ctes>  cte_list
+%type <ctes>  WithList
 %type <list>  window_clause window_definition_list
 %type <node>  window_definition window_specification over_clause opt_frame_clause
 %type <frame>  frame_extent
@@ -7317,31 +7317,31 @@ select_no_parens:
 		{
 			$$ = $1
 		}
-	| select_clause sort_clause
+	| select_clause OrderBy
 		{
 			$$ = setSelectOptions($1, $2, nil, nil)
 		}
-	| select_clause opt_sort_clause for_locking_clause opt_select_limit
+	| select_clause OrderByOptional for_locking_clause opt_select_limit
 		{
 			$$ = setSelectOptions($1, $2, $3, $4)
 		}
-	| select_clause opt_sort_clause select_limit opt_for_locking_clause
+	| select_clause OrderByOptional select_limit opt_for_locking_clause
 		{
 			$$ = setSelectOptions($1, $2, $4, $3)
 		}
-	| with_clause select_clause
+	| WithClause select_clause
 		{
 			$$ = setWithClause($2, $1)
 		}
-	| with_clause select_clause sort_clause
+	| WithClause select_clause OrderBy
 		{
 			$$ = setSelectOptions(setWithClause($2, $1), $3, nil, nil)
 		}
-	| with_clause select_clause opt_sort_clause for_locking_clause opt_select_limit
+	| WithClause select_clause OrderByOptional for_locking_clause opt_select_limit
 		{
 			$$ = setSelectOptions(setWithClause($2, $1), $3, $4, $5)
 		}
-	| with_clause select_clause opt_sort_clause select_limit opt_for_locking_clause
+	| WithClause select_clause OrderByOptional select_limit opt_for_locking_clause
 		{
 			$$ = setSelectOptions(setWithClause($2, $1), $3, $5, $4)
 		}
@@ -7359,7 +7359,7 @@ select_clause:
 	;
 
 simple_select:
-	SELECT opt_all_clause opt_target_list into_clause from_clause where_clause group_clause having_clause window_clause
+	SELECT opt_all_clause opt_target_list into_clause from_clause where_clause group_clause HavingClause window_clause
 		{
 			n := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
@@ -7371,7 +7371,7 @@ simple_select:
 			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
-	| SELECT distinct_clause target_list into_clause from_clause where_clause group_clause having_clause window_clause
+	| SELECT distinct_clause target_list into_clause from_clause where_clause group_clause HavingClause window_clause
 		{
 			n := &ast.SelectStmt{
 				Distinct:      true,
@@ -7452,37 +7452,37 @@ set_quantifier:
  *****************************************************************************/
 
 opt_with_clause:
-	with_clause { $$ = $1 }
+	WithClause { $$ = $1 }
 	| /* EMPTY */ { $$ = nil }
 	;
 
-with_clause:
-	WITH cte_list
+WithClause:
+	WITH WithList
 		{
 			$$ = &ast.WithClause{BaseWithClause: pkast.BaseWithClause{CTEs: $2}}
 		}
-	| WITH_LA cte_list
+	| WITH_LA WithList
 		{
 			$$ = &ast.WithClause{BaseWithClause: pkast.BaseWithClause{CTEs: $2}}
 		}
-	| WITH RECURSIVE cte_list
+	| WITH RECURSIVE WithList
 		{
 			$$ = &ast.WithClause{BaseWithClause: pkast.BaseWithClause{CTEs: $3, IsRecursive: true}}
 		}
 	;
 
-cte_list:
-	common_table_expr
+WithList:
+	WithClauseItem
 		{
 			$$ = []ast.CTENode{$1.(ast.CTENode)}
 		}
-	| cte_list ',' common_table_expr
+	| WithList ',' WithClauseItem
 		{
 			$$ = append($1, $3.(ast.CTENode))
 		}
 	;
 
-common_table_expr:
+WithClauseItem:
 	name opt_name_list AS opt_materialized '(' PreparableStmt ')' opt_search_clause opt_cycle_clause
 		{
 			cte := &ast.CommonTableExpression{BaseCommonTableExpression: pkast.BaseCommonTableExpression{
@@ -7653,7 +7653,7 @@ table_ref:
 			applySourceAlias(ts, $2)
 			$$ = ts
 		}
-	| joined_table
+	| JoinTable
 		{
 			$$ = $1
 			$$.SetSpan(yyVAL.span)
@@ -7688,7 +7688,7 @@ table_ref:
 			applySourceAlias(ts, $3)
 			$$ = ts
 		}
-	| '(' joined_table ')' opt_alias_clause
+	| '(' JoinTable ')' opt_alias_clause
 		{
 			ts := syntaxTableSource($2.(ast.ResultSetNode), yyVAL.span)
 			applySourceAlias(ts, $4)
@@ -7722,12 +7722,12 @@ table_ref:
 		}
 	;
 
-joined_table:
+JoinTable:
 	table_ref CROSS JOIN table_ref
 		{
 			$$ = makeJoin(pkast.JoinTypeCross, $1, $4, nil, false)
 		}
-	| table_ref join_type JOIN table_ref join_qual
+	| table_ref JoinType JOIN table_ref join_qual
 		{
 			$$ = makeJoin($2, $1, $4, $5, false)
 		}
@@ -7735,7 +7735,7 @@ joined_table:
 		{
 			$$ = makeJoin(pkast.JoinTypeInner, $1, $3, $4, false)
 		}
-	| table_ref NATURAL join_type JOIN table_ref
+	| table_ref NATURAL JoinType JOIN table_ref
 		{
 			$$ = makeJoin($3, $1, $5, nil, true)
 		}
@@ -7745,7 +7745,7 @@ joined_table:
 		}
 	;
 
-join_type:
+JoinType:
 	FULL opt_outer      { $$ = pkast.JoinTypeFull }
 	| LEFT opt_outer    { $$ = pkast.JoinTypeLeft }
 	| RIGHT opt_outer   { $$ = pkast.JoinTypeRight }
@@ -7993,18 +7993,18 @@ grouping_sets_clause:
 	;
 
 // HAVING clause
-having_clause:
+HavingClause:
 	HAVING a_expr { $$ = $2 }
 	| /* EMPTY */ { $$ = nil }
 	;
 
 // Sort clause
-sort_clause:
+OrderBy:
 	ORDER BY sortby_list { $$ = orderByFromList($3) }
 	;
 
-opt_sort_clause:
-	sort_clause { $$ = $1 }
+OrderByOptional:
+	OrderBy { $$ = $1 }
 	| /* EMPTY */ { $$ = nil }
 	;
 
@@ -8873,7 +8873,7 @@ func_expr_windowless:
 	;
 
 within_group_clause:
-	WITHIN GROUP_P '(' sort_clause ')'	{ $$ = $4 }
+	WITHIN GROUP_P '(' OrderBy ')'	{ $$ = $4 }
 	| /* EMPTY */						{ $$ = nil }
 	;
 
@@ -8911,7 +8911,7 @@ window_definition:
 	;
 
 window_specification:
-	'(' opt_existing_window_name opt_partition_clause opt_sort_clause opt_frame_clause ')'
+	'(' opt_existing_window_name opt_partition_clause OrderByOptional opt_frame_clause ')'
 		{
 			spec := &ast.WindowSpec{Ref: syntaxIdent(yylex, $2, yyS[yypt-4].span)}
 			if $3 != nil {
@@ -8993,16 +8993,16 @@ func_application:
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1))
 		}
-	| func_name '(' func_arg_list opt_sort_clause ')'
+	| func_name '(' func_arg_list OrderByOptional ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($3)...)
 			if $4 != nil { $$.(*ast.FuncCallExpr).OrderBy = $4.(*ast.OrderByClause) }
 		}
-	| func_name '(' VARIADIC func_arg_expr opt_sort_clause ')'
+	| func_name '(' VARIADIC func_arg_expr OrderByOptional ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), $4)
 		}
-	| func_name '(' func_arg_list ',' VARIADIC func_arg_expr opt_sort_clause ')'
+	| func_name '(' func_arg_list ',' VARIADIC func_arg_expr OrderByOptional ')'
 		{
 			args := append(exprsFromList($3), $6)
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), args...)
@@ -9013,13 +9013,13 @@ func_application:
 			fn.Star = true
 			$$ = fn
 		}
-	| func_name '(' DISTINCT func_arg_list opt_sort_clause ')'
+	| func_name '(' DISTINCT func_arg_list OrderByOptional ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($4)...)
 			$$.(*ast.FuncCallExpr).Distinct = true
 			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
 		}
-	| func_name '(' ALL func_arg_list opt_sort_clause ')'
+	| func_name '(' ALL func_arg_list OrderByOptional ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($4)...)
 			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
@@ -10082,7 +10082,7 @@ AexprConst:
 		{
 			$$ = ast.NewTypeCastExpr(ast.NewValueExpr($2), typeNameFromList($1))
 		}
-	| func_name '(' func_arg_list opt_sort_clause ')' Sconst
+	| func_name '(' func_arg_list OrderByOptional ')' Sconst
 		{
 			tp := typeNameFromList($1)
 			if $4 != nil { yylex.Error("type modifier cannot have ORDER BY") }
