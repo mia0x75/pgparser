@@ -159,7 +159,7 @@ import (
 %type <node>  select_with_parens select_no_parens
 %type <expr>  a_expr b_expr c_expr columnref AexprConst func_expr func_application func_expr_common_subexpr
 %type <node>  target_el
-%type <expr>  where_clause where_or_current_clause
+%type <expr>  WhereClauseOptional where_or_current_clause
 %type <list>  func_name
 %type <froms>  from_clause
 %type <node>  table_ref relation_expr JoinTable
@@ -237,13 +237,13 @@ import (
 %type <node>  InsertStmt insert_rest
 %type <node>  insert_target
 %type <exprs>   insert_column_list
-%type <fields>  returning_clause
+%type <fields>  ReturningOpt
 %type <node>  insert_column_item
 %type <node>  opt_on_conflict
 %type <node>  values_clause
-%type <assignments>  set_clause_list
+%type <assignments>  AssignmentList
 %type <list>
-%type <node>  set_clause
+%type <node>  Assignment
 %type <node>  into_clause OptTempTableName
 %type <list>
 %type <node>
@@ -251,7 +251,7 @@ import (
 %type <joinqual> join_qual
 %type <node>
 %type <node>  UpdateStmt
-%type <node>  DeleteStmt
+%type <node>  DeleteFromStmt
 %type <froms>  using_clause
 %type <node>  relation_expr_opt_alias
 %type <node>  CreateStmt
@@ -615,7 +615,7 @@ stmt:
 		{
 			$$ = $1
 		}
-	| DeleteStmt
+	| DeleteFromStmt
 		{
 			$$ = $1
 		}
@@ -1128,7 +1128,7 @@ stmt:
  *****************************************************************************/
 
 InsertStmt:
-	opt_with_clause INSERT INTO insert_target insert_rest opt_on_conflict returning_clause
+	opt_with_clause INSERT INTO insert_target insert_rest opt_on_conflict ReturningOpt
 		{
 			n := $5.(*ast.InsertStmt)
 			if target, ok := $4.(*ast.TableSource); ok {
@@ -1221,7 +1221,7 @@ opt_on_conflict:
 				DoNothing: true,
 			}
 		}
-	| ON CONFLICT DO UPDATE SET set_clause_list where_clause
+	| ON CONFLICT DO UPDATE SET AssignmentList WhereClauseOptional
 		{
 			$$ = &ast.OnConflictClause{
 				UpdateList: $6,
@@ -1235,7 +1235,7 @@ opt_on_conflict:
 				DoNothing: true,
 			}
 		}
-	| ON CONFLICT '(' index_params ')' DO UPDATE SET set_clause_list where_clause
+	| ON CONFLICT '(' index_params ')' DO UPDATE SET AssignmentList WhereClauseOptional
 		{
 			$$ = &ast.OnConflictClause{
 				IndexCols:  indexElemColNames($4),
@@ -1250,7 +1250,7 @@ opt_on_conflict:
 				DoNothing:  true,
 			}
 		}
-	| ON CONFLICT ON CONSTRAINT name DO UPDATE SET set_clause_list where_clause
+	| ON CONFLICT ON CONSTRAINT name DO UPDATE SET AssignmentList WhereClauseOptional
 		{
 			$$ = &ast.OnConflictClause{
 				Constraint: $5,
@@ -1258,7 +1258,7 @@ opt_on_conflict:
 				UpdateWhere: $10,
 			}
 		}
-	| ON CONFLICT '(' index_params ')' where_clause DO NOTHING
+	| ON CONFLICT '(' index_params ')' WhereClauseOptional DO NOTHING
 		{
 			$$ = &ast.OnConflictClause{
 				IndexCols:  indexElemColNames($4),
@@ -1266,7 +1266,7 @@ opt_on_conflict:
 				DoNothing:  true,
 			}
 		}
-	| ON CONFLICT '(' index_params ')' where_clause DO UPDATE SET set_clause_list where_clause
+	| ON CONFLICT '(' index_params ')' WhereClauseOptional DO UPDATE SET AssignmentList WhereClauseOptional
 		{
 			$$ = &ast.OnConflictClause{
 				IndexCols:  indexElemColNames($4),
@@ -1281,7 +1281,7 @@ opt_on_conflict:
 		}
 	;
 
-returning_clause:
+ReturningOpt:
 	RETURNING target_list
 		{
 			$$ = $2
@@ -1292,18 +1292,18 @@ returning_clause:
 		}
 	;
 
-set_clause_list:
-	set_clause
+AssignmentList:
+	Assignment
 		{
 			$$ = []*ast.Assignment{$1.(*ast.Assignment)}
 		}
-	| set_clause_list ',' set_clause
+	| AssignmentList ',' Assignment
 		{
 			$$ = append($1, $3.(*ast.Assignment))
 		}
 	;
 
-set_clause:
+Assignment:
 	'(' columnList ')' '=' a_expr
 		{
 			$$ = &ast.Assignment{
@@ -1336,7 +1336,7 @@ set_clause:
  *****************************************************************************/
 
 UpdateStmt:
-	opt_with_clause UPDATE relation_expr_opt_alias SET set_clause_list from_clause where_or_current_clause returning_clause
+	opt_with_clause UPDATE relation_expr_opt_alias SET AssignmentList from_clause where_or_current_clause ReturningOpt
 		{
 			n := &ast.UpdateStmt{BaseUpdateStmt: pkast.BaseUpdateStmt{
 				Table:       $3.(*ast.TableSource),
@@ -1362,8 +1362,8 @@ UpdateStmt:
  *
  *****************************************************************************/
 
-DeleteStmt:
-	opt_with_clause DELETE_P FROM relation_expr_opt_alias using_clause where_or_current_clause returning_clause
+DeleteFromStmt:
+	opt_with_clause DELETE_P FROM relation_expr_opt_alias using_clause where_or_current_clause ReturningOpt
 		{
 			n := &ast.DeleteStmt{BaseDeleteStmt: pkast.BaseDeleteStmt{
 				Table: $4.(*ast.TableSource),
@@ -2273,7 +2273,7 @@ ConstraintElem:
 			applyConstraintAttrs(n, $11)
 			$$ = n
 		}
-	| EXCLUDE access_method_clause '(' ExclusionConstraintList ')' opt_c_include opt_definition OptConsTableSpace where_clause ConstraintAttributeSpec
+	| EXCLUDE access_method_clause '(' ExclusionConstraintList ')' opt_c_include opt_definition OptConsTableSpace WhereClauseOptional ConstraintAttributeSpec
 		{
 			n := &ast.Constraint{
 				Tp:             ast.ConstraintUniq,
@@ -4372,7 +4372,7 @@ any_name_list:
 
 IndexStmt:
 	CREATE opt_unique INDEX opt_concurrently IF_P NOT EXISTS opt_index_name
-	ON relation_expr access_method_clause '(' index_params ')' opt_include opt_unique_null_treatment opt_reloptions OptTableSpace where_clause
+	ON relation_expr access_method_clause '(' index_params ')' opt_include opt_unique_null_treatment opt_reloptions OptTableSpace WhereClauseOptional
 		{
 			$$ = &ast.CreateIndexStmt{
 				IndexName:     indexNameFromList(yylex, $8),
@@ -4390,7 +4390,7 @@ IndexStmt:
 			}
 		}
 	| CREATE opt_unique INDEX opt_concurrently opt_index_name
-	ON relation_expr access_method_clause '(' index_params ')' opt_include opt_unique_null_treatment opt_reloptions OptTableSpace where_clause
+	ON relation_expr access_method_clause '(' index_params ')' opt_include opt_unique_null_treatment opt_reloptions OptTableSpace WhereClauseOptional
 		{
 			$$ = &ast.CreateIndexStmt{
 				IndexName:     indexNameFromList(yylex, $5),
@@ -5198,7 +5198,7 @@ ExplainableStmt:
 	SelectStmt          { $$ = $1 }
 	| InsertStmt        { $$ = $1 }
 	| UpdateStmt        { $$ = $1 }
-	| DeleteStmt        { $$ = $1 }
+	| DeleteFromStmt    { $$ = $1 }
 	| MergeStmt         { $$ = $1 }
 	| DeclareCursorStmt { $$ = $1 }
 	| CreateAsStmt      { $$ = $1 }
@@ -5217,7 +5217,7 @@ ExplainableStmt:
 CopyStmt:
 	COPY opt_binary relation_expr opt_column_list
 			copy_from opt_program copy_file_name copy_delimiter copy_opt_with
-			copy_options where_clause
+			copy_options WhereClauseOptional
 		{
 			rv := relationName($3)
 			stmt := &ast.CopyStmt{
@@ -7359,7 +7359,7 @@ select_clause:
 	;
 
 simple_select:
-	SELECT opt_all_clause opt_target_list into_clause from_clause where_clause group_clause HavingClause window_clause
+	SELECT opt_all_clause opt_target_list into_clause from_clause WhereClauseOptional group_clause HavingClause window_clause
 		{
 			n := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
@@ -7371,7 +7371,7 @@ simple_select:
 			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
-	| SELECT distinct_clause target_list into_clause from_clause where_clause group_clause HavingClause window_clause
+	| SELECT distinct_clause target_list into_clause from_clause WhereClauseOptional group_clause HavingClause window_clause
 		{
 			n := &ast.SelectStmt{
 				Distinct:      true,
@@ -7918,7 +7918,7 @@ opt_repeatable_clause:
 	;
 
 // WHERE clause
-where_clause:
+WhereClauseOptional:
 	WHERE a_expr { $$ = $2 }
 	| /* EMPTY */ { $$ = nil }
 	;
@@ -11287,7 +11287,7 @@ PreparableStmt:
 	SelectStmt  { $$ = $1 }
 	| InsertStmt { $$ = $1 }
 	| UpdateStmt { $$ = $1 }
-	| DeleteStmt { $$ = $1 }
+	| DeleteFromStmt { $$ = $1 }
 	| MergeStmt  { $$ = $1 }
 	;
 
@@ -12111,7 +12111,7 @@ opt_from_in:
  *****************************************************************************/
 
 MergeStmt:
-	opt_with_clause MERGE INTO relation_expr_opt_alias USING table_ref ON a_expr merge_when_list returning_clause
+	opt_with_clause MERGE INTO relation_expr_opt_alias USING table_ref ON a_expr merge_when_list ReturningOpt
 		{
 			m := &ast.MergeStmt{
 				Table:  syntaxFromClause(resultSetNodeOf($4)),
@@ -12231,7 +12231,7 @@ opt_merge_when_condition:
 	;
 
 merge_update:
-	UPDATE SET set_clause_list
+	UPDATE SET AssignmentList
 		{
 			$$ = &ast.MergeWhenClause{
 				Tp:         ast.MergeWhenMatchedUpdate,
@@ -12968,7 +12968,7 @@ enable_trigger:
 
 RuleStmt:
 	CREATE opt_or_replace RULE name AS
-	ON event TO qualified_name where_clause
+	ON event TO qualified_name WhereClauseOptional
 	DO opt_instead RuleActionList
 		{
 			$$ = &ast.RuleStmt{
@@ -13015,7 +13015,7 @@ RuleActionStmt:
 	SelectStmt  { $$ = $1 }
 	| InsertStmt { $$ = $1 }
 	| UpdateStmt { $$ = $1 }
-	| DeleteStmt { $$ = $1 }
+	| DeleteFromStmt { $$ = $1 }
 	| NotifyStmt { $$ = $1 }
 	;
 
