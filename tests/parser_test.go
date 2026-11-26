@@ -2,12 +2,62 @@ package parser_test
 
 import (
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
+
+	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
 	pgparser "github.com/mia0x75/pgparser/parser"
 )
+
+func TestParse(t *testing.T) {
+	stmts, err := pgparser.New().Parse("SELECT 1")
+	if err != nil || len(stmts) != 1 {
+		t.Fatalf("Parse returned %d statements, error %v", len(stmts), err)
+	}
+}
+
+func TestParseResultNotOverwrittenByNextCall(t *testing.T) {
+	shared := pgparser.New()
+	first, err := shared.Parse("SELECT 1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstStmt := first[0]
+	if _, err := shared.Parse("SELECT 2"); err != nil {
+		t.Fatal(err)
+	}
+	if first[0] != firstStmt {
+		t.Fatal("a later parse replaced an earlier result")
+	}
+}
+
+func TestParserConcurrentUse(t *testing.T) {
+	const workers, iterations = 8, 20
+	shared := pgparser.New()
+	var group sync.WaitGroup
+	group.Add(workers)
+	for worker := range workers {
+		go func(worker int) {
+			defer group.Done()
+			for iteration := range iterations {
+				sql := "SELECT " + strings.Repeat("1", worker*iterations+iteration+1)
+				stmt, err := shared.ParseOneStmt(sql)
+				if err != nil {
+					t.Errorf("ParseOneStmt returned error: %v", err)
+					return
+				}
+				if got, want := stmt.Span(), (loc.Span{Start: 0, End: loc.ByteOffset(len(sql))}); got != want {
+					t.Errorf("statement span = %v, want %v", got, want)
+				}
+			}
+		}(worker)
+	}
+	group.Wait()
+}
 
 func mustParseOne(t *testing.T, sql string) ast.StmtNode {
 	t.Helper()

@@ -52,7 +52,7 @@ help:
 	@echo "  generate - Regenerate parser/parser_generated.go and AST from parser/grammar.y"
 	@echo "  generate-check - Fail if generated files differ from the grammar"
 	@echo "  test     - Run tests with race detector and coverage (includes corpus gate)"
-	@echo "  testdata - Run the corpus gate with per-statement diagnostics"
+	@echo "  testdata - Run the PostgreSQL corpus gate with per-statement diagnostics"
 	@echo "  vet      - Run go vet"
 	@echo "  race     - Run tests with race detector (no coverage overhead)"
 	@echo "  lint     - Run golangci-lint (fails if the tool is missing)"

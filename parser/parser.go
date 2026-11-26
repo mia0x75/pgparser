@@ -64,15 +64,9 @@ func appendParseDiagnostics(result []*diagnostic.Diagnostic, err error) []*diagn
 // ErrSyntax returns for sql syntax error.
 var ErrSyntax = errors.New("You have an error in your SQL syntax")
 
-// Parser represents a parser instance. Some temporary objects are stored in it
-// to reduce object allocations during Parse.
-//
-// A Parser is not safe for concurrent use: Parse stores its result and lexer
-// state on the receiver. Create one Parser per goroutine.
-type Parser struct {
-	result []ast.StmtNode
-	lexer  Scanner
-}
+// Parser represents a parser instance. It is safe for concurrent use because
+// each parse keeps its mutable state locally.
+type Parser struct{}
 
 // New returns a Parser object.
 func New() *Parser {
@@ -80,13 +74,12 @@ func New() *Parser {
 }
 
 // Parse parses a query string to raw ast.StmtNode.
-func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
-	parser.result = nil
+func (*Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
+	state := parseState{}
+	state.lexer.reset(sql)
+	ret := yyParse(&state.lexer)
 
-	parser.lexer.reset(sql)
-	ret := yyParse(&parser.lexer)
-
-	errs := parser.lexer.Errors()
+	errs := state.lexer.Errors()
 	if len(errs) != 0 {
 		// Keep a single error unwrappable so sqlerr class checks still match.
 		if len(errs) == 1 {
@@ -97,20 +90,20 @@ func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
 	if ret != 0 {
 		return nil, errors.Trace(sqlerr.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
 	}
-	if parser.lexer.result != nil {
-		for _, item := range parser.lexer.result.Items {
+	if state.lexer.result != nil {
+		for _, item := range state.lexer.result.Items {
 			if raw, ok := item.(*ast.RawStmt); ok {
 				if stmt, ok := raw.Stmt.(ast.StmtNode); ok {
-					parser.result = append(parser.result, stmt)
+					state.result = append(state.result, stmt)
 				}
 				continue
 			}
 			if stmt, ok := item.(ast.StmtNode); ok {
-				parser.result = append(parser.result, stmt)
+				state.result = append(state.result, stmt)
 			}
 		}
 	}
-	return parser.result, nil
+	return state.result, nil
 }
 
 // ParseOneStmt parses a query and returns an ast.StmtNode.

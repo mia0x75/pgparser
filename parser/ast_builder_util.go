@@ -43,63 +43,6 @@ func hasDefElem(l *ast.List, name string) bool {
 	return slices.Contains(defElemNames(l), name)
 }
 
-// tableNameFromList returns the table name of a qualified name list.
-func tableNameFromList(l *ast.List) *ast.TableName {
-	name := &ast.TableName{}
-	if l == nil {
-		return name
-	}
-	parts := make([]lex.Ident, 0, len(l.Items))
-	for _, item := range l.Items {
-		if s, ok := item.(*ast.String); ok {
-			parts = append(parts, lex.Ident{Name: s.Str})
-		}
-	}
-	name.Name = syntaxName(parts...)
-	return name
-}
-
-// tableNamesFromList returns the table names of a list.
-func tableNamesFromList(l *ast.List) []*ast.TableName {
-	if l == nil {
-		return nil
-	}
-	var result []*ast.TableName
-	for _, item := range l.Items {
-		switch v := item.(type) {
-		case *ast.TableName:
-			result = append(result, v)
-		case *ast.String:
-			result = append(result, syntaxTableName(nameFromString(v.Str)))
-		case *ast.List:
-			result = append(result, tableNameFromList(v))
-		case *ast.RangeVar:
-			result = append(result, syntaxTableName(nameFromParts(v.Schemaname, v.Relname)))
-		case *ast.TableSource:
-			if name, ok := v.Source.(*ast.TableName); ok {
-				result = append(result, name)
-			}
-		case *ast.VacuumRelation:
-			result = append(result, tableNameFromList(nil))
-		}
-	}
-	return result
-}
-
-// nameFromList returns the name of a qualified name list.
-func nameFromList(l *ast.List) string {
-	name := tableNameFromList(l)
-	return nameString(name.Name)
-}
-
-// indexName returns the index name of a cluster index specification.
-func indexName(name string) *ast.TableName {
-	if name == "" {
-		return nil
-	}
-	return syntaxTableName(nameFromString(name))
-}
-
 // reindexObjectName returns the object name of a reindex target type.
 func reindexObjectName(code int64) string {
 	switch ast.ReindexObjectType(code) {
@@ -117,31 +60,6 @@ func reindexObjectName(code int64) string {
 	return ""
 }
 
-// roleIdentity returns the role identity of a role specification.
-func roleIdentity(n ast.Node) *auth.RoleIdentity {
-	if spec, ok := n.(*ast.RoleSpec); ok {
-		return &auth.RoleIdentity{Username: spec.Rolename.Name}
-	}
-	return nil
-}
-
-// roleIdentities returns the role identities of a role list.
-func roleIdentities(l *ast.List) []*auth.RoleIdentity {
-	if l == nil {
-		return nil
-	}
-	var result []*auth.RoleIdentity
-	for _, item := range l.Items {
-		switch v := item.(type) {
-		case *ast.RoleSpec:
-			result = append(result, &auth.RoleIdentity{Username: v.Rolename.Name})
-		case *ast.String:
-			result = append(result, &auth.RoleIdentity{Username: v.Str})
-		}
-	}
-	return result
-}
-
 // mergeWhenClauses returns the when clauses of a merge statement.
 func mergeWhenClauses(l *ast.List) []*ast.MergeWhenClause {
 	if l == nil {
@@ -154,23 +72,6 @@ func mergeWhenClauses(l *ast.List) []*ast.MergeWhenClause {
 		}
 	}
 	return result
-}
-
-// relationName returns the table name of a relation expression.
-func relationName(n ast.Node) *ast.TableName {
-	switch v := n.(type) {
-	case *ast.TableName:
-		return v
-	case *ast.TableSource:
-		if name, ok := v.Source.(*ast.TableName); ok {
-			return name
-		}
-	case *ast.RangeVar:
-		table := syntaxTableName(nameFromParts(v.Catalogname, v.Schemaname, v.Relname))
-		table.Relpersistence = v.Relpersistence
-		return table
-	}
-	return nil
 }
 
 func makeReferenceDef(names, columns *ast.List, match int64, actions *KeyActions) *ast.ReferenceDef {
@@ -505,25 +406,6 @@ func commentNodeString(n ast.Node) string {
 		return ""
 	}
 	return sb.String()
-}
-
-// tableNamesFromNameList returns the table names of a name list.
-func tableNamesFromNameList(l *ast.List) []*ast.TableName {
-	if l == nil {
-		return nil
-	}
-	var result []*ast.TableName
-	for _, item := range l.Items {
-		switch v := item.(type) {
-		case *ast.String:
-			result = append(result, syntaxTableName(nameFromString(v.Str)))
-		case *ast.DataType:
-			result = append(result, syntaxTableName(nameFromString(v.Type.String())))
-		case *ast.List:
-			result = append(result, tableNameFromList(v))
-		}
-	}
-	return result
 }
 
 // exprList1 returns the list of a single expression.
@@ -1082,16 +964,6 @@ func doLanguage(l *ast.List) string {
 	return ""
 }
 
-// tableNameFromSource returns the table name of a table source.
-func tableNameFromSource(n ast.Node) *ast.TableName {
-	if src, ok := n.(*ast.TableSource); ok {
-		if name, ok := src.Source.(*ast.TableName); ok {
-			return name
-		}
-	}
-	return nil
-}
-
 // dropFunctionStmt returns the drop function statement of a function list.
 func dropFunctionStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
 	names := objectWithArgsNames(l)
@@ -1139,39 +1011,6 @@ func routineArguments(l *ast.List) []*ast.List {
 		args = append(args, signature)
 	}
 	return args
-}
-
-// objectWithArgsNames returns the names of an object list.
-func objectWithArgsNames(l *ast.List) []*ast.TableName {
-	if l == nil {
-		return nil
-	}
-	var names []*ast.TableName
-	for _, item := range l.Items {
-		obj, ok := item.(*ast.ObjectWithArgs)
-		if !ok {
-			continue
-		}
-		var parts []string
-		for _, name := range obj.Objname.Items {
-			s, ok := name.(*ast.String)
-			if !ok {
-				continue
-			}
-			parts = append(parts, s.Str)
-		}
-		switch len(parts) {
-		case 0:
-			continue
-		case 1:
-			names = append(names, syntaxTableName(nameFromString(parts[0])))
-		case 3:
-			names = append(names, syntaxTableName(nameFromParts(parts[0], parts[1], parts[2])))
-		default:
-			names = append(names, syntaxTableName(nameFromParts(parts[0], parts[1])))
-		}
-	}
-	return names
 }
 
 // serverOptions returns the server options of a generic option list.
@@ -1301,11 +1140,6 @@ func dropRoutineStmt(ifExists bool, l *ast.List) ast.Node {
 	}
 }
 
-// tableNamesFromObjectWithArgs returns the names of an object with args list.
-func tableNamesFromObjectWithArgs(l *ast.List) []*ast.TableName {
-	return objectWithArgsNames(l)
-}
-
 // dropTriggerStmt returns the drop trigger statement of a trigger name and table.
 func dropTriggerStmt(ifExists bool, name string, table ast.Node) ast.Node {
 	stmt := &ast.DropTriggerStmt{
@@ -1319,40 +1153,6 @@ func dropTriggerStmt(ifExists bool, name string, table ast.Node) ast.Node {
 	}
 	stmt.Name = syntaxTableName(nameFromString(name))
 	return stmt
-}
-
-// firstName returns the first name of a name list.
-func firstName(l *ast.List) string {
-	if l == nil {
-		return ""
-	}
-	for _, item := range l.Items {
-		if s, ok := item.(*ast.String); ok {
-			return s.Str
-		}
-	}
-	return ""
-}
-
-// indexNameFromList returns the index name of a name list.
-func indexNameFromList(l yyLexer, list *ast.List) ast.QualifiedName {
-	return syntaxName(syntaxIdents(l, list)...)
-}
-
-// columnNameListFromStrings returns the column names of a string list.
-func columnNameListFromStrings(l *ast.List) []*ast.ColumnName {
-	if l == nil {
-		return nil
-	}
-	var cols []*ast.ColumnName
-	for _, item := range l.Items {
-		s, ok := item.(*ast.String)
-		if !ok {
-			continue
-		}
-		cols = append(cols, &ast.ColumnName{Name: model.NewCIStr(s.Str)})
-	}
-	return cols
 }
 
 // resultSetNodeOf returns the result set node of a table reference.

@@ -58,7 +58,7 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 
 解析器的 `Parse` 返回 `([]ast.StmtNode, error)`；`ParseOneStmt` 要求恰好一条语句，否则返回 `ErrSyntax`。
 
-`*Parser` 不是并发安全的：`Parse` 会把结果与词法状态写回接收者。每个 goroutine 请单独调用 `pgparser.New()` 创建 Parser，不要跨 goroutine 共享。
+`*Parser` 可并发复用；每次 `Parse` 都使用独立的解析状态。
 
 ## 支持的 SQL
 
@@ -107,7 +107,7 @@ parser/             解析器、词法分析、语法定义与 AST 构造辅助
 parser/grammar.y    语法定义（goyacc），单文件包含全部产生式
 parser/parser_generated.go 由 grammar.y 生成的解析器（勿手工修改）
 ast/                语法树节点与 Restore/Accept
-tests/              单元测试与 PostgreSQL 回归语料
+tests/              解析器黑盒单测与 PostgreSQL 官方 SQL 回归语料门禁
 internal/astgen/    AST visitor 代码生成工具（make generate 调用）
 ```
 
