@@ -1,4 +1,5 @@
 GOYACC ?= go tool goyacc
+GRAMMAR_CONFLICTS := conflicts: 418 shift/reduce, 37 reduce/reduce
 
 .PHONY: all build generate generate-check test testdata vet race lint fmt help
 
@@ -9,7 +10,16 @@ build:
 
 generate:
 	go run ./internal/astgen
-	$(GOYACC) -o parser.go -l -p yy parser.y
+	@set -eu; \
+	output=$$(mktemp); \
+	trap 'rm -f "$$output"' EXIT HUP INT TERM; \
+	if ! $(GOYACC) -o parser.go -l -p yy parser.y >"$$output" 2>&1; then \
+		cat "$$output"; exit 1; \
+	fi; \
+	cat "$$output"; \
+	if [ "$$(grep '^conflicts:' "$$output" || true)" != "$(GRAMMAR_CONFLICTS)" ]; then \
+		echo 'Grammar conflict baseline changed; review the grammar before updating it.'; exit 1; \
+	fi
 	go run github.com/mia0x75/parserkit/cmd/yaccspan parser.go
 	go run ./internal/astgen parser
 
