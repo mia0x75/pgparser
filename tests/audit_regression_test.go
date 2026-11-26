@@ -7,10 +7,10 @@ import (
 
 	pkast "github.com/mia0x75/parserkit/ast"
 
-	parser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/format"
+	parser "github.com/mia0x75/pgparser/parser"
 	json "github.com/mia0x75/pgparser/types/json"
 )
 

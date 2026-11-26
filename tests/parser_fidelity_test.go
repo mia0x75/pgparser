@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/format"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 func TestRestoreParserFidelity(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 // Ported from parser_ir_ddl_test.go: supported DDL shapes.

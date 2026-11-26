@@ -10,11 +10,11 @@ import (
 	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/parserkit/lex"
 
-	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 func restoreString(t *testing.T, stmt ast.StmtNode) string {

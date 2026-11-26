@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 // Ported from parser_ir_error_test.go and parser_test.go: syntax errors expose

@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/format"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 // These tests pin the restore fixes: restored SQL

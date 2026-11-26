@@ -1,13 +1,13 @@
 # pgparser
 
-纯 Go 实现的 PostgreSQL SQL 语法解析器。语法由 goyacc 从单一 `parser.y` 生成，无 cgo 依赖，解析结果为 `ast` 包中的语法树节点。
+纯 Go 实现的 PostgreSQL SQL 语法解析器。语法由 goyacc 从单一 `parser/grammar.y` 生成，无 cgo 依赖，解析结果为 `ast` 包中的语法树节点。
 
 ## 特性
 
 - 覆盖 PostgreSQL 主要语句族：`SELECT`、`INSERT`、`UPDATE`、`DELETE`、`MERGE`、DDL、权限、事务、游标、`COPY`、`EXPLAIN`、`VACUUM` 等。
 - 建模 `WITH`/CTE、集合运算、窗口函数、`GROUPING SETS`/`ROLLUP`/`CUBE`、`ON CONFLICT`、分区、`XMLTABLE`、`JSON_TABLE`、JSON 聚合等。
 - PostgreSQL 特有节点与字段集中在 `ast/pg_ext.go`、`ast/pg_nodes_generated.go`；语法解析与 SQL 恢复的支持范围不同。
-- 单文件语法定义：所有产生式集中在 `parser.y`，便于对照 PostgreSQL `gram.y` 维护。
+- 单文件语法定义：所有产生式集中在 `parser/grammar.y`，便于对照 PostgreSQL `gram.y` 维护。
 - 无 cgo、无外部解析器运行时依赖。
 
 ## 安装
@@ -28,7 +28,7 @@ package main
 import (
 	"fmt"
 
-	pgparser "github.com/mia0x75/pgparser"
+	pgparser "github.com/mia0x75/pgparser/parser"
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
 )
@@ -56,7 +56,7 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 
 > 多条语句需以 `;` 分隔，并以 `;` 结尾，例如 `SELECT 1;SELECT 2;`。
 
-`Parse` 返回 `([]ast.StmtNode, error)`；`ParseOneStmt` 要求恰好一条语句，否则返回 `ErrSyntax`。
+解析器的 `Parse` 返回 `([]ast.StmtNode, error)`；`ParseOneStmt` 要求恰好一条语句，否则返回 `ErrSyntax`。
 
 `*Parser` 不是并发安全的：`Parse` 会把结果与词法状态写回接收者。每个 goroutine 请单独调用 `pgparser.New()` 创建 Parser，不要跨 goroutine 共享。
 
@@ -103,12 +103,9 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 ## 项目结构
 
 ```
-parser.y            语法定义（goyacc），单文件包含全部产生式
-parser.go           由 parser.y 生成的解析器（勿手工修改）
-lexer.go            词法分析（含参数、注释、美元引用）
-keywords.go         关键字表
-lexer_adapter.go    goyacc 词法适配
-ast_builder_*.go    语义动作使用的 AST 构造辅助
+parser/             解析器、词法分析、语法定义与 AST 构造辅助
+parser/grammar.y    语法定义（goyacc），单文件包含全部产生式
+parser/parser_generated.go 由 grammar.y 生成的解析器（勿手工修改）
 ast/                语法树节点与 Restore/Accept
 tests/              单元测试与 PostgreSQL 回归语料
 internal/astgen/    AST visitor 代码生成工具（make generate 调用）
@@ -118,16 +115,16 @@ internal/astgen/    AST visitor 代码生成工具（make generate 调用）
 
 ### 生成解析器
 
-解析器由 `parser.y` 通过 [golang.org/x/tools/cmd/goyacc](https://pkg.go.dev/golang.org/x/tools/cmd/goyacc) 生成：
+解析器由 `parser/grammar.y` 通过 [golang.org/x/tools/cmd/goyacc](https://pkg.go.dev/golang.org/x/tools/cmd/goyacc) 生成：
 
 ```bash
 make generate
 # 等价于：
 #   go run ./internal/astgen            # 重新生成 AST visitor
-#   go tool goyacc -o parser.go -l -p yy parser.y   # go.mod pins v0.52.0
+#   go tool goyacc -o parser/parser_generated.go -l -p yy parser/grammar.y   # go.mod pins v0.52.0
 ```
 
-不要在提交中手工修改 `parser.go`。若需查看冲突，可附加 `-v y.output`（该文件已被忽略）。
+不要在提交中手工修改 `parser/parser_generated.go`。若需查看冲突，可附加 `-v y.output`（该文件已被忽略）。
 
 ### 测试与检查
 

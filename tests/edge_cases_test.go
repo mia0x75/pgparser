@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 // Ported from parser_ir_edge_cases_test.go: expression/query shapes.

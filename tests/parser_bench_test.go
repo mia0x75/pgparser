@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 func BenchmarkScanOperatorChain(b *testing.B) {

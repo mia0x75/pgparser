@@ -12,7 +12,7 @@ import (
 
 // Token types returned by the lexer (internal, prefixed with lex_).
 // These are mapped to parser token constants in parse.go.
-// Keywords are defined in keywords.go using constants from parser.go.
+// Keywords are defined in keywords.go using constants from parser_generated.go.
 // Non-keyword tokens start after all keywords to avoid conflicts.
 // Non-keyword token base - must be after all keyword tokens
 // Keywords use 258 + 0..491 (492 keywords), so we start at 800

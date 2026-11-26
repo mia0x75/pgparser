@@ -7,7 +7,7 @@ import (
 
 	"github.com/mia0x75/parserkit/diagnostic"
 
-	pgparser "github.com/mia0x75/pgparser"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 func TestParseErrorDiagnostic(t *testing.T) {

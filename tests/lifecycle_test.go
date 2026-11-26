@@ -6,8 +6,8 @@ import (
 
 	"github.com/mia0x75/parserkit/loc"
 
-	parser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
+	parser "github.com/mia0x75/pgparser/parser"
 )
 
 func TestStatementSpansArePopulated(t *testing.T) {

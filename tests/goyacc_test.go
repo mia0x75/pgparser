@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 func mustParseOne(t *testing.T, sql string) ast.StmtNode {

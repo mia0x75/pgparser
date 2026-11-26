@@ -17,13 +17,13 @@
 
 ## 生成解析器
 
-解析器由 `parser.y` 通过 `golang.org/x/tools/cmd/goyacc` 生成：
+解析器由 `parser/grammar.y` 通过 `golang.org/x/tools/cmd/goyacc` 生成：
 
 ```bash
-go run golang.org/x/tools/cmd/goyacc@v0.52.0 -o parser.go -l -p yy parser.y
+go run golang.org/x/tools/cmd/goyacc@v0.52.0 -o parser/parser_generated.go -l -p yy parser/grammar.y
 ```
 
-- 不要手工修改 `parser.go`。
+- 不要手工修改 `parser/parser_generated.go`。
 - 新增产生式后必须重新生成，并确认冲突数没有异常增长。
 - 需要查看状态机与冲突时，可加 `-v y.output`；`y.output` 已被 `.gitignore` 忽略。
 

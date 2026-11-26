@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
+	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
 // Ported from parser_ir_advanced_test.go: advanced SQL constructs.

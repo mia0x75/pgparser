@@ -13,7 +13,7 @@ import (
 var spanTargets = []string{"node", "expr", "list"}
 
 func generateParserSpans() error {
-	const path = "parser.go"
+	const path = "parser/parser_generated.go"
 	source, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func generateParserSpans() error {
 
 func injectParserSpans(source []byte) ([]byte, error) {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "parser.go", source, 0)
+	file, err := parser.ParseFile(fset, "parser/parser_generated.go", source, 0)
 	if err != nil {
 		return nil, err
 	}
