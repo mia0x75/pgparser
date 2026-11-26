@@ -28,7 +28,9 @@ func functionOptionFlags(filter ExprNode, orderBy, withinGroup *OrderByClause) u
 	for _, order := range []*OrderByClause{orderBy, withinGroup} {
 		if order != nil {
 			for _, item := range order.Items {
-				flag |= ExprFlag(item.Expr)
+				if core := item.OrderItemCore(); core != nil && core.Expr != nil {
+					flag |= ExprFlag(core.Expr)
+				}
 			}
 		}
 	}

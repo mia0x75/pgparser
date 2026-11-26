@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mia0x75/parserkit/lex"
+
 	"github.com/mia0x75/pgparser/errors"
 
 	"github.com/mia0x75/pgparser/format"
@@ -136,7 +138,7 @@ func (n *DatabaseOption) Restore(ctx *format.RestoreCtx) error {
 type CreateSchemaStmt struct {
 	ddlNode
 
-	Name          string
+	Name          lex.Ident
 	Authorization *RoleSpec
 	IfNotExists   bool
 }
@@ -147,11 +149,11 @@ func (n *CreateSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IfNotExists {
 		ctx.WriteKeyword("IF NOT EXISTS ")
 	}
-	if n.Name != "" {
-		ctx.WriteName(n.Name)
+	if n.Name.Present() {
+		ctx.WriteIdent(n.Name)
 	}
 	if n.Authorization != nil {
-		if n.Name != "" {
+		if n.Name.Present() {
 			ctx.WritePlain(" ")
 		}
 		ctx.WriteKeyword("AUTHORIZATION ")
@@ -182,13 +184,13 @@ type CreateDatabaseStmt struct {
 	ddlNode
 
 	IfNotExists bool
-	Name        string
+	Name        lex.Ident
 	Options     []*DatabaseOption
 }
 
 // Restore implements Node interface.
 func (n *CreateDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
-	if n.Name == "" {
+	if !n.Name.Present() {
 		return errors.New("database has no name")
 	}
 	for i, option := range n.Options {
@@ -200,7 +202,7 @@ func (n *CreateDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IfNotExists {
 		ctx.WriteKeyword("IF NOT EXISTS ")
 	}
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	for _, option := range n.Options {
 		ctx.WritePlain(" ")
 		if err := option.Restore(ctx); err != nil {
@@ -224,23 +226,23 @@ func (n *CreateDatabaseStmt) Accept(v Visitor) (Node, bool) {
 type AlterDatabaseStmt struct {
 	ddlNode
 
-	Name                 string
+	Name                 lex.Ident
 	AlterDefaultDatabase bool
 	Options              []*DatabaseOption
 	// RenameTo is the new database name of a rename statement.
-	RenameTo   string
-	Tablespace string
+	RenameTo   lex.Ident
+	Tablespace lex.Ident
 }
 
 // Restore implements Node interface.
 func (n *AlterDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
-	if n.Name == "" {
+	if !n.Name.Present() {
 		return errors.New("database has no name")
 	}
-	if (n.RenameTo != "" || n.Tablespace != "") && len(n.Options) > 0 {
+	if (n.RenameTo.Present() || n.Tablespace.Present()) && len(n.Options) > 0 {
 		return errors.New("ALTER DATABASE has conflicting actions")
 	}
-	if n.RenameTo != "" && n.Tablespace != "" {
+	if n.RenameTo.Present() && n.Tablespace.Present() {
 		return errors.New("ALTER DATABASE has conflicting actions")
 	}
 	for i, option := range n.Options {
@@ -249,20 +251,20 @@ func (n *AlterDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 	ctx.WriteKeyword("ALTER DATABASE ")
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	for _, option := range n.Options {
 		ctx.WritePlain(" ")
 		if err := option.Restore(ctx); err != nil {
 			return err
 		}
 	}
-	if n.RenameTo != "" {
+	if n.RenameTo.Present() {
 		ctx.WriteKeyword(" RENAME TO ")
-		ctx.WriteName(n.RenameTo)
+		ctx.WriteIdent(n.RenameTo)
 	}
-	if n.Tablespace != "" {
+	if n.Tablespace.Present() {
 		ctx.WriteKeyword(" SET TABLESPACE ")
-		ctx.WriteName(n.Tablespace)
+		ctx.WriteIdent(n.Tablespace)
 	}
 	return ctx.Err()
 }
@@ -1010,7 +1012,7 @@ type Constraint struct {
 	node
 
 	Tp   ConstraintType
-	Name string
+	Name lex.Ident
 
 	Keys []*IndexColName // Used for PRIMARY KEY, UNIQUE, ......
 
@@ -1033,11 +1035,11 @@ type Constraint struct {
 	// NullsNotDistinct is true for `UNIQUE NULLS NOT DISTINCT` constraints.
 	NullsNotDistinct bool
 	// IndexName is the name of an existing index of the constraint.
-	IndexName string
+	IndexName lex.Ident
 	// IndexSpace is the tablespace of the constraint.
-	IndexSpace string
+	IndexSpace lex.Ident
 	// Including holds the columns of the `INCLUDE` clause.
-	Including []string
+	Including []lex.Ident
 	// Options holds the definition options of the constraint.
 	Options []string
 	// AccessMethod is the access method of an exclusion constraint.
@@ -1050,15 +1052,15 @@ type Constraint struct {
 
 // Restore implements Node interface.
 func (n *Constraint) Restore(ctx *format.RestoreCtx) error {
-	if n.Tp != ConstraintCheck && n.IndexName == "" && len(n.Keys) == 0 {
+	if n.Tp != ConstraintCheck && !n.IndexName.Present() && len(n.Keys) == 0 {
 		return errors.Annotate(ErrUnsupportedRestore, "constraint without modeled keys")
 	}
 	if n.Option != nil || n.AccessMethod != "" || n.WhereClause != nil || len(n.Options) > 0 {
 		return errors.Annotate(ErrUnsupportedRestore, "constraint options")
 	}
-	if n.Name != "" {
+	if n.Name.Present() {
 		ctx.WriteKeyword("CONSTRAINT ")
-		ctx.WriteName(n.Name)
+		ctx.WriteIdent(n.Name)
 		ctx.WritePlain(" ")
 	}
 	switch n.Tp {
@@ -1076,9 +1078,9 @@ func (n *Constraint) Restore(ctx *format.RestoreCtx) error {
 	default:
 		return errors.Annotate(ErrUnsupportedRestore, "constraint type")
 	}
-	if n.IndexName != "" {
+	if n.IndexName.Present() {
 		ctx.WriteKeyword(" USING INDEX ")
-		ctx.WriteName(n.IndexName)
+		ctx.WriteIdent(n.IndexName)
 	} else {
 		ctx.WritePlain(" (")
 		if n.Tp == ConstraintCheck {
@@ -1116,13 +1118,13 @@ func (n *Constraint) Restore(ctx *format.RestoreCtx) error {
 			if i > 0 {
 				ctx.WritePlain(", ")
 			}
-			ctx.WriteName(name)
+			ctx.WriteIdent(name)
 		}
 		ctx.WritePlain(")")
 	}
-	if n.IndexSpace != "" {
+	if n.IndexSpace.Present() {
 		ctx.WriteKeyword(" USING INDEX TABLESPACE ")
-		ctx.WriteName(n.IndexSpace)
+		ctx.WriteIdent(n.IndexSpace)
 	}
 	if n.Deferrable {
 		ctx.WriteKeyword(" DEFERRABLE")
@@ -1262,7 +1264,7 @@ type CreateTableStmt struct {
 	// PartitionBound is the bound specification of a partition table.
 	PartitionBound *PartitionBoundSpec
 	WithOptions    *List
-	Tablespace     string
+	Tablespace     lex.Ident
 	Inherits       []*TableName
 	PartitionBy    *PartitionSpec
 	LikeClauses    []*TableLikeClause
@@ -1388,9 +1390,9 @@ func (n *CreateTableStmt) Restore(ctx *format.RestoreCtx) error {
 	case ONCOMMIT_DROP:
 		ctx.WriteKeyword(" ON COMMIT DROP")
 	}
-	if n.Tablespace != "" {
+	if n.Tablespace.Present() {
 		ctx.WriteKeyword(" TABLESPACE ")
-		ctx.WriteName(n.Tablespace)
+		ctx.WriteIdent(n.Tablespace)
 	}
 
 	if n.Select != nil {
@@ -1843,7 +1845,7 @@ type CreateViewStmt struct {
 	OrReplace      bool
 	Temporary      bool
 	ViewName       *TableName
-	Cols           []model.CIStr
+	Cols           []lex.Ident
 	Select         StmtNode
 	WithOptions    *List
 	HasCheckOption bool
@@ -1871,7 +1873,7 @@ func (n *CreateViewStmt) Restore(ctx *format.RestoreCtx) error {
 			if i != 0 {
 				ctx.WritePlain(", ")
 			}
-			ctx.WriteName(col.O)
+			ctx.WriteIdent(col)
 		}
 		ctx.WritePlain(")")
 	}
@@ -1926,7 +1928,7 @@ func (n *CreateViewStmt) Accept(v Visitor) (Node, bool) {
 type CreateIndexStmt struct {
 	ddlNode
 
-	IndexName string
+	IndexName QualifiedName
 	Table     *TableName
 	Unique    bool
 	// NullsNotDistinct is true for `UNIQUE ... NULLS NOT DISTINCT` indexes.
@@ -1941,9 +1943,9 @@ type CreateIndexStmt struct {
 	// Where is the optional predicate of a partial index.
 	Where ExprNode
 	// Using is the optional index access method.
-	Using string
+	Using lex.Ident
 	// Tablespace is the optional index tablespace.
-	Tablespace string
+	Tablespace lex.Ident
 	// WithOptions is the optional storage parameter list.
 	WithOptions *List
 }
@@ -1961,8 +1963,10 @@ func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IfNotExists {
 		ctx.WriteKeyword("IF NOT EXISTS ")
 	}
-	if n.IndexName != "" {
-		ctx.WriteName(n.IndexName)
+	if len(n.IndexName.Parts) > 0 {
+		if err := restoreQualifiedName(ctx, n.IndexName); err != nil {
+			return err
+		}
 		ctx.WritePlain(" ")
 	}
 	ctx.WriteKeyword("ON ")
@@ -1972,9 +1976,9 @@ func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 	if err := n.Table.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore CreateIndexStmt.Table")
 	}
-	if n.Using != "" {
+	if n.Using.Present() {
 		ctx.WriteKeyword(" USING ")
-		ctx.WriteName(n.Using)
+		ctx.WriteIdent(n.Using)
 	}
 
 	ctx.WritePlain(" (")
@@ -2006,9 +2010,9 @@ func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	if n.Tablespace != "" {
+	if n.Tablespace.Present() {
 		ctx.WriteKeyword(" TABLESPACE ")
-		ctx.WriteName(n.Tablespace)
+		ctx.WriteIdent(n.Tablespace)
 	}
 	if n.Where != nil {
 		ctx.WriteKeyword(" WHERE ")
@@ -2082,7 +2086,7 @@ type DropIndexStmt struct {
 
 	IfExists     bool
 	Concurrently bool
-	IndexName    string
+	IndexName    QualifiedName
 	Table        *TableName
 }
 
@@ -2095,7 +2099,9 @@ func (n *DropIndexStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
 	}
-	ctx.WriteName(n.IndexName)
+	if err := restoreQualifiedName(ctx, n.IndexName); err != nil {
+		return err
+	}
 	return ctx.Err()
 }
 
@@ -2106,11 +2112,13 @@ func (n *DropIndexStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*DropIndexStmt)
-	node, ok := n.Table.Accept(v)
-	if !ok {
-		return n, false
+	if n.Table != nil {
+		node, ok := n.Table.Accept(v)
+		if !ok {
+			return n, false
+		}
+		n.Table = node.(*TableName)
 	}
-	n.Table = node.(*TableName)
 	return v.Leave(n)
 }
 

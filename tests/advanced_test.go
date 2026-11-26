@@ -19,7 +19,7 @@ func TestParseSQLAdvancedConstructsAST(t *testing.T) {
 	}
 
 	setOp, ok := mustParseOne(t, `SELECT id, name FROM active_users UNION SELECT id, name FROM inactive_users;`).(*ast.SetOprStmt)
-	if !ok || setOp.SelectList == nil {
+	if !ok || setOp.Operator != ast.Union {
 		t.Fatalf("expected UNION set operation, got %#v", setOp)
 	}
 	if tables := collectTables(setOp); !hasTable(tables, "", "inactive_users") {
@@ -35,7 +35,7 @@ func TestParseSQLAdvancedConstructsAST(t *testing.T) {
 	}
 
 	insSelect, ok := mustParseOne(t, `INSERT INTO high_value_orders (order_id, customer_id, total) SELECT id, customer_id, order_total FROM orders WHERE order_total > 1000;`).(*ast.InsertStmt)
-	if !ok || insSelect.Select == nil || len(insSelect.Columns) != 3 {
+	if !ok || insSelect.Query == nil || len(insSelect.Columns) != 3 {
 		t.Fatalf("unexpected INSERT ... SELECT: %#v", insSelect)
 	}
 	if tables := collectTables(insSelect); !hasTable(tables, "", "high_value_orders") || !hasTable(tables, "", "orders") {
@@ -133,20 +133,20 @@ func TestParseSQLGenericUtilityStatementsAST(t *testing.T) {
 
 func TestParseSQLCreateSchemaAST(t *testing.T) {
 	schema := mustParseOne(t, `CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION alice;`).(*ast.CreateSchemaStmt)
-	if !schema.IfNotExists || schema.Name != "app" {
+	if !schema.IfNotExists || schema.Name.Name != "app" {
 		t.Fatalf("CreateSchemaStmt = %#v", schema)
 	}
-	if schema.Authorization == nil || schema.Authorization.Rolename != "alice" {
+	if schema.Authorization == nil || schema.Authorization.Rolename.Name != "alice" {
 		t.Fatalf("CreateSchemaStmt = %#v", schema)
 	}
 	if got := compactSQL(restoreNode(t, schema)); got != `CREATE SCHEMA IF NOT EXISTS "app" AUTHORIZATION "alice"` {
 		t.Fatalf("CreateSchemaStmt restore = %q", got)
 	}
 	authOnly := mustParseOne(t, `CREATE SCHEMA AUTHORIZATION alice;`).(*ast.CreateSchemaStmt)
-	if authOnly.Name != "" {
+	if authOnly.Name.Present() {
 		t.Fatalf("CreateSchemaStmt = %#v", authOnly)
 	}
-	if authOnly.Authorization == nil || authOnly.Authorization.Rolename != "alice" {
+	if authOnly.Authorization == nil || authOnly.Authorization.Rolename.Name != "alice" {
 		t.Fatalf("CreateSchemaStmt = %#v", authOnly)
 	}
 }
@@ -215,23 +215,23 @@ func TestParseSQLMaintenanceAndSessionStatementsAST(t *testing.T) {
 
 func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	sel := mustParseOne(t, `SELECT a COLLATE "C", count(*) FILTER (WHERE a > 0), percentile_cont(0.5) WITHIN GROUP (ORDER BY a), sum(a) OVER w FROM t TABLESAMPLE system (10) REPEATABLE (5) WINDOW w AS (PARTITION BY b ORDER BY c) FOR NO KEY UPDATE OF t SKIP LOCKED;`).(*ast.SelectStmt)
-	if len(sel.WindowSpecs) != 1 || sel.WindowSpecs[0].Name.Name != "w" {
+	if len(sel.WindowSpecs) != 1 || windowSpec(t, sel.WindowSpecs[0]).Name.Name != "w" {
 		t.Fatalf("WindowSpecs = %#v", sel.WindowSpecs)
 	}
 	if sel.LockTp != ast.SelectLockNoKeyUpdate || sel.LockWaitPolicy != ast.SelectLockWaitSkipLocked || len(sel.LockedTables) != 1 {
 		t.Fatalf("unexpected lock info: %#v %#v %#v", sel.LockTp, sel.LockWaitPolicy, sel.LockedTables)
 	}
-	from := sel.From.TableRefs.Left.(*ast.TableSource)
+	from := fromClause(t, sel.From).Table.(*ast.TableSource)
 	if from.TableSample == nil || from.TableSample.Method != "system" || len(from.TableSample.Args) != 1 || from.TableSample.Repeatable == nil {
 		t.Fatalf("TableSample = %#v", from.TableSample)
 	}
-	if _, ok := sel.Fields.Fields[0].Expr.(*ast.CollateExpr); !ok {
-		t.Fatalf("COLLATE AST = %T", sel.Fields.Fields[0].Expr)
+	if _, ok := sel.Fields.Items[0].Expr.(*ast.CollateExpr); !ok {
+		t.Fatalf("COLLATE AST = %T", sel.Fields.Items[0].Expr)
 	}
-	if f, ok := sel.Fields.Fields[1].Expr.(*ast.AggregateFuncExpr); !ok || f.Filter == nil {
-		t.Fatalf("FILTER AST = %#v", sel.Fields.Fields[1].Expr)
+	if f, ok := sel.Fields.Items[1].Expr.(*ast.AggregateFuncExpr); !ok || f.Filter == nil {
+		t.Fatalf("FILTER AST = %#v", sel.Fields.Items[1].Expr)
 	}
-	switch f := sel.Fields.Fields[2].Expr.(type) {
+	switch f := sel.Fields.Items[2].Expr.(type) {
 	case *ast.FuncCallExpr:
 		if f.WithinGroup == nil {
 			t.Fatalf("WITHIN GROUP AST = %#v", f)
@@ -245,18 +245,18 @@ func TestParseSQLModeledPostgresClausesAST(t *testing.T) {
 	}
 
 	grouped := mustParseOne(t, `SELECT a FROM t GROUP BY GROUPING SETS ((a, b), ()), ROLLUP (a, b), CUBE (a, b);`).(*ast.SelectStmt)
-	if len(grouped.GroupBy.Items) != 3 || grouped.GroupBy.Items[0].GroupingSet == nil || grouped.GroupBy.Items[1].GroupingSet.Type != ast.GroupingSetRollup {
+	if len(groupClause(t, grouped.GroupBy).Items) != 3 || groupItem(t, groupClause(t, grouped.GroupBy).Items[0]).GroupingSet == nil || groupItem(t, groupClause(t, grouped.GroupBy).Items[1]).GroupingSet.Type != ast.GroupingSetRollup {
 		t.Fatalf("GroupBy = %#v", grouped.GroupBy)
 	}
 
 	ct := mustParseOne(t, `CREATE TABLE t (id int) INHERITS (parent) PARTITION BY RANGE (id) WITH (fillfactor=70) TABLESPACE ts;`).(*ast.CreateTableStmt)
-	if ct.WithOptions == nil || len(ct.WithOptions.Items) != 1 || ct.WithOptions.Items[0].(*ast.DefElem).Arg.(*ast.Integer).Ival != 70 || ct.Tablespace != "ts" || len(ct.Inherits) != 1 || ct.PartitionBy == nil || ct.PartitionBy.Strategy != "r" {
+	if ct.WithOptions == nil || len(ct.WithOptions.Items) != 1 || ct.WithOptions.Items[0].(*ast.DefElem).Arg.(*ast.Integer).Ival != 70 || ct.Tablespace.Name != "ts" || len(ct.Inherits) != 1 || ct.PartitionBy == nil || ct.PartitionBy.Strategy != "r" {
 		t.Fatalf("CreateTableStmt = %#v", ct)
 	}
 
 	idx := mustParseOne(t, `CREATE INDEX CONCURRENTLY IF NOT EXISTS ix ON t USING btree (a text_pattern_ops DESC NULLS LAST) WITH (fillfactor=70) TABLESPACE ts;`).(*ast.CreateIndexStmt)
 	col := idx.IndexColNames[0]
-	if !idx.Concurrently || !idx.IfNotExists || idx.Using != "btree" || idx.WithOptions == nil || len(idx.WithOptions.Items) != 1 || idx.WithOptions.Items[0].(*ast.DefElem).Arg.(*ast.Integer).Ival != 70 || idx.Tablespace != "ts" || !col.Desc || col.NullsOrder != 2 || col.Opclass == nil || col.Opclass.Items[0].(*ast.String).Str != "text_pattern_ops" {
+	if !idx.Concurrently || !idx.IfNotExists || idx.Using.Name != "btree" || idx.WithOptions == nil || len(idx.WithOptions.Items) != 1 || idx.WithOptions.Items[0].(*ast.DefElem).Arg.(*ast.Integer).Ival != 70 || idx.Tablespace.Name != "ts" || !col.Desc || col.NullsOrder != 2 || col.Opclass == nil || col.Opclass.Items[0].(*ast.String).Str != "text_pattern_ops" {
 		t.Fatalf("CreateIndexStmt = %#v col=%#v", idx, col)
 	}
 	if got := compactSQL(restoreNode(t, idx)); got != `CREATE INDEX CONCURRENTLY IF NOT EXISTS "ix" ON "t" USING "btree" ("a" "text_pattern_ops" DESC NULLS LAST) WITH ("fillfactor" = 70) TABLESPACE "ts"` {
@@ -362,7 +362,7 @@ func TestParseSQLAlterTableStructuredSpecsAST(t *testing.T) {
 		{`ALTER TABLE t ALTER COLUMN a SET STATISTICS 100;`, ast.AlterTableSetStatistics, func(s *ast.AlterTableSpec) bool { return s.Num == 100 }},
 		{`ALTER TABLE t ALTER COLUMN a SET STORAGE external;`, ast.AlterTableSetStorage, func(s *ast.AlterTableSpec) bool { return s.Storage == "external" }},
 		{`ALTER TABLE t OWNER TO u;`, ast.AlterTableOwner, func(s *ast.AlterTableSpec) bool {
-			return s.Owner != nil && s.Owner.Roletype == int(ast.ROLESPEC_CSTRING) && s.Owner.Rolename == "u"
+			return s.Owner != nil && s.Owner.Roletype == int(ast.ROLESPEC_CSTRING) && s.Owner.Rolename.Name == "u"
 		}},
 		{`ALTER TABLE t SET TABLESPACE ts;`, ast.AlterTableSetTablespace, func(s *ast.AlterTableSpec) bool { return s.Name == "ts" }},
 		{`ALTER TABLE t ENABLE ALWAYS TRIGGER tr;`, ast.AlterTableEnableTrigger, func(s *ast.AlterTableSpec) bool { return s.TriggerMode == "ALWAYS" && s.Name == "tr" }},

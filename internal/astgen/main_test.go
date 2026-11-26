@@ -15,6 +15,7 @@ func TestVisitField(t *testing.T) {
 	}{
 		{"*Child", true}, {"Node", true}, {"[][]ExprNode", true}, {"[]*Child", true},
 		{"string", false}, {"[]int", false}, {"*External", false},
+		{"QueryNode", true}, {"CTENode", true}, {"OrderByClauseNode", true},
 	} {
 		expr, err := parser.ParseExpr(tc.typ)
 		if err != nil {
@@ -42,6 +43,24 @@ func TestVisitField(t *testing.T) {
 			if calls != 1 {
 				t.Fatalf("%s: generated %d Accept calls", tc.typ, calls)
 			}
+		}
+	}
+}
+
+func TestFieldTypeName(t *testing.T) {
+	for _, tc := range []struct {
+		typ  string
+		want string
+	}{
+		{"*Child", "Child"}, {"Node", "Node"}, {"QueryNode", "QueryNode"},
+		{"*External", "External"},
+	} {
+		expr, err := parser.ParseExpr(tc.typ)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := fieldTypeName(expr, token.NewFileSet()); got != tc.want {
+			t.Fatalf("%s: got %q", tc.typ, got)
 		}
 	}
 }

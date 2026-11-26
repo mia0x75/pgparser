@@ -123,11 +123,11 @@ func TestFormatGroupingSetExpressions(t *testing.T) {
 		{`SELECT a FROM t GROUP BY GROUPING SETS ((a), (a, b))`, "GROUPING SETS ((`a`), (`a`, `b`))"},
 	} {
 		stmt := mustParseOne(t, tc.sql).(*ast.SelectStmt)
-		if stmt.GroupBy == nil || len(stmt.GroupBy.Items) != 1 {
+		if stmt.GroupBy == nil || len(groupClause(t, stmt.GroupBy).Items) != 1 {
 			t.Fatalf("%q: no group by item", tc.sql)
 		}
 		var sb strings.Builder
-		stmt.GroupBy.Items[0].Format(&sb)
+		groupItem(t, groupClause(t, stmt.GroupBy).Items[0]).Format(&sb)
 		if sb.String() != tc.want {
 			t.Errorf("Format(%q) = %q, want %q", tc.sql, sb.String(), tc.want)
 		}

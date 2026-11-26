@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/mia0x75/parserkit/lex"
+
 	"github.com/mia0x75/pgparser/errors"
 
 	"github.com/mia0x75/pgparser/auth"
@@ -215,7 +217,7 @@ func (n *ExplainStmt) Accept(v Visitor) (Node, bool) {
 type PrepareStmt struct {
 	stmtNode
 
-	Name    string
+	Name    lex.Ident
 	Params  []*types.FieldType
 	Stmt    StmtNode
 	SQLText string
@@ -225,7 +227,7 @@ type PrepareStmt struct {
 // Restore implements Node interface.
 func (n *PrepareStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyword("PREPARE ")
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	if len(n.Params) > 0 {
 		ctx.WritePlain(" (")
 		for i, tp := range n.Params {
@@ -283,7 +285,7 @@ func (n *PrepareStmt) Accept(v Visitor) (Node, bool) {
 type DeallocateStmt struct {
 	stmtNode
 
-	Name string
+	Name lex.Ident
 	All  bool
 }
 
@@ -294,7 +296,7 @@ func (n *DeallocateStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyword("ALL")
 		return ctx.Err()
 	}
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	return ctx.Err()
 }
 
@@ -320,7 +322,7 @@ type Prepared struct {
 type ExecuteStmt struct {
 	stmtNode
 
-	Name      string
+	Name      lex.Ident
 	Args      []ExprNode
 	UsingVars []ExprNode
 	ExecID    uint32
@@ -329,7 +331,7 @@ type ExecuteStmt struct {
 // Restore implements Node interface.
 func (n *ExecuteStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyword("EXECUTE ")
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	if len(n.Args) > 0 {
 		ctx.WritePlain(" (")
 		for i, val := range n.Args {
@@ -2138,8 +2140,7 @@ func (i Ident) String() string {
 
 // SelectStmtOpts wrap around select hints and switches
 type SelectStmtOpts struct {
-	Distinct        bool
-	DistinctOn      []*ByItem
+	DistinctOn      []*GroupItem
 	SQLBigResult    bool
 	SQLBufferResult bool
 	SQLCache        bool

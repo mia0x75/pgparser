@@ -28,165 +28,18 @@ var (
 	_ DMLNode = &LoadDataStmt{}
 
 	_ Node = &Assignment{}
-	_ Node = &ByItem{}
-	_ Node = &FieldList{}
 	_ Node = &GroupByClause{}
-	_ Node = &HavingClause{}
-	_ Node = &Join{}
+	_ Node = &JoinExpr{}
 	_ Node = &Limit{}
-	_ Node = &OnCondition{}
 	_ Node = &OrderByClause{}
-	_ Node = &SelectField{}
 	_ Node = &TableName{}
-	_ Node = &TableRefsClause{}
+	_ Node = &FromClause{}
 	_ Node = &TableSource{}
-	_ Node = &SetOprSelectList{}
-	_ Node = &WildCardField{}
 	_ Node = &WindowSpec{}
 	_ Node = &PartitionByClause{}
 	_ Node = &FrameClause{}
 	_ Node = &FrameBound{}
 )
-
-// JoinType is join type, including cross/left/right/full.
-type JoinType int
-
-const (
-	// CrossJoin is cross join type.
-	CrossJoin JoinType = iota + 1
-	// LeftJoin is left Join type.
-	LeftJoin
-	// RightJoin is right Join type.
-	RightJoin
-	// FullJoin is full outer join type.
-	FullJoin
-	// InnerJoin is inner join type.
-	InnerJoin
-)
-
-// Join represents table join.
-type Join struct {
-	resultSetNode
-
-	// Left table can be TableSource or JoinNode.
-	Left ResultSetNode
-	// Right table can be TableSource or JoinNode or nil.
-	Right ResultSetNode
-	// Tp represents join type.
-	Tp JoinType
-	// On represents join on condition.
-	On *OnCondition
-	// Using represents join using clause.
-	Using []*ColumnName
-	// NaturalJoin represents join is natural join.
-	NaturalJoin bool
-	// StraightJoin represents a straight join.
-	StraightJoin bool
-}
-
-// Restore implements Node interface.
-func (n *Join) Restore(ctx *format.RestoreCtx) error {
-	if n.Left == nil {
-		return errors.New("join has no left relation")
-	}
-	if n.Right == nil {
-		return n.Left.Restore(ctx)
-	}
-	if ctx.JoinLevel != 0 {
-		ctx.WritePlain("(")
-		defer ctx.WritePlain(")")
-	}
-	ctx.JoinLevel++
-	defer func() { ctx.JoinLevel-- }()
-	if err := n.Left.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore Join.Left")
-	}
-	if n.NaturalJoin {
-		ctx.WriteKeyword(" NATURAL")
-	}
-	switch n.Tp {
-	case CrossJoin:
-		ctx.WriteKeyword(" CROSS")
-	case LeftJoin:
-		ctx.WriteKeyword(" LEFT")
-	case RightJoin:
-		ctx.WriteKeyword(" RIGHT")
-	case FullJoin:
-		ctx.WriteKeyword(" FULL")
-	case InnerJoin:
-		ctx.WriteKeyword(" INNER")
-	default:
-		return errors.New("invalid join type")
-	}
-	if n.StraightJoin {
-		ctx.WriteKeyword(" STRAIGHT_JOIN ")
-	} else {
-		ctx.WriteKeyword(" JOIN ")
-	}
-	if err := n.Right.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore Join.Right")
-	}
-
-	if n.On != nil {
-		ctx.WritePlain(" ")
-		if err := n.On.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore Join.On")
-		}
-	}
-	if n.On == nil && len(n.Using) != 0 {
-		ctx.WriteKeyword(" USING ")
-		ctx.WritePlain("(")
-		for i, v := range n.Using {
-			if i != 0 {
-				ctx.WritePlain(",")
-			}
-			if err := v.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore Join.Using")
-			}
-		}
-		ctx.WritePlain(")")
-	}
-
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *Join) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*Join)
-	node, ok := n.Left.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.Left = node.(ResultSetNode)
-	if n.Right != nil {
-		node, ok = n.Right.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Right = node.(ResultSetNode)
-	}
-	if n.On != nil {
-		node, ok = n.On.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.On = node.(*OnCondition)
-		n.Using = n.On.Using
-	} else {
-		for i, column := range n.Using {
-			child, ok := column.Accept(v)
-			if !ok {
-				return n, false
-			}
-			n.Using[i] = child.(*ColumnName)
-		}
-	}
-	return v.Leave(n)
-}
 
 // TableName represents a table name.
 type TableName struct {
@@ -353,113 +206,6 @@ func (n *DeleteTableList) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// OnCondition represents JOIN on condition.
-type OnCondition struct {
-	node
-
-	// Expr is the join condition of an `ON` clause.
-	Expr ExprNode
-	// Using holds the column names of a `USING` clause.
-	Using []*ColumnName
-	// JoinUsingAlias is the alias of a `JOIN ... USING (...) AS alias` clause.
-	JoinUsingAlias *Alias
-}
-
-// Restore implements Node interface.
-func (n *OnCondition) Restore(ctx *format.RestoreCtx) error {
-	if n.Expr != nil && len(n.Using) > 0 {
-		return errors.New("join has both ON and USING")
-	}
-	if len(n.Using) > 0 {
-		ctx.WriteKeyword("USING (")
-		for i, col := range n.Using {
-			if col == nil {
-				return errors.New("USING has a nil column")
-			}
-			if i != 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := col.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore OnCondition.Using")
-			}
-		}
-		ctx.WritePlain(")")
-		if n.JoinUsingAlias != nil {
-			if n.JoinUsingAlias.Aliasname == "" || n.JoinUsingAlias.Colnames != nil {
-				return errors.New("invalid USING alias")
-			}
-			ctx.WriteKeyword(" AS ")
-			ctx.WriteName(n.JoinUsingAlias.Aliasname)
-		}
-		return ctx.Err()
-	}
-	if n.Expr == nil {
-		return errors.New("join condition has no expression")
-	}
-	ctx.WriteKeyword("ON ")
-	if err := n.Expr.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore OnCondition.Expr")
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *OnCondition) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*OnCondition)
-	if n.Expr != nil {
-		node, ok := n.Expr.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Expr = node.(ExprNode)
-	}
-	for i, column := range n.Using {
-		child, ok := column.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Using[i] = child.(*ColumnName)
-	}
-	if n.JoinUsingAlias != nil {
-		child, ok := n.JoinUsingAlias.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.JoinUsingAlias = child.(*Alias)
-	}
-	return v.Leave(n)
-}
-
-// TableSource represents table source with a name.
-type TableSource struct {
-	resultSetNode
-
-	// Source is the source of the data, can be a TableName,
-	// a SelectStmt, a SetOprStmt, a JoinNode, or a TableFunction.
-	Source ResultSetNode
-
-	// AsName is the alias name of the table source.
-	AsName model.CIStr
-
-	// ColumnAliases holds the explicit output column names from a derived
-	// table alias list, e.g. (SELECT ...) AS t(a, b) or f() AS t(a, b).
-	ColumnAliases []model.CIStr
-	ColDefs       []*ColumnDef
-
-	// Lateral is true when the table source was introduced with LATERAL.
-	Lateral bool
-
-	// TableSample is the optional PostgreSQL TABLESAMPLE clause.
-	TableSample *TableSample
-
-	// Only is true for the ONLY table reference modifier.
-	Only bool
-}
-
 // TableSample is a PostgreSQL TABLESAMPLE clause.
 type TableSample struct {
 	node
@@ -578,96 +324,6 @@ func (n *TableFunction) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// Restore implements Node interface.
-func (n *TableSource) Restore(ctx *format.RestoreCtx) error {
-	if n.Lateral {
-		ctx.WriteKeyword("LATERAL ")
-	}
-	needParen := false
-	switch n.Source.(type) {
-	case *SelectStmt, *SetOprStmt:
-		needParen = true
-	}
-	if needParen {
-		ctx.WritePlain("(")
-	}
-	if err := n.Source.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore TableSource.Source")
-	}
-	if needParen {
-		ctx.WritePlain(")")
-	}
-	if asName := n.AsName.String(); asName != "" {
-		ctx.WriteKeyword(" AS ")
-		ctx.WriteName(asName)
-	}
-	if len(n.ColDefs) > 0 {
-		if len(n.ColumnAliases) > 0 {
-			return errors.New("table source has both column aliases and definitions")
-		}
-		if n.AsName.O == "" {
-			ctx.WriteKeyword(" AS ")
-		}
-		ctx.WritePlain("(")
-		for i, col := range n.ColDefs {
-			if i > 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := col.Restore(ctx); err != nil {
-				return err
-			}
-		}
-		ctx.WritePlain(")")
-	}
-	if len(n.ColumnAliases) > 0 {
-		ctx.WritePlain("(")
-		for i, alias := range n.ColumnAliases {
-			if i != 0 {
-				ctx.WritePlain(", ")
-			}
-			ctx.WriteName(alias.O)
-		}
-		ctx.WritePlain(")")
-	}
-
-	if n.TableSample != nil {
-		ctx.WritePlain(" ")
-		if err := n.TableSample.Restore(ctx); err != nil {
-			return err
-		}
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *TableSource) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*TableSource)
-	node, ok := n.Source.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.Source = node.(ResultSetNode)
-	for i, col := range n.ColDefs {
-		child, ok := col.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.ColDefs[i] = child.(*ColumnDef)
-	}
-	if n.TableSample != nil {
-		child, ok := n.TableSample.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.TableSample = child.(*TableSample)
-	}
-	return v.Leave(n)
-}
-
 // SelectLockType is the lock type for SelectStmt.
 type SelectLockType int
 
@@ -720,517 +376,12 @@ type SelectLockInfo struct {
 	WaitPolicy SelectLockWaitPolicy
 }
 
-// WildCardField is a special type of select field content.
-type WildCardField struct {
-	exprNode
-
-	Catalog model.CIStr
-	Table   model.CIStr
-	Schema  model.CIStr
-}
-
-// Restore implements Node interface.
-func (n *WildCardField) Restore(ctx *format.RestoreCtx) error {
-	if n.Catalog.O != "" {
-		ctx.WriteName(n.Catalog.O)
-		ctx.WritePlain(".")
-	}
-	if schema := n.Schema.String(); schema != "" {
-		ctx.WriteName(schema)
-		ctx.WritePlain(".")
-	}
-	if table := n.Table.String(); table != "" {
-		ctx.WriteName(table)
-		ctx.WritePlain(".")
-	}
-	ctx.WritePlain("*")
-	return ctx.Err()
-}
-
-// Format implements ExprNode interface.
-func (n *WildCardField) Format(w io.Writer) {
-	if n.Catalog.O != "" {
-		_, _ = fmt.Fprintf(w, "%s.", n.Catalog.O)
-	}
-	if schema := n.Schema.String(); schema != "" {
-		_, _ = fmt.Fprintf(w, "%s.", schema)
-	}
-	if table := n.Table.String(); table != "" {
-		_, _ = fmt.Fprintf(w, "%s.", table)
-	}
-	_, _ = fmt.Fprint(w, "*")
-}
-
-// Accept implements Node Accept interface.
-func (n *WildCardField) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*WildCardField)
-	return v.Leave(n)
-}
-
-// SelectField represents fields in select statement.
-// There are two type of select field: wildcard
-// and expression with optional alias name.
-type SelectField struct {
-	node
-
-	// Offset is used to get original text.
-	Offset int
-	// WildCard is not nil, Expr will be nil.
-	WildCard *WildCardField
-	// Expr is not nil, WildCard will be nil.
-	Expr ExprNode
-	// AsName is alias name for Expr.
-	AsName model.CIStr
-	// Auxiliary stands for if this field is auxiliary.
-	// When we add a Field into SelectField list which is used for having/orderby clause but the field is not in select clause,
-	// we should set its Auxiliary to true. Then the TrimExec will trim the field.
-	Auxiliary bool
-}
-
-// Restore implements Node interface.
-func (n *SelectField) Restore(ctx *format.RestoreCtx) error {
-	if n.WildCard != nil {
-		if err := n.WildCard.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SelectField.WildCard")
-		}
-	}
-	if n.Expr != nil {
-		if err := n.Expr.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SelectField.Expr")
-		}
-	}
-	if asName := n.AsName.String(); asName != "" {
-		ctx.WriteKeyword(" AS ")
-		ctx.WriteName(asName)
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *SelectField) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*SelectField)
-	if n.Expr != nil {
-		node, ok := n.Expr.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Expr = node.(ExprNode)
-	}
-	return v.Leave(n)
-}
-
-// FieldList represents field list in select statement.
-type FieldList struct {
-	node
-
-	Fields []*SelectField
-}
-
-// Restore implements Node interface.
-func (n *FieldList) Restore(ctx *format.RestoreCtx) error {
-	for i, v := range n.Fields {
-		if i != 0 {
-			ctx.WritePlain(", ")
-		}
-		if err := v.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore FieldList.Fields[%d]", i)
-		}
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *FieldList) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*FieldList)
-	for i, val := range n.Fields {
-		node, ok := val.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Fields[i] = node.(*SelectField)
-	}
-	return v.Leave(n)
-}
-
-// TableRefsClause represents table references clause in dml statement.
-type TableRefsClause struct {
-	node
-
-	TableRefs *Join
-}
-
-// Restore implements Node interface.
-func (n *TableRefsClause) Restore(ctx *format.RestoreCtx) error {
-	if err := n.TableRefs.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore TableRefsClause.TableRefs")
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *TableRefsClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*TableRefsClause)
-	node, ok := n.TableRefs.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.TableRefs = node.(*Join)
-	return v.Leave(n)
-}
-
-// ByItem represents an item in order by or group by.
-type ByItem struct {
-	node
-
-	Expr  ExprNode
-	UseOp string
-	Desc  bool
-	// NullOrder indicates the NULLS ordering: 0 for default, 1 for NULLS FIRST, 2 for NULLS LAST.
-	NullOrder int
-	// GroupingSet is set for PostgreSQL GROUPING SETS / ROLLUP / CUBE items.
-	GroupingSet *GroupingSet
-}
-
-// Restore implements Node interface.
-func (n *ByItem) Restore(ctx *format.RestoreCtx) error {
-	if n.GroupingSet != nil {
-		switch n.GroupingSet.Type {
-		case GroupingSetEmpty:
-			ctx.WritePlain("()")
-		case GroupingSetRollup:
-			ctx.WriteKeyword("ROLLUP (")
-			if err := restoreExprList(ctx, n.GroupingSet.Sets[0]); err != nil {
-				return err
-			}
-			ctx.WritePlain(")")
-		case GroupingSetCube:
-			ctx.WriteKeyword("CUBE (")
-			if err := restoreExprList(ctx, n.GroupingSet.Sets[0]); err != nil {
-				return err
-			}
-			ctx.WritePlain(")")
-		case GroupingSetSets:
-			ctx.WriteKeyword("GROUPING SETS (")
-			if err := restoreExprSets(ctx, n.GroupingSet.Sets); err != nil {
-				return err
-			}
-			ctx.WritePlain(")")
-		}
-		return ctx.Err()
-	}
-	if err := n.Expr.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore ByItem.Expr")
-	}
-	if n.UseOp != "" {
-		ctx.WriteKeyword(" USING ")
-		ctx.WritePlain(n.UseOp)
-	} else if n.Desc {
-		ctx.WriteKeyword(" DESC")
-	}
-	switch n.NullOrder {
-	case 1:
-		ctx.WriteKeyword(" NULLS FIRST")
-	case 2:
-		ctx.WriteKeyword(" NULLS LAST")
-	}
-	return ctx.Err()
-}
-
-// Format formats the ByItem into a Writer.
-func (n *ByItem) Format(w io.Writer) {
-	if n.GroupingSet != nil {
-		switch n.GroupingSet.Type {
-		case GroupingSetEmpty:
-			_, _ = fmt.Fprint(w, "()")
-		case GroupingSetRollup:
-			_, _ = fmt.Fprint(w, "ROLLUP (")
-			formatExprSets(w, n.GroupingSet.Sets, false)
-			_, _ = fmt.Fprint(w, ")")
-		case GroupingSetCube:
-			_, _ = fmt.Fprint(w, "CUBE (")
-			formatExprSets(w, n.GroupingSet.Sets, false)
-			_, _ = fmt.Fprint(w, ")")
-		case GroupingSetSets:
-			_, _ = fmt.Fprint(w, "GROUPING SETS (")
-			formatExprSets(w, n.GroupingSet.Sets, true)
-			_, _ = fmt.Fprint(w, ")")
-		}
-		return
-	}
-	if n.Expr != nil {
-		FormatExpr(n.Expr, w)
-	}
-	if n.UseOp != "" {
-		_, _ = fmt.Fprint(w, " USING ", n.UseOp)
-	} else if n.Desc {
-		_, _ = fmt.Fprint(w, " DESC")
-	}
-	switch n.NullOrder {
-	case 1:
-		_, _ = fmt.Fprint(w, " NULLS FIRST")
-	case 2:
-		_, _ = fmt.Fprint(w, " NULLS LAST")
-	}
-}
-
-// formatExprSets writes grouping-set expressions; each set is parenthesised when
-// withParens is true (GROUPING SETS) and left flat for ROLLUP/CUBE.
-func formatExprSets(w io.Writer, sets [][]ExprNode, withParens bool) {
-	for i, set := range sets {
-		if i > 0 {
-			_, _ = fmt.Fprint(w, ", ")
-		}
-		if withParens {
-			_, _ = fmt.Fprint(w, "(")
-		}
-		for j, e := range set {
-			if j > 0 {
-				_, _ = fmt.Fprint(w, ", ")
-			}
-			FormatExpr(e, w)
-		}
-		if withParens {
-			_, _ = fmt.Fprint(w, ")")
-		}
-	}
-}
-
-// Accept implements Node Accept interface.
-func (n *ByItem) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*ByItem)
-	if n.Expr == nil {
-		return v.Leave(n)
-	}
-	node, ok := n.Expr.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.Expr = node.(ExprNode)
-	return v.Leave(n)
-}
-
-// GroupByClause represents group by clause.
-type GroupByClause struct {
-	node
-	Items    []*ByItem
-	Distinct bool
-	// WithRollup indicates whether `WITH ROLLUP` is specified.
-	WithRollup bool
-	// WithCube indicates whether `WITH CUBE` is specified.
-	WithCube bool
-	// HasCheckOption indicates whether a view `WITH CASCADED|LOCAL CHECK OPTION`
-	// clause directly follows the GROUP BY clause.
-	HasCheckOption bool
-	// CheckOption is the view check option following the GROUP BY clause.
-	// It is only meaningful when HasCheckOption is true.
-	CheckOption model.ViewCheckOption
-}
-
-// Restore implements Node interface.
-func (n *GroupByClause) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyword("GROUP BY ")
-	if n.Distinct {
-		ctx.WriteKeyword("DISTINCT ")
-	}
-	for i, v := range n.Items {
-		if i != 0 {
-			ctx.WritePlain(",")
-		}
-		if err := v.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore GroupByClause.Items[%d]", i)
-		}
-	}
-	if n.WithRollup {
-		ctx.WriteKeyword(" WITH ROLLUP")
-	}
-	if n.WithCube {
-		ctx.WriteKeyword(" WITH CUBE")
-	}
-	if n.HasCheckOption {
-		if n.CheckOption == model.CheckOptionLocal {
-			ctx.WriteKeyword(" WITH LOCAL CHECK OPTION")
-		} else {
-			ctx.WriteKeyword(" WITH CASCADED CHECK OPTION")
-		}
-	}
-	return ctx.Err()
-}
-
-// Format formats the GroupByClause into a Writer.
-func (n *GroupByClause) Format(w io.Writer) {
-	_, _ = fmt.Fprint(w, "GROUP BY ")
-	if n.Distinct {
-		_, _ = fmt.Fprint(w, "DISTINCT ")
-	}
-	for i, v := range n.Items {
-		if i != 0 {
-			_, _ = fmt.Fprint(w, ", ")
-		}
-		v.Format(w)
-	}
-	if n.WithRollup {
-		_, _ = fmt.Fprint(w, " WITH ROLLUP")
-	}
-	if n.WithCube {
-		_, _ = fmt.Fprint(w, " WITH CUBE")
-	}
-	if n.HasCheckOption {
-		if n.CheckOption == model.CheckOptionLocal {
-			_, _ = fmt.Fprint(w, " WITH LOCAL CHECK OPTION")
-		} else {
-			_, _ = fmt.Fprint(w, " WITH CASCADED CHECK OPTION")
-		}
-	}
-}
-
-// Accept implements Node Accept interface.
-func (n *GroupByClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*GroupByClause)
-	for i, val := range n.Items {
-		node, ok := val.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Items[i] = node.(*ByItem)
-	}
-	return v.Leave(n)
-}
-
-// HavingClause represents having clause.
-type HavingClause struct {
-	node
-	Expr ExprNode
-}
-
-// Restore implements Node interface.
-func (n *HavingClause) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyword("HAVING ")
-	if err := n.Expr.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore HavingClause.Expr")
-	}
-	return ctx.Err()
-}
-
-// Format formats the HavingClause into a Writer.
-func (n *HavingClause) Format(w io.Writer) {
-	_, _ = fmt.Fprint(w, "HAVING ")
-	if n.Expr != nil {
-		FormatExpr(n.Expr, w)
-	}
-}
-
-// Accept implements Node Accept interface.
-func (n *HavingClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*HavingClause)
-	node, ok := n.Expr.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.Expr = node.(ExprNode)
-	return v.Leave(n)
-}
-
-// OrderByClause represents order by clause.
-type OrderByClause struct {
-	node
-	Items    []*ByItem
-	ForUnion bool
-}
-
-// Restore implements Node interface.
-func (n *OrderByClause) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyword("ORDER BY ")
-	for i, item := range n.Items {
-		if i != 0 {
-			ctx.WritePlain(",")
-		}
-		if err := item.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore OrderByClause.Items[%d]", i)
-		}
-	}
-	return ctx.Err()
-}
-
-// Format formats the OrderByClause into a Writer.
-func (n *OrderByClause) Format(w io.Writer) {
-	_, _ = fmt.Fprint(w, "ORDER BY ")
-	for i, item := range n.Items {
-		if i != 0 {
-			_, _ = fmt.Fprint(w, ", ")
-		}
-		item.Format(w)
-	}
-}
-
-// Accept implements Node Accept interface.
-func (n *OrderByClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*OrderByClause)
-	for i, val := range n.Items {
-		node, ok := val.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Items[i] = node.(*ByItem)
-	}
-	return v.Leave(n)
-}
-
 // SelectStmt represents the select query node.
 type SelectStmt struct {
-	pkast.BaseQuery
+	pkast.BaseSelectStmt
 
 	// SelectStmtOpts wraps around select hints and switches.
 	*SelectStmtOpts
-	// Distinct represents whether the select has distinct option.
-	Distinct bool
-	// From is the from clause of the query.
-	From *TableRefsClause
-	// Where is the where clause in select statement.
-	Where ExprNode
-	// Fields is the select expression list.
-	Fields *FieldList
-	// GroupBy is the group by expression list.
-	GroupBy *GroupByClause
-	// Having is the having condition.
-	Having *HavingClause
-	// WindowSpecs is the window specification list.
-	WindowSpecs []WindowSpec
-	// OrderBy is the ordering expression list.
-	OrderBy *OrderByClause
-	// Limit is the limit clause.
-	Limit *Limit
 	// LockTp is the lock type
 	LockTp SelectLockType
 	// LockedTables is the optional `OF tbl_name [, ...]` list of a locking read.
@@ -1250,10 +401,6 @@ type SelectStmt struct {
 	With *WithClause
 	// IsInBraces indicates whether it's a stmt in brace.
 	IsInBraces bool
-	// AfterSetOperator indicates the SelectStmt after which type of set operator
-	// (UNION/EXCEPT/INTERSECT) it is. It is nil when the SelectStmt is the first
-	// operand of a set operation or when it is not part of one.
-	AfterSetOperator *SetOprType
 }
 
 // Restore implements Node interface.
@@ -1312,7 +459,7 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyword("STRAIGHT_JOIN ")
 	}
 	if n.Fields != nil {
-		for i, field := range n.Fields.Fields {
+		for i, field := range n.Fields.Items {
 			if i != 0 {
 				ctx.WritePlain(",")
 			}
@@ -1365,6 +512,7 @@ func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 
 	if n.Having != nil {
 		ctx.WritePlain(" ")
+		ctx.WriteKeyword("HAVING ")
 		if err := n.Having.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore SelectStmt.Having")
 		}
@@ -1472,7 +620,7 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.DistinctOn[i] = node.(*ByItem)
+		n.DistinctOn[i] = node.(*GroupItem)
 	}
 	if n.With != nil {
 		node, ok := n.With.Accept(v)
@@ -1498,7 +646,7 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.From = node.(*TableRefsClause)
+		n.From = node.(*FromClause)
 	}
 
 	if n.Where != nil {
@@ -1526,19 +674,33 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 	}
 
 	if n.Having != nil {
+		if !nodePresent(n.Having) {
+			return n, false
+		}
 		node, ok := n.Having.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Having = node.(*HavingClause)
+		having, ok := node.(ExprNode)
+		if !ok || !nodePresent(having) {
+			return n, false
+		}
+		n.Having = having
 	}
 
 	for i, spec := range n.WindowSpecs {
+		if !nodePresent(spec) || spec.WindowSpecCore() == nil {
+			return n, false
+		}
 		node, ok := spec.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.WindowSpecs[i] = *node.(*WindowSpec)
+		replacement, ok := node.(WindowSpecNode)
+		if !ok || replacement.WindowSpecCore() == nil {
+			return n, false
+		}
+		n.WindowSpecs[i] = replacement
 	}
 
 	if n.OrderBy != nil {
@@ -1564,8 +726,7 @@ func (n *SelectStmt) Accept(v Visitor) (Node, bool) {
 type ValuesStmt struct {
 	pkast.BaseQuery
 
-	Rows             []*RowExpr
-	AfterSetOperator *SetOprType
+	Rows []*RowExpr
 }
 
 // Restore implements Node interface.
@@ -1609,10 +770,9 @@ func (n *ValuesStmt) Accept(v Visitor) (Node, bool) {
 // TableStmt is a `TABLE tbl_name` statement, which is equivalent to
 // `SELECT * FROM tbl_name`.
 type TableStmt struct {
-	dmlNode
+	pkast.BaseQuery
 
-	Table            *TableName
-	AfterSetOperator *SetOprType
+	Table *TableName
 }
 
 // Restore implements Node interface.
@@ -1636,422 +796,6 @@ func (n *TableStmt) Accept(v Visitor) (Node, bool) {
 		return n, false
 	}
 	n.Table = node.(*TableName)
-	return v.Leave(n)
-}
-
-// WithClause is a common table expression clause.
-type WithClause struct {
-	node
-
-	IsRecursive bool
-	CTEs        []*CommonTableExpression
-}
-
-// Restore implements Node interface.
-func (n *WithClause) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteKeyword("WITH ")
-	if n.IsRecursive {
-		ctx.WriteKeyword("RECURSIVE ")
-	}
-	for i, cte := range n.CTEs {
-		if i > 0 {
-			ctx.WritePlain(", ")
-		}
-		if err := cte.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occurred while restore WithClause.CTEs[%d]", i)
-		}
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *WithClause) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*WithClause)
-	for i, cte := range n.CTEs {
-		node, ok := cte.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.CTEs[i] = node.(*CommonTableExpression)
-	}
-	return v.Leave(n)
-}
-
-// CommonTableExpression is a single CTE definition inside a WithClause.
-type CommonTableExpression struct {
-	node
-
-	Name     model.CIStr
-	ColNames []model.CIStr
-	Query    StmtNode
-}
-
-// Restore implements Node interface.
-func (n *CommonTableExpression) Restore(ctx *format.RestoreCtx) error {
-	ctx.WriteName(n.Name.O)
-	if len(n.ColNames) > 0 {
-		ctx.WritePlain(" (")
-		for i, col := range n.ColNames {
-			if i > 0 {
-				ctx.WritePlain(", ")
-			}
-			ctx.WriteName(col.O)
-		}
-		ctx.WritePlain(")")
-	}
-	ctx.WriteKeyword(" AS ")
-	ctx.WritePlain("(")
-	if err := n.Query.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore CommonTableExpression.Query")
-	}
-	ctx.WritePlain(")")
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *CommonTableExpression) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*CommonTableExpression)
-	node, ok := n.Query.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.Query = node.(StmtNode)
-	return v.Leave(n)
-}
-
-// SetOprType is the type of a set operator.
-type SetOprType uint8
-
-const (
-	// Union is "UNION" (distinct).
-	Union SetOprType = iota
-	// UnionAll is "UNION ALL".
-	UnionAll
-	// Except is "EXCEPT" (distinct).
-	Except
-	// ExceptAll is "EXCEPT ALL".
-	ExceptAll
-	// Intersect is "INTERSECT" (distinct).
-	Intersect
-	// IntersectAll is "INTERSECT ALL".
-	IntersectAll
-)
-
-// String implements fmt.Stringer.
-func (s *SetOprType) String() string {
-	switch *s {
-	case Union:
-		return "UNION"
-	case UnionAll:
-		return "UNION ALL"
-	case Except:
-		return "EXCEPT"
-	case ExceptAll:
-		return "EXCEPT ALL"
-	case Intersect:
-		return "INTERSECT"
-	case IntersectAll:
-		return "INTERSECT ALL"
-	}
-	return ""
-}
-
-// SetOprSelectList represents the select list in a union/except/intersect statement.
-type SetOprSelectList struct {
-	node
-
-	With             *WithClause
-	AfterSetOperator *SetOprType
-	Selects          []Node
-	Limit            *Limit
-	OrderBy          *OrderByClause
-}
-
-// Restore implements Node interface.
-func (n *SetOprSelectList) Restore(ctx *format.RestoreCtx) error {
-	if n.With != nil {
-		if err := n.With.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SetOprSelectList.With")
-		}
-		ctx.WritePlain(" ")
-	}
-	for i, stmt := range n.Selects {
-		var op *SetOprType
-		braces := false
-		switch s := stmt.(type) {
-		case *SelectStmt:
-			op, braces = s.AfterSetOperator, s.IsInBraces
-		case *SetOprStmt:
-			op = s.AfterSetOperator
-		case *SetOprSelectList:
-			op, braces = s.AfterSetOperator, true
-		case *ValuesStmt:
-			op = s.AfterSetOperator
-		case *TableStmt:
-			op = s.AfterSetOperator
-		default:
-			return errors.Errorf("unsupported set operand %T", stmt)
-		}
-		if i > 0 {
-			if op == nil {
-				return errors.New("missing set operator")
-			}
-			ctx.WriteKeyword(" " + op.String() + " ")
-		}
-		if braces {
-			ctx.WritePlain("(")
-		}
-		if err := stmt.Restore(ctx); err != nil {
-			return err
-		}
-		if braces {
-			ctx.WritePlain(")")
-		}
-	}
-
-	if n.OrderBy != nil {
-		ctx.WritePlain(" ")
-		if err := n.OrderBy.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SetOprSelectList.OrderBy")
-		}
-	}
-
-	if n.Limit != nil {
-		ctx.WritePlain(" ")
-		if err := n.Limit.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SetOprSelectList.Limit")
-		}
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *SetOprSelectList) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*SetOprSelectList)
-	if n.With != nil {
-		node, ok := n.With.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.With = node.(*WithClause)
-	}
-	for i, sel := range n.Selects {
-		node, ok := sel.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Selects[i] = node
-	}
-	if n.OrderBy != nil {
-		node, ok := n.OrderBy.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.OrderBy = node.(*OrderByClause)
-	}
-	if n.Limit != nil {
-		node, ok := n.Limit.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Limit = node.(*Limit)
-	}
-	return v.Leave(n)
-}
-
-// SetOprStmt represents a "union/except/intersect statement"
-type SetOprStmt struct {
-	pkast.BaseQuery
-
-	// IsInBraces indicates whether the whole statement is in braces.
-	IsInBraces bool
-	SelectList *SetOprSelectList
-	OrderBy    *OrderByClause
-	Limit      *Limit
-	Locking    *List
-	// With is the optional common table expression clause.
-	With             *WithClause
-	AfterSetOperator *SetOprType
-}
-
-// Restore implements Node interface.
-func (n *SetOprStmt) Restore(ctx *format.RestoreCtx) error {
-	if n.SelectList == nil {
-		return errors.New("set operation has no operands")
-	}
-	if n.IsInBraces {
-		ctx.WritePlain("(")
-	}
-	if n.With != nil {
-		if err := n.With.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SetOprStmt.With")
-		}
-		ctx.WritePlain(" ")
-	}
-	if err := n.SelectList.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore SetOprStmt.SelectList")
-	}
-	if n.OrderBy != nil {
-		ctx.WritePlain(" ")
-		if err := n.OrderBy.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SetOprStmt.OrderBy")
-		}
-	}
-	if n.Limit != nil {
-		ctx.WritePlain(" ")
-		if err := n.Limit.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore SetOprStmt.Limit")
-		}
-	}
-	if n.Locking != nil {
-		if err := restoreLocking(ctx, n.Locking); err != nil {
-			return err
-		}
-	}
-	if n.IsInBraces {
-		ctx.WritePlain(")")
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *SetOprStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*SetOprStmt)
-	if n.Locking != nil {
-		child, ok := n.Locking.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Locking = child.(*List)
-	}
-	if n.With != nil {
-		node, ok := n.With.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.With = node.(*WithClause)
-	}
-	if n.SelectList != nil {
-		node, ok := n.SelectList.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.SelectList = node.(*SetOprSelectList)
-	}
-	if n.OrderBy != nil {
-		node, ok := n.OrderBy.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.OrderBy = node.(*OrderByClause)
-	}
-	if n.Limit != nil {
-		node, ok := n.Limit.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Limit = node.(*Limit)
-	}
-	return v.Leave(n)
-}
-
-// Assignment is the expression for assignment, like a = 1.
-type Assignment struct {
-	node
-	// Column is the column name to be assigned.
-	Column *ColumnName
-	// MultiColumns holds the column names of a row assignment.
-	MultiColumns []*ColumnName
-	// Expr is the expression assigning to ColName.
-	Expr ExprNode
-}
-
-// Restore implements Node interface.
-func (n *Assignment) Restore(ctx *format.RestoreCtx) error {
-	if n.Expr == nil {
-		return errors.New("assignment has no expression")
-	}
-	if n.Column != nil && len(n.MultiColumns) > 0 {
-		return errors.New("assignment has both single and tuple targets")
-	}
-	switch {
-	case n.Column != nil:
-		if err := n.Column.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore Assignment.Column")
-		}
-	case len(n.MultiColumns) > 0:
-		ctx.WritePlain("(")
-		for i, col := range n.MultiColumns {
-			if col == nil {
-				return errors.New("assignment has a nil target column")
-			}
-			if i > 0 {
-				ctx.WritePlain(", ")
-			}
-			if err := col.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore Assignment.MultiColumns")
-			}
-		}
-		ctx.WritePlain(")")
-	default:
-		return errors.New("Assignment has no target column")
-	}
-	ctx.WritePlain("=")
-	if err := n.Expr.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occurred while restore Assignment.Expr")
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *Assignment) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*Assignment)
-	var node Node
-	var ok bool
-	if n.Column != nil {
-		node, ok = n.Column.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Column = node.(*ColumnName)
-	}
-	for i, col := range n.MultiColumns {
-		if col == nil {
-			continue
-		}
-		node, ok = col.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.MultiColumns[i] = node.(*ColumnName)
-	}
-	if n.Expr != nil {
-		node, ok = n.Expr.Accept(v)
-		if !ok {
-			return n, false
-		}
-		n.Expr = node.(ExprNode)
-	}
 	return v.Leave(n)
 }
 
@@ -2313,24 +1057,16 @@ func (n *SelectIntoStatement) Accept(v Visitor) (Node, bool) {
 }
 
 // InsertStmt is a statement to insert new rows into an existing table.
+// InsertStmt is a statement to insert rows into a table.
 type InsertStmt struct {
-	dmlNode
+	pkast.BaseInsertStmt
 
 	// With is the optional common table expression clause.
-	With        *WithClause
-	IsReplace   bool
-	IgnoreErr   bool
-	Table       *TableRefsClause
-	Columns     []*ColumnName
-	Lists       [][]ExprNode
-	Setlist     []*Assignment
-	Priority    postgres.PriorityEnum
-	OnDuplicate []*Assignment
-	Select      ResultSetNode
+	With *WithClause
+	// TargetAlias is the optional alias of the insert target.
+	TargetAlias lex.Ident
 	// OnConflict is the optional PostgreSQL `ON CONFLICT` clause.
 	OnConflict *OnConflictClause
-	// Returning is the optional RETURNING field list (PostgreSQL).
-	Returning *FieldList
 }
 
 // OnConflictClause is the PostgreSQL `ON CONFLICT` clause of an INSERT.
@@ -2382,6 +1118,9 @@ func (n *OnConflictClause) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyword(" DO UPDATE SET ")
 	for i, a := range n.UpdateList {
+		if !assignmentValid(a) {
+			return errors.Errorf("restore OnConflictClause.UpdateList[%d]: invalid assignment", i)
+		}
 		if i > 0 {
 			ctx.WritePlain(", ")
 		}
@@ -2438,29 +1177,28 @@ func (n *OnConflictClause) Accept(v Visitor) (Node, bool) {
 
 // Restore implements Node interface.
 func (n *InsertStmt) Restore(ctx *format.RestoreCtx) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if n == nil {
+		return errors.New("restore InsertStmt: nil statement")
+	}
+	if !nodePresent(n.Table) {
+		return errors.New("restore InsertStmt: missing table")
+	}
 	if n.With != nil {
 		if err := n.With.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore InsertStmt.With")
 		}
 		ctx.WritePlain(" ")
 	}
-	if n.IsReplace {
-		ctx.WriteKeyword("REPLACE ")
-	} else {
-		ctx.WriteKeyword("INSERT ")
-	}
-	if err := n.Priority.Restore(ctx); err != nil {
-		return errors.Trace(err)
-	}
-	if n.Priority != postgres.NoPriority {
-		ctx.WritePlain(" ")
-	}
-	if n.IgnoreErr {
-		ctx.WriteKeyword("IGNORE ")
-	}
-	ctx.WriteKeyword("INTO ")
+	ctx.WriteKeyword("INSERT INTO ")
 	if err := n.Table.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore InsertStmt.Table")
+	}
+	if n.TargetAlias.Present() {
+		ctx.WriteKeyword(" AS ")
+		ctx.WriteIdent(n.TargetAlias)
 	}
 	if n.Columns != nil {
 		ctx.WritePlain(" (")
@@ -2468,15 +1206,18 @@ func (n *InsertStmt) Restore(ctx *format.RestoreCtx) error {
 			if i != 0 {
 				ctx.WritePlain(",")
 			}
+			if !nodePresent(v) {
+				return errors.Errorf("restore InsertStmt.Columns[%d]: missing target", i)
+			}
 			if err := v.Restore(ctx); err != nil {
 				return errors.Annotatef(err, "An error occurred while restore InsertStmt.Columns[%d]", i)
 			}
 		}
 		ctx.WritePlain(")")
 	}
-	if n.Lists != nil {
+	if n.Values != nil {
 		ctx.WriteKeyword(" VALUES ")
-		for i, row := range n.Lists {
+		for i, row := range n.Values {
 			if i != 0 {
 				ctx.WritePlain(",")
 			}
@@ -2485,47 +1226,26 @@ func (n *InsertStmt) Restore(ctx *format.RestoreCtx) error {
 				if j != 0 {
 					ctx.WritePlain(",")
 				}
+				if !nodePresent(v) {
+					return errors.Errorf("restore InsertStmt.Values[%d][%d]: missing expression", i, j)
+				}
 				if err := v.Restore(ctx); err != nil {
-					return errors.Annotatef(err, "An error occurred while restore InsertStmt.Lists[%d][%d]", i, j)
+					return errors.Annotatef(err, "An error occurred while restore InsertStmt.Values[%d][%d]", i, j)
 				}
 			}
 			ctx.WritePlain(")")
 		}
 	}
-	if n.Lists == nil && n.Select == nil && n.Setlist == nil {
+	if n.Values == nil && n.Query == nil {
 		ctx.WriteKeyword(" DEFAULT VALUES")
 	}
-	if n.Select != nil {
+	if n.Query != nil {
 		ctx.WritePlain(" ")
-		switch v := n.Select.(type) {
-		case *SelectStmt, *SetOprStmt:
-			if err := v.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore InsertStmt.Select")
-			}
-		default:
-			return errors.Errorf("Incorrect type for InsertStmt.Select: %T", v)
+		if !nodePresent(n.Query) {
+			return errors.New("restore InsertStmt.Query: nil query")
 		}
-	}
-	if n.Setlist != nil {
-		ctx.WriteKeyword(" SET ")
-		for i, v := range n.Setlist {
-			if i != 0 {
-				ctx.WritePlain(",")
-			}
-			if err := v.Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore InsertStmt.Setlist[%d]", i)
-			}
-		}
-	}
-	if n.OnDuplicate != nil {
-		ctx.WriteKeyword(" ON DUPLICATE KEY UPDATE ")
-		for i, v := range n.OnDuplicate {
-			if i != 0 {
-				ctx.WritePlain(",")
-			}
-			if err := v.Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore InsertStmt.OnDuplicate[%d]", i)
-			}
+		if err := n.Query.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred while restore InsertStmt.Query")
 		}
 	}
 	if n.OnConflict != nil {
@@ -2545,78 +1265,112 @@ func (n *InsertStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *InsertStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	if n == nil {
+		return nil, false
 	}
-
-	n = newNode.(*InsertStmt)
-	if n.With != nil {
-		node, ok := n.With.Accept(v)
+	entered, skip := v.Enter(n)
+	outer, ok := entered.(*InsertStmt)
+	if !ok || outer == nil {
+		return entered, false
+	}
+	if skip {
+		return v.Leave(outer)
+	}
+	if outer.With != nil {
+		node, ok := outer.With.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.With = node.(*WithClause)
+		with, ok := node.(*WithClause)
+		if !ok || with == nil {
+			return outer, false
+		}
+		outer.With = with
 	}
-	if n.Select != nil {
-		node, ok := n.Select.Accept(v)
+	if outer.Table != nil {
+		if !nodePresent(outer.Table) {
+			return outer, false
+		}
+		node, ok := outer.Table.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Select = node.(ResultSetNode)
+		table, ok := node.(TableRefNode)
+		if !ok || !nodePresent(table) {
+			return outer, false
+		}
+		outer.Table = table
 	}
-
-	node, ok := n.Table.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.Table = node.(*TableRefsClause)
-
-	for i, val := range n.Columns {
+	for i, val := range outer.Columns {
+		if !nodePresent(val) {
+			return outer, false
+		}
 		node, ok := val.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Columns[i] = node.(*ColumnName)
+		column, ok := node.(ExprNode)
+		if !ok || !nodePresent(column) {
+			return outer, false
+		}
+		outer.Columns[i] = column
 	}
-	for i, list := range n.Lists {
+	for i, list := range outer.Values {
 		for j, val := range list {
+			if !nodePresent(val) {
+				return outer, false
+			}
 			node, ok := val.Accept(v)
 			if !ok {
-				return n, false
+				return outer, false
 			}
-			n.Lists[i][j] = node.(ExprNode)
+			expr, ok := node.(ExprNode)
+			if !ok || !nodePresent(expr) {
+				return outer, false
+			}
+			outer.Values[i][j] = expr
 		}
 	}
-	for i, val := range n.Setlist {
-		node, ok := val.Accept(v)
+	if outer.Query != nil {
+		if !nodePresent(outer.Query) {
+			return outer, false
+		}
+		node, ok := outer.Query.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Setlist[i] = node.(*Assignment)
+		query, ok := node.(QueryNode)
+		if !ok || !nodePresent(query) {
+			return outer, false
+		}
+		outer.Query = query
 	}
-	for i, val := range n.OnDuplicate {
-		node, ok := val.Accept(v)
+	if outer.OnConflict != nil {
+		node, ok := outer.OnConflict.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.OnDuplicate[i] = node.(*Assignment)
+		conflict, ok := node.(*OnConflictClause)
+		if !ok || conflict == nil {
+			return outer, false
+		}
+		outer.OnConflict = conflict
 	}
-	if n.OnConflict != nil {
-		node, ok := n.OnConflict.Accept(v)
+	if outer.Returning != nil {
+		if !nodePresent(outer.Returning) {
+			return outer, false
+		}
+		node, ok := outer.Returning.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.OnConflict = node.(*OnConflictClause)
-	}
-	if n.Returning != nil {
-		node, ok := n.Returning.Accept(v)
-		if !ok {
-			return n, false
+		returning, ok := node.(*FieldList)
+		if !ok || returning == nil {
+			return outer, false
 		}
-		n.Returning = node.(*FieldList)
+		outer.Returning = returning
 	}
-	return v.Leave(n)
+	return v.Leave(outer)
 }
 
 // MergeWhenType is the action type of a MERGE WHEN clause.
@@ -2637,8 +1391,8 @@ const (
 type MergeStmt struct {
 	dmlNode
 
-	Table     *TableRefsClause
-	Source    *TableRefsClause
+	Table     *FromClause
+	Source    *FromClause
 	On        ExprNode
 	Whens     []*MergeWhenClause
 	Returning *FieldList
@@ -2687,14 +1441,14 @@ func (n *MergeStmt) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Table = node.(*TableRefsClause)
+		n.Table = node.(*FromClause)
 	}
 	if n.Source != nil {
 		node, ok := n.Source.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Source = node.(*TableRefsClause)
+		n.Source = node.(*FromClause)
 	}
 	if n.On != nil {
 		node, ok := n.On.Accept(v)
@@ -2728,7 +1482,7 @@ type MergeWhenClause struct {
 	Condition  ExprNode
 	Tp         MergeWhenType
 	UpdateList []*Assignment
-	Columns    []*ColumnName
+	Columns    []ExprNode
 	Values     []ExprNode
 }
 
@@ -2824,33 +1578,29 @@ func (n *MergeWhenClause) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
+// DeleteStmt keeps PostgreSQL's multi-target delete outside the shared syntax.
 type DeleteStmt struct {
-	dmlNode
+	pkast.BaseDeleteStmt
 
 	// With is the optional common table expression clause.
 	With *WithClause
-	// TableRefs is used in both single table and multiple table delete statement.
-	TableRefs *TableRefsClause
-	// Using is the optional PostgreSQL `USING` clause.
-	Using *TableRefsClause
 	// Tables is only used in multiple table delete statement.
 	Tables       *DeleteTableList
-	Where        ExprNode
-	Order        *OrderByClause
-	Limit        *Limit
-	Priority     postgres.PriorityEnum
-	IgnoreErr    bool
-	Quick        bool
 	IsMultiTable bool
 	BeforeFrom   bool
-	// TableHints represents the table level Optimizer Hint for join type.
-	TableHints []*TableOptimizerHint
-	// Returning is the optional RETURNING field list (PostgreSQL).
-	Returning *FieldList
 }
 
 // Restore implements Node interface.
 func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if n == nil {
+		return errors.New("restore DeleteStmt: nil statement")
+	}
+	if !nodePresent(n.Table) {
+		return errors.New("restore DeleteStmt: missing table")
+	}
 	if n.With != nil {
 		if err := n.With.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore DeleteStmt.With")
@@ -2859,38 +1609,18 @@ func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyword("DELETE ")
 
-	if len(n.TableHints) != 0 {
-		ctx.WritePlain("/*+ ")
-		for i, tableHint := range n.TableHints {
-			if err := tableHint.Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore UpdateStmt.TableHints[%d]", i)
-			}
-		}
-		ctx.WritePlain("*/ ")
-	}
-
-	if err := n.Priority.Restore(ctx); err != nil {
-		return errors.Trace(err)
-	}
-	if n.Priority != postgres.NoPriority {
-		ctx.WritePlain(" ")
-	}
-	if n.Quick {
-		ctx.WriteKeyword("QUICK ")
-	}
-	if n.IgnoreErr {
-		ctx.WriteKeyword("IGNORE ")
-	}
-
 	if n.IsMultiTable { // Multiple-Table Syntax
+		if n.Tables == nil {
+			return errors.New("restore DeleteStmt.Tables: missing tables")
+		}
 		if n.BeforeFrom {
 			if err := n.Tables.Restore(ctx); err != nil {
 				return errors.Annotate(err, "An error occurred while restore DeleteStmt.Tables")
 			}
 
 			ctx.WriteKeyword(" FROM ")
-			if err := n.TableRefs.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore DeleteStmt.TableRefs")
+			if err := n.Table.Restore(ctx); err != nil {
+				return errors.Annotate(err, "An error occurred while restore DeleteStmt.Table")
 			}
 		} else {
 			ctx.WriteKeyword("FROM ")
@@ -2899,15 +1629,15 @@ func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
 			}
 
 			ctx.WriteKeyword(" USING ")
-			if err := n.TableRefs.Restore(ctx); err != nil {
-				return errors.Annotate(err, "An error occurred while restore DeleteStmt.TableRefs")
+			if err := n.Table.Restore(ctx); err != nil {
+				return errors.Annotate(err, "An error occurred while restore DeleteStmt.Table")
 			}
 		}
 	} else { // Single-Table Syntax
 		ctx.WriteKeyword("FROM ")
 
-		if err := n.TableRefs.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore DeleteStmt.TableRefs")
+		if err := n.Table.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred while restore DeleteStmt.Table")
 		}
 	}
 
@@ -2925,10 +1655,10 @@ func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	if n.Order != nil {
+	if n.OrderBy != nil {
 		ctx.WritePlain(" ")
-		if err := n.Order.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore DeleteStmt.Order")
+		if err := n.OrderBy.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occurred while restore DeleteStmt.OrderBy")
 		}
 	}
 
@@ -2951,94 +1681,151 @@ func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DeleteStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	if n == nil {
+		return nil, false
 	}
-
-	n = newNode.(*DeleteStmt)
-	if n.With != nil {
-		node, ok := n.With.Accept(v)
+	entered, skip := v.Enter(n)
+	outer, ok := entered.(*DeleteStmt)
+	if !ok || outer == nil {
+		return entered, false
+	}
+	if skip {
+		return v.Leave(outer)
+	}
+	if outer.With != nil {
+		node, ok := outer.With.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.With = node.(*WithClause)
+		with, ok := node.(*WithClause)
+		if !ok || with == nil {
+			return outer, false
+		}
+		outer.With = with
 	}
-	node, ok := n.TableRefs.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.TableRefs = node.(*TableRefsClause)
-
-	if n.Tables != nil {
-		node, ok = n.Tables.Accept(v)
+	if outer.Table != nil {
+		if !nodePresent(outer.Table) {
+			return outer, false
+		}
+		node, ok := outer.Table.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Tables = node.(*DeleteTableList)
+		table, ok := node.(ResultSetNode)
+		if !ok || !nodePresent(table) {
+			return outer, false
+		}
+		outer.Table = table
 	}
-	if n.Using != nil {
-		node, ok = n.Using.Accept(v)
+	if outer.Tables != nil {
+		node, ok := outer.Tables.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Using = node.(*TableRefsClause)
+		tables, ok := node.(*DeleteTableList)
+		if !ok || tables == nil {
+			return outer, false
+		}
+		outer.Tables = tables
 	}
-
-	if n.Where != nil {
-		node, ok = n.Where.Accept(v)
+	if outer.Using != nil {
+		if !nodePresent(outer.Using) {
+			return outer, false
+		}
+		node, ok := outer.Using.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Where = node.(ExprNode)
+		using, ok := node.(ResultSetNode)
+		if !ok || !nodePresent(using) {
+			return outer, false
+		}
+		outer.Using = using
 	}
-	if n.Order != nil {
-		node, ok = n.Order.Accept(v)
+	if outer.Where != nil {
+		if !nodePresent(outer.Where) {
+			return outer, false
+		}
+		node, ok := outer.Where.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Order = node.(*OrderByClause)
+		where, ok := node.(ExprNode)
+		if !ok || !nodePresent(where) {
+			return outer, false
+		}
+		outer.Where = where
 	}
-	if n.Limit != nil {
-		node, ok = n.Limit.Accept(v)
+	if outer.OrderBy != nil {
+		if !nodePresent(outer.OrderBy) {
+			return outer, false
+		}
+		node, ok := outer.OrderBy.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Limit = node.(*Limit)
+		order, ok := node.(OrderByClauseNode)
+		if !ok || order.OrderByClauseCore() == nil {
+			return outer, false
+		}
+		outer.OrderBy = order
 	}
-	if n.Returning != nil {
-		node, ok = n.Returning.Accept(v)
+	if outer.Limit != nil {
+		if !nodePresent(outer.Limit) {
+			return outer, false
+		}
+		node, ok := outer.Limit.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Returning = node.(*FieldList)
+		limit, ok := node.(LimitNode)
+		if !ok || limit.LimitCore() == nil {
+			return outer, false
+		}
+		outer.Limit = limit
 	}
-	return v.Leave(n)
+	if outer.Returning != nil {
+		if !nodePresent(outer.Returning) {
+			return outer, false
+		}
+		node, ok := outer.Returning.Accept(v)
+		if !ok {
+			return outer, false
+		}
+		returning, ok := node.(*FieldList)
+		if !ok || returning == nil {
+			return outer, false
+		}
+		outer.Returning = returning
+	}
+	return v.Leave(outer)
 }
 
 // UpdateStmt is a statement to update columns of existing rows in tables with new values.
+// UpdateStmt keeps PostgreSQL's CTE prefix and FROM clause outside the shared syntax.
 type UpdateStmt struct {
-	dmlNode
+	pkast.BaseUpdateStmt
 
 	// With is the optional common table expression clause.
-	With      *WithClause
-	TableRefs *TableRefsClause
+	With *WithClause
 	// From is the optional PostgreSQL `FROM` clause.
-	From          *TableRefsClause
-	List          []*Assignment
-	Where         ExprNode
-	Order         *OrderByClause
-	Limit         *Limit
-	Priority      postgres.PriorityEnum
-	IgnoreErr     bool
-	MultipleTable bool
-	TableHints    []*TableOptimizerHint
-	// Returning is the optional RETURNING field list (PostgreSQL).
-	Returning *FieldList
+	From *FromClause
 }
 
 // Restore implements Node interface.
 func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if n == nil {
+		return errors.New("restore UpdateStmt: nil statement")
+	}
+	if !nodePresent(n.Table) {
+		return errors.New("restore UpdateStmt: missing table")
+	}
+	if len(n.Assignments) == 0 {
+		return errors.New("restore UpdateStmt: missing assignments")
+	}
 	if n.With != nil {
 		if err := n.With.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while restore UpdateStmt.With")
@@ -3047,37 +1834,20 @@ func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WriteKeyword("UPDATE ")
 
-	if len(n.TableHints) != 0 {
-		ctx.WritePlain("/*+ ")
-		for i, tableHint := range n.TableHints {
-			if err := tableHint.Restore(ctx); err != nil {
-				return errors.Annotatef(err, "An error occurred while restore UpdateStmt.TableHints[%d]", i)
-			}
-		}
-		ctx.WritePlain("*/ ")
-	}
-
-	if err := n.Priority.Restore(ctx); err != nil {
-		return errors.Trace(err)
-	}
-	if n.Priority != postgres.NoPriority {
-		ctx.WritePlain(" ")
-	}
-	if n.IgnoreErr {
-		ctx.WriteKeyword("IGNORE ")
-	}
-
-	if err := n.TableRefs.Restore(ctx); err != nil {
-		return errors.Annotate(err, "An error occur while restore UpdateStmt.TableRefs")
+	if err := n.Table.Restore(ctx); err != nil {
+		return errors.Annotate(err, "An error occur while restore UpdateStmt.Table")
 	}
 
 	ctx.WriteKeyword(" SET ")
-	for i, assignment := range n.List {
+	for i, assignment := range n.Assignments {
+		if !assignmentValid(assignment) {
+			return errors.Errorf("restore UpdateStmt.Assignments[%d]: invalid assignment", i)
+		}
 		if i != 0 {
 			ctx.WritePlain(", ")
 		}
 		if err := assignment.Restore(ctx); err != nil {
-			return errors.Annotatef(err, "An error occur while restore UpdateStmt.List[%d]", i)
+			return errors.Annotatef(err, "An error occur while restore UpdateStmt.Assignments[%d]", i)
 		}
 	}
 
@@ -3095,10 +1865,10 @@ func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
 		}
 	}
 
-	if n.Order != nil {
+	if n.OrderBy != nil {
 		ctx.WritePlain(" ")
-		if err := n.Order.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occur while restore UpdateStmt.Order")
+		if err := n.OrderBy.Restore(ctx); err != nil {
+			return errors.Annotate(err, "An error occur while restore UpdateStmt.OrderBy")
 		}
 	}
 
@@ -3121,121 +1891,127 @@ func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *UpdateStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	if n == nil {
+		return nil, false
 	}
-	n = newNode.(*UpdateStmt)
-	if n.With != nil {
-		node, ok := n.With.Accept(v)
+	entered, skip := v.Enter(n)
+	outer, ok := entered.(*UpdateStmt)
+	if !ok || outer == nil {
+		return entered, false
+	}
+	if skip {
+		return v.Leave(outer)
+	}
+	if outer.With != nil {
+		node, ok := outer.With.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.With = node.(*WithClause)
+		with, ok := node.(*WithClause)
+		if !ok || with == nil {
+			return outer, false
+		}
+		outer.With = with
 	}
-	node, ok := n.TableRefs.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.TableRefs = node.(*TableRefsClause)
-	for i, val := range n.List {
-		node, ok = val.Accept(v)
+	if outer.Table != nil {
+		if !nodePresent(outer.Table) {
+			return outer, false
+		}
+		node, ok := outer.Table.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.List[i] = node.(*Assignment)
+		table, ok := node.(ResultSetNode)
+		if !ok || !nodePresent(table) {
+			return outer, false
+		}
+		outer.Table = table
 	}
-	if n.Where != nil {
-		node, ok = n.Where.Accept(v)
+	if outer.From != nil {
+		if !nodePresent(outer.From) {
+			return outer, false
+		}
+		node, ok := outer.From.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Where = node.(ExprNode)
+		from, ok := node.(*FromClause)
+		if !ok || from == nil {
+			return outer, false
+		}
+		outer.From = from
 	}
-	if n.Order != nil {
-		node, ok = n.Order.Accept(v)
+	for i, assignment := range outer.Assignments {
+		if !nodePresent(assignment) {
+			return outer, false
+		}
+		node, ok := assignment.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Order = node.(*OrderByClause)
+		replacement, ok := node.(*Assignment)
+		if !ok || replacement == nil {
+			return outer, false
+		}
+		outer.Assignments[i] = replacement
 	}
-	if n.Limit != nil {
-		node, ok = n.Limit.Accept(v)
+	if outer.Where != nil {
+		if !nodePresent(outer.Where) {
+			return outer, false
+		}
+		node, ok := outer.Where.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Limit = node.(*Limit)
+		where, ok := node.(ExprNode)
+		if !ok || !nodePresent(where) {
+			return outer, false
+		}
+		outer.Where = where
 	}
-	if n.Returning != nil {
-		node, ok = n.Returning.Accept(v)
+	if outer.OrderBy != nil {
+		if !nodePresent(outer.OrderBy) {
+			return outer, false
+		}
+		node, ok := outer.OrderBy.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Returning = node.(*FieldList)
-	}
-	return v.Leave(n)
-}
-
-// Limit is the limit clause.
-type Limit struct {
-	node
-
-	Count    ExprNode
-	Offset   ExprNode
-	WithTies bool
-}
-
-// Restore implements Node interface.
-func (n *Limit) Restore(ctx *format.RestoreCtx) error {
-	if n.WithTies {
-		ctx.WriteKeyword("FETCH FIRST ")
-	} else if n.Count != nil {
-		ctx.WriteKeyword("LIMIT ")
-	}
-	if n.Count != nil {
-		if err := n.Count.Restore(ctx); err != nil {
-			return err
+		order, ok := node.(OrderByClauseNode)
+		if !ok || order.OrderByClauseCore() == nil {
+			return outer, false
 		}
+		outer.OrderBy = order
 	}
-	if n.WithTies {
-		ctx.WriteKeyword(" ROWS WITH TIES")
-	}
-	if n.Offset != nil {
-		if n.Count != nil || n.WithTies {
-			ctx.WritePlain(" ")
+	if outer.Limit != nil {
+		if !nodePresent(outer.Limit) {
+			return outer, false
 		}
-		ctx.WriteKeyword("OFFSET ")
-		if err := n.Offset.Restore(ctx); err != nil {
-			return errors.Annotate(err, "An error occurred while restore Limit.Offset")
-		}
-	}
-	return ctx.Err()
-}
-
-// Accept implements Node Accept interface.
-func (n *Limit) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
-	}
-	n = newNode.(*Limit)
-	if n.Count != nil {
-		node, ok := n.Count.Accept(v)
+		node, ok := outer.Limit.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Count = node.(ExprNode)
+		limit, ok := node.(LimitNode)
+		if !ok || limit.LimitCore() == nil {
+			return outer, false
+		}
+		outer.Limit = limit
 	}
-	if n.Offset != nil {
-		node, ok := n.Offset.Accept(v)
+	if outer.Returning != nil {
+		if !nodePresent(outer.Returning) {
+			return outer, false
+		}
+		node, ok := outer.Returning.Accept(v)
 		if !ok {
-			return n, false
+			return outer, false
 		}
-		n.Offset = node.(ExprNode)
+		returning, ok := node.(*FieldList)
+		if !ok || returning == nil {
+			return outer, false
+		}
+		outer.Returning = returning
 	}
-
-	n = newNode.(*Limit)
-	return v.Leave(n)
+	return v.Leave(outer)
 }
 
 // ShowStmtType is the type for SHOW statement.
@@ -3510,21 +2286,24 @@ func (n *ShowStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
+// WindowSpecNode preserves the concrete dialect window identity.
+type WindowSpecNode = pkast.WindowSpecNode
+
 // WindowSpec is the specification of a window.
 type WindowSpec struct {
-	node
-
-	Name lex.Ident
-	// Ref is the reference window of this specification. For example, in `w2 as (w1 order by a)`,
-	// the definition of `w2` references `w1`.
-	Ref lex.Ident
+	pkast.BaseWindowSpec
 
 	PartitionBy *PartitionByClause
 	OrderBy     *OrderByClause
 	Frame       *FrameClause
+}
 
-	// OnlyAlias preserves OVER w; OVER (w) copies w and cannot copy a framed window.
-	OnlyAlias bool
+// WindowSpecCore returns the shared window data without replacing this outer.
+func (n *WindowSpec) WindowSpecCore() *pkast.BaseWindowSpec {
+	if n == nil {
+		return nil
+	}
+	return &n.BaseWindowSpec
 }
 
 // Restore implements Node interface.
@@ -3636,7 +2415,7 @@ func (n *WindowSpec) Accept(v Visitor) (Node, bool) {
 type PartitionByClause struct {
 	node
 
-	Items []*ByItem
+	Items []*OrderItem
 }
 
 // Restore implements Node interface.
@@ -3676,7 +2455,7 @@ func (n *PartitionByClause) Accept(v Visitor) (Node, bool) {
 		if !ok {
 			return n, false
 		}
-		n.Items[i] = node.(*ByItem)
+		n.Items[i] = node.(*OrderItem)
 	}
 	return v.Leave(n)
 }

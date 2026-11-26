@@ -33,17 +33,34 @@ func (n *CollateExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *CollateExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CollateExpr)
+	outer, ok := node.(*CollateExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Expr = replacement
 	}
 	return v.Leave(n)
 }
@@ -106,19 +123,36 @@ func (n *GroupingSet) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *GroupingSet) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*GroupingSet)
+	outer, ok := node.(*GroupingSet)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	for i0 := range n.Sets {
 		for i1 := range n.Sets[i0] {
 			if n.Sets[i0][i1] != nil {
+				if !nodePresent(n.Sets[i0][i1]) {
+					return n, false
+				}
 				updated, ok := n.Sets[i0][i1].Accept(v)
 				if !ok {
 					return n, false
 				}
-				n.Sets[i0][i1] = updated.(ExprNode)
+				replacement, ok := updated.(ExprNode)
+				if !ok || !nodePresent(replacement) {
+					return n, false
+				}
+				n.Sets[i0][i1] = replacement
 			}
 		}
 	}
@@ -193,41 +227,79 @@ func (n *XMLTableExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *XMLTableExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*XMLTableExpr)
+	outer, ok := node.(*XMLTableExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.RowExpr != nil {
+		if !nodePresent(n.RowExpr) {
+			return n, false
+		}
 		updated, ok := n.RowExpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.RowExpr = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.RowExpr = replacement
 	}
 	if n.DocExpr != nil {
+		if !nodePresent(n.DocExpr) {
+			return n, false
+		}
 		updated, ok := n.DocExpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.DocExpr = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.DocExpr = replacement
 	}
 	for i0 := range n.Columns {
 		if n.Columns[i0] != nil {
+			if !nodePresent(n.Columns[i0]) {
+				return n, false
+			}
 			updated, ok := n.Columns[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Columns[i0] = updated.(*XMLTableColumn)
+			replacement, ok := updated.(*XMLTableColumn)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Columns[i0] = replacement
 		}
 	}
 	for i0 := range n.Namespaces {
 		if n.Namespaces[i0] != nil {
+			if !nodePresent(n.Namespaces[i0]) {
+				return n, false
+			}
 			updated, ok := n.Namespaces[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Namespaces[i0] = updated.(*XMLTableNamespace)
+			replacement, ok := updated.(*XMLTableNamespace)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Namespaces[i0] = replacement
 		}
 	}
 	return v.Leave(n)
@@ -283,24 +355,48 @@ func (n *XMLTableColumn) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *XMLTableColumn) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*XMLTableColumn)
+	outer, ok := node.(*XMLTableColumn)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.DefaultExpr != nil {
+		if !nodePresent(n.DefaultExpr) {
+			return n, false
+		}
 		updated, ok := n.DefaultExpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.DefaultExpr = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.DefaultExpr = replacement
 	}
 	if n.PathExpr != nil {
+		if !nodePresent(n.PathExpr) {
+			return n, false
+		}
 		updated, ok := n.PathExpr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.PathExpr = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.PathExpr = replacement
 	}
 	return v.Leave(n)
 }
@@ -334,17 +430,34 @@ func (n *XMLTableNamespace) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *XMLTableNamespace) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*XMLTableNamespace)
+	outer, ok := node.(*XMLTableNamespace)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Expr = replacement
 	}
 	return v.Leave(n)
 }
@@ -406,29 +519,56 @@ func (n *JSONTableExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *JSONTableExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JSONTableExpr)
+	outer, ok := node.(*JSONTableExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.ContextItem != nil {
+		if !nodePresent(n.ContextItem) {
+			return n, false
+		}
 		updated, ok := n.ContextItem.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ContextItem = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ContextItem = replacement
 	}
 	if n.PathSpec != nil {
+		if !nodePresent(n.PathSpec) {
+			return n, false
+		}
 		updated, ok := n.PathSpec.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.PathSpec = updated.(*JSONTablePathSpec)
+		replacement, ok := updated.(*JSONTablePathSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.PathSpec = replacement
 	}
 	for i0 := range n.Passing {
 		if n.Passing[i0] != nil {
+			if !nodePresent(n.Passing[i0]) {
+				return n, false
+			}
 			updated, ok := n.Passing[i0].Accept(v)
-			if !ok {
+			if !ok || !nodePresent(updated) {
 				return n, false
 			}
 			n.Passing[i0] = updated
@@ -436,19 +576,33 @@ func (n *JSONTableExpr) Accept(v Visitor) (Node, bool) {
 	}
 	for i0 := range n.Columns {
 		if n.Columns[i0] != nil {
+			if !nodePresent(n.Columns[i0]) {
+				return n, false
+			}
 			updated, ok := n.Columns[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Columns[i0] = updated.(*JSONTableColumn)
+			replacement, ok := updated.(*JSONTableColumn)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Columns[i0] = replacement
 		}
 	}
 	if n.OnError != nil {
+		if !nodePresent(n.OnError) {
+			return n, false
+		}
 		updated, ok := n.OnError.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnError = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnError = replacement
 	}
 	return v.Leave(n)
 }
@@ -479,17 +633,34 @@ func (n *JSONTablePathSpec) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *JSONTablePathSpec) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JSONTablePathSpec)
+	outer, ok := node.(*JSONTablePathSpec)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(ExprNode)
+		replacement, ok := updated.(ExprNode)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Expr = replacement
 	}
 	return v.Leave(n)
 }
@@ -594,46 +765,91 @@ func (n *JSONTableColumn) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *JSONTableColumn) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JSONTableColumn)
+	outer, ok := node.(*JSONTableColumn)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Format != nil {
+		if !nodePresent(n.Format) {
+			return n, false
+		}
 		updated, ok := n.Format.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Format = updated.(*JsonFormat)
+		replacement, ok := updated.(*JsonFormat)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Format = replacement
 	}
 	if n.PathSpec != nil {
+		if !nodePresent(n.PathSpec) {
+			return n, false
+		}
 		updated, ok := n.PathSpec.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.PathSpec = updated.(*JSONTablePathSpec)
+		replacement, ok := updated.(*JSONTablePathSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.PathSpec = replacement
 	}
 	if n.OnEmpty != nil {
+		if !nodePresent(n.OnEmpty) {
+			return n, false
+		}
 		updated, ok := n.OnEmpty.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnEmpty = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnEmpty = replacement
 	}
 	if n.OnError != nil {
+		if !nodePresent(n.OnError) {
+			return n, false
+		}
 		updated, ok := n.OnError.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnError = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnError = replacement
 	}
 	for i0 := range n.Columns {
 		if n.Columns[i0] != nil {
+			if !nodePresent(n.Columns[i0]) {
+				return n, false
+			}
 			updated, ok := n.Columns[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Columns[i0] = updated.(*JSONTableColumn)
+			replacement, ok := updated.(*JSONTableColumn)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Columns[i0] = replacement
 		}
 	}
 	return v.Leave(n)
@@ -669,18 +885,35 @@ func (n *RowsFromExpr) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *RowsFromExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RowsFromExpr)
+	outer, ok := node.(*RowsFromExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	for i0 := range n.Functions {
 		if n.Functions[i0] != nil {
+			if !nodePresent(n.Functions[i0]) {
+				return n, false
+			}
 			updated, ok := n.Functions[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Functions[i0] = updated.(*TableFunction)
+			replacement, ok := updated.(*TableFunction)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Functions[i0] = replacement
 		}
 	}
 	return v.Leave(n)
@@ -707,26 +940,50 @@ func (n *PrivilegeTarget) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *PrivilegeTarget) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*PrivilegeTarget)
+	outer, ok := node.(*PrivilegeTarget)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	for i0 := range n.Objects {
 		if n.Objects[i0] != nil {
+			if !nodePresent(n.Objects[i0]) {
+				return n, false
+			}
 			updated, ok := n.Objects[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Objects[i0] = updated.(*TableName)
+			replacement, ok := updated.(*TableName)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Objects[i0] = replacement
 		}
 	}
 	if n.TargetNodes != nil {
+		if !nodePresent(n.TargetNodes) {
+			return n, false
+		}
 		updated, ok := n.TargetNodes.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.TargetNodes = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.TargetNodes = replacement
 	}
 	return v.Leave(n)
 }

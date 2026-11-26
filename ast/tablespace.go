@@ -3,6 +3,8 @@ package ast
 import (
 	"fmt"
 
+	"github.com/mia0x75/parserkit/lex"
+
 	"github.com/mia0x75/pgparser/format"
 )
 
@@ -17,7 +19,7 @@ var (
 type CreateTablespaceStmt struct {
 	ddlNode
 
-	Name     string
+	Name     lex.Ident
 	Owner    *RoleSpec
 	Location string
 	// Options is the `WITH (...)` storage parameter list.
@@ -27,7 +29,7 @@ type CreateTablespaceStmt struct {
 // Restore implements Node interface.
 func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyword("CREATE TABLESPACE ")
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	if n.Owner != nil {
 		ctx.WriteKeyword(" OWNER ")
 		if err := n.Owner.Restore(ctx); err != nil {
@@ -74,18 +76,18 @@ func (n *CreateTablespaceStmt) Accept(v Visitor) (Node, bool) {
 type AlterTablespaceStmt struct {
 	ddlNode
 
-	Name string
+	Name lex.Ident
 	// Action is `SET` or `RESET` when Options are present.
 	Action  string
 	Options *List
 	// RenameTo is set by `ALTER TABLESPACE ... RENAME TO`.
-	RenameTo string
+	RenameTo lex.Ident
 }
 
 // Restore implements Node interface.
 func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyword("ALTER TABLESPACE ")
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	if n.Action != "" {
 		if n.Options == nil {
 			return fmt.Errorf("ALTER TABLESPACE %s has no options", n.Action)
@@ -95,9 +97,9 @@ func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 			return err
 		}
 	}
-	if n.RenameTo != "" {
+	if n.RenameTo.Present() {
 		ctx.WriteKeyword(" RENAME TO ")
-		ctx.WriteName(n.RenameTo)
+		ctx.WriteIdent(n.RenameTo)
 	}
 	return ctx.Err()
 }
@@ -124,7 +126,7 @@ type DropTablespaceStmt struct {
 	ddlNode
 
 	IfExists bool
-	Name     string
+	Name     lex.Ident
 }
 
 // Restore implements Node interface.
@@ -133,7 +135,7 @@ func (n *DropTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
 	}
-	ctx.WriteName(n.Name)
+	ctx.WriteIdent(n.Name)
 	return ctx.Err()
 }
 

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/parserkit/lex"
 
 	"github.com/mia0x75/pgparser/ast"
@@ -119,7 +120,7 @@ func reindexObjectName(code int64) string {
 // roleIdentity returns the role identity of a role specification.
 func roleIdentity(n ast.Node) *auth.RoleIdentity {
 	if spec, ok := n.(*ast.RoleSpec); ok {
-		return &auth.RoleIdentity{Username: spec.Rolename}
+		return &auth.RoleIdentity{Username: spec.Rolename.Name}
 	}
 	return nil
 }
@@ -133,7 +134,7 @@ func roleIdentities(l *ast.List) []*auth.RoleIdentity {
 	for _, item := range l.Items {
 		switch v := item.(type) {
 		case *ast.RoleSpec:
-			result = append(result, &auth.RoleIdentity{Username: v.Rolename})
+			result = append(result, &auth.RoleIdentity{Username: v.Rolename.Name})
 		case *ast.String:
 			result = append(result, &auth.RoleIdentity{Username: v.Str})
 		}
@@ -231,7 +232,7 @@ func userSpecs(l *ast.List) []*ast.UserSpec {
 		switch v := item.(type) {
 		case *ast.RoleSpec:
 			result = append(result, &ast.UserSpec{
-				User:   &auth.UserIdentity{Username: v.Rolename},
+				User:   &auth.UserIdentity{Username: v.Rolename.Name},
 				IsRole: true,
 				Role:   v,
 			})
@@ -256,7 +257,7 @@ func grantRoleNames(l *ast.List, lexer yyLexer) *ast.List {
 			lexer.Error("invalid role name list")
 			return nil
 		}
-		l.Items[i] = &ast.RoleSpec{Roletype: int(ast.ROLESPEC_CSTRING), Rolename: priv.PrivName}
+		l.Items[i] = &ast.RoleSpec{Roletype: int(ast.ROLESPEC_CSTRING), Rolename: syntaxIdent(lexer, priv.PrivName, priv.Span())}
 	}
 	return l
 }
@@ -545,20 +546,6 @@ func exprList(exprs []ast.ExprNode) *ast.List {
 	return &ast.List{Items: items}
 }
 
-// columnNameStrings returns the column names of a column list.
-func columnNameStrings(l *ast.List) []model.CIStr {
-	if l == nil {
-		return nil
-	}
-	var result []model.CIStr
-	for _, item := range l.Items {
-		if s, ok := item.(*ast.String); ok {
-			result = append(result, model.NewCIStr(s.Str))
-		}
-	}
-	return result
-}
-
 // defElems returns the definition elements of a list.
 func defElems(l *ast.List) []*ast.DefElem {
 	if l == nil {
@@ -667,27 +654,6 @@ func typeNameFromList(l *ast.List) *types.FieldType {
 	tp := newDataType(strings.Join(parts, "."), -1, -1)
 	tp.PGName = parts
 	return tp
-}
-
-// aliasName returns the alias name of an alias clause.
-func aliasName(n ast.Node) string {
-	switch v := n.(type) {
-	case *ast.Alias:
-		return v.Aliasname
-	case *ast.List:
-		// func_alias_clause keeps the alias in the first list item.
-		if len(v.Items) > 0 {
-			if alias, ok := v.Items[0].(*ast.Alias); ok {
-				return alias.Aliasname
-			}
-		}
-	}
-	return ""
-}
-
-// accessMethodName returns the name of an access method.
-func accessMethodName(name string) string {
-	return name
 }
 
 // constraintOptions returns the options of a constraint attribute list.
@@ -830,9 +796,9 @@ func explainOptionList(l *ast.List) []string {
 }
 
 // createUserStmt returns the create user statement of a role.
-func createUserStmt(role bool, name string, options *ast.List) ast.Node {
+func createUserStmt(role bool, name lex.Ident, options *ast.List) ast.Node {
 	spec := &ast.UserSpec{
-		User:   &auth.UserIdentity{Username: name},
+		User:   &auth.UserIdentity{Username: name.Name},
 		IsRole: role,
 	}
 	if opt := authOption(options); opt != nil {
@@ -855,7 +821,7 @@ func alterUserStmt(role bool, spec ast.Node, options *ast.List) ast.Node {
 	if s, ok := spec.(*ast.RoleSpec); ok {
 		stmt.Role = s
 		stmt.Specs = []*ast.UserSpec{{
-			User:   &auth.UserIdentity{Username: s.Rolename},
+			User:   &auth.UserIdentity{Username: s.Rolename.Name},
 			IsRole: role,
 		}}
 	}
@@ -875,7 +841,7 @@ func dropUserStmt(role bool, ifExists bool, roles *ast.List) ast.Node {
 		for _, item := range roles.Items {
 			switch v := item.(type) {
 			case *ast.RoleSpec:
-				stmt.UserList = append(stmt.UserList, &auth.UserIdentity{Username: v.Rolename})
+				stmt.UserList = append(stmt.UserList, &auth.UserIdentity{Username: v.Rolename.Name})
 			case *ast.String:
 				stmt.UserList = append(stmt.UserList, &auth.UserIdentity{Username: v.Str})
 			}
@@ -917,18 +883,24 @@ func defElemString(def *ast.DefElem) string {
 	return ""
 }
 
-// inBraces marks a select statement as written in braces.
+// inBraces marks a query as written in braces.
 func inBraces(n ast.Node) ast.Node {
-	n = selectClauseNode(n)
 	switch v := n.(type) {
 	case *ast.SelectStmt:
 		v.IsInBraces = true
 		return v
+	case *ast.QueryTailStmt:
+		if v.Parenthesized {
+			return v
+		}
+		return &ast.QueryTailStmt{BaseQueryTailStmt: pkast.BaseQueryTailStmt{Query: v, Parenthesized: true}}
 	case *ast.SetOprStmt:
-		v.IsInBraces = true
-		return v
+		return &ast.QueryTailStmt{BaseQueryTailStmt: pkast.BaseQueryTailStmt{Query: v, Parenthesized: true}}
+	case *ast.ValuesStmt, *ast.TableStmt:
+		return &ast.QueryTailStmt{BaseQueryTailStmt: pkast.BaseQueryTailStmt{Query: queryNodeOf(v), Parenthesized: true}}
+	default:
+		return n
 	}
-	return n
 }
 
 // databaseOptions returns the options of a database option list.
@@ -1062,31 +1034,6 @@ func indexIncludeNames(l *ast.List) []*ast.ColumnName {
 		}
 	}
 	return result
-}
-
-// aliasColumnNames returns the column names of an alias clause.
-func aliasColumnNames(n ast.Node) []model.CIStr {
-	switch v := n.(type) {
-	case *ast.Alias:
-		return columnNameStrings(v.Colnames)
-	case *ast.List:
-		if len(v.Items) > 0 {
-			if alias, ok := v.Items[0].(*ast.Alias); ok {
-				return columnNameStrings(alias.Colnames)
-			}
-		}
-	}
-	return nil
-}
-
-func applyFunctionAlias(ts *ast.TableSource, alias ast.Node) {
-	ts.AsName = model.NewCIStr(aliasName(alias))
-	ts.ColumnAliases = aliasColumnNames(alias)
-	if list, ok := alias.(*ast.List); ok && len(list.Items) > 1 {
-		if defs, ok := list.Items[1].(*ast.List); ok {
-			ts.ColDefs = tableFuncElementDefs(defs)
-		}
-	}
 }
 
 // setLocalStatement returns the local set statement of a set clause.
@@ -1388,12 +1335,8 @@ func firstName(l *ast.List) string {
 }
 
 // indexNameFromList returns the index name of a name list.
-func indexNameFromList(l *ast.List) string {
-	name := tableNameFromList(l)
-	if len(name.Name.Parts) == 0 {
-		return ""
-	}
-	return name.Name.Parts[len(name.Name.Parts)-1].Name
+func indexNameFromList(l yyLexer, list *ast.List) ast.QualifiedName {
+	return syntaxName(syntaxIdents(l, list)...)
 }
 
 // columnNameListFromStrings returns the column names of a string list.

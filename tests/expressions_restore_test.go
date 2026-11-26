@@ -85,7 +85,7 @@ func TestUnaryOperatorFormat(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			stmt := mustParseOne(t, tc.sql).(*ast.SelectStmt)
 			var out strings.Builder
-			ast.FormatExpr(stmt.Fields.Fields[0].Expr, &out)
+			ast.FormatExpr(stmt.Fields.Items[0].Expr, &out)
 			if got := out.String(); got != tc.want {
 				t.Fatalf("format = %q, want %q", got, tc.want)
 			}
@@ -104,7 +104,7 @@ func TestPreservedExpressionFormat(t *testing.T) {
 	})
 	t.Run("symmetric", func(t *testing.T) {
 		stmt := mustParseOne(t, `SELECT 1 BETWEEN SYMMETRIC 3 AND 0`).(*ast.SelectStmt)
-		expr := stmt.Fields.Fields[0].Expr.(*ast.BetweenExpr)
+		expr := stmt.Fields.Items[0].Expr.(*ast.BetweenExpr)
 		var out strings.Builder
 		expr.Format(&out)
 		if !expr.Symmetric || out.String() != "1 BETWEEN SYMMETRIC 3 AND 0" {
@@ -113,7 +113,7 @@ func TestPreservedExpressionFormat(t *testing.T) {
 	})
 	t.Run("comparison", func(t *testing.T) {
 		stmt := mustParseOne(t, `SELECT a @> ANY (SELECT b FROM t)`).(*ast.SelectStmt)
-		expr := stmt.Fields.Fields[0].Expr.(*ast.CompareSubqueryExpr)
+		expr := stmt.Fields.Items[0].Expr.(*ast.CompareSubqueryExpr)
 		var out strings.Builder
 		expr.Format(&out)
 		if expr.Op != 0 || expr.OpName != "@>" || !strings.Contains(out.String(), " @> ANY ") {
@@ -123,7 +123,7 @@ func TestPreservedExpressionFormat(t *testing.T) {
 	t.Run("sort", func(t *testing.T) {
 		stmt := mustParseOne(t, `SELECT a ORDER BY a USING > NULLS FIRST`).(*ast.SelectStmt)
 		var out strings.Builder
-		stmt.OrderBy.Items[0].Format(&out)
+		orderItem(t, orderClause(t, stmt.OrderBy).Items[0]).Format(&out)
 		if out.String() != "`a` USING > NULLS FIRST" {
 			t.Fatalf("Format = %q", out.String())
 		}
@@ -132,7 +132,7 @@ func TestPreservedExpressionFormat(t *testing.T) {
 
 func TestRestoreNegativeZeroOperand(t *testing.T) {
 	stmt := mustParseOne(t, `SELECT 2 - 0`).(*ast.SelectStmt)
-	expr := stmt.Fields.Fields[0].Expr.(*ast.BinaryOperationExpr)
+	expr := stmt.Fields.Items[0].Expr.(*ast.BinaryOperationExpr)
 	expr.Right = ast.NewValueExpr(math.Copysign(0, -1))
 	if got := restoreString(t, stmt); got != `SELECT 2- -0e+00` {
 		t.Fatalf("restore = %q, want SELECT 2- -0e+00", got)
@@ -141,7 +141,7 @@ func TestRestoreNegativeZeroOperand(t *testing.T) {
 
 func TestRestoreUnaryWordOperator(t *testing.T) {
 	stmt := mustParseOne(t, `SELECT NOT a`).(*ast.SelectStmt)
-	expr := stmt.Fields.Fields[0].Expr.(*ast.UnaryOperationExpr)
+	expr := stmt.Fields.Items[0].Expr.(*ast.UnaryOperationExpr)
 	expr.OpName = "NOT"
 	if got := restoreString(t, stmt); got != `SELECT NOT "a"` {
 		t.Fatalf("restore = %q, want SELECT NOT \"a\"", got)

@@ -151,7 +151,7 @@ func TestAuditLexerRegression(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := n.(*ast.SelectStmt).Fields.Fields[0].Expr.(ast.ValueExpr).GetValue(); got != tc.value {
+		if got := n.(*ast.SelectStmt).Fields.Items[0].Expr.(ast.ValueExpr).GetValue(); got != tc.value {
 			t.Errorf("%q = %q, want %q", tc.sql, got, tc.value)
 		}
 	}
@@ -205,11 +205,12 @@ func (v *auditVisitor) Enter(n ast.Node) (ast.Node, bool) {
 	if f, ok := n.(*ast.JsonFormat); ok {
 		v.formats = append(v.formats, f.Encoding)
 	}
-	if role, ok := n.(*ast.RoleSpec); ok && role.Rolename == "reader" {
+	if role, ok := n.(*ast.RoleSpec); ok && role.Rolename.Name == "reader" {
 		v.seen++
 		if v.replace {
 			copy := *role
-			copy.Rolename = "renamed"
+			copy.Rolename.Name = "renamed"
+			copy.Rolename.Raw = ""
 			return &copy, false
 		}
 	}
@@ -270,7 +271,7 @@ func TestAuditExpressionFlags(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			n := mustParseSelect(t, tc.sql)
-			if got := ast.ExprFlag(n.Fields.Fields[0].Expr); got != tc.flag {
+			if got := ast.ExprFlag(n.Fields.Items[0].Expr); got != tc.flag {
 				t.Fatalf("expression flags = %d, want %d", got, tc.flag)
 			}
 		})

@@ -13,7 +13,7 @@ func TestParseSQLStringLiteralsAndComments(t *testing.T) {
 	}
 	for _, sql := range queries {
 		st := mustParseSelect(t, sql)
-		if st.Fields == nil || len(st.Fields.Fields) == 0 {
+		if st.Fields == nil || len(st.Fields.Items) == 0 {
 			t.Fatalf("ParseOneStmt(%q) produced no fields", sql)
 		}
 	}

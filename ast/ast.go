@@ -3,6 +3,8 @@
 package ast
 
 import (
+	"reflect"
+
 	pkast "github.com/mia0x75/parserkit/ast"
 
 	"github.com/mia0x75/pgparser/model"
@@ -11,6 +13,22 @@ import (
 // Node is the basic element of the AST.
 // Interfaces embed Node should have 'Node' name suffix.
 type Node = pkast.Node
+
+// NodePresent reports whether node holds a non-nil concrete value.
+func NodePresent(node Node) bool { return nodePresent(node) }
+
+func nodePresent(node Node) bool {
+	if node == nil {
+		return false
+	}
+	value := reflect.ValueOf(node)
+	switch value.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return !value.IsNil()
+	default:
+		return true
+	}
+}
 
 // Flags indicates whether an expression contains certain types of expression.
 const (

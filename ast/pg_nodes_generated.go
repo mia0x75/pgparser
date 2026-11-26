@@ -5,6 +5,8 @@ package ast
 import (
 	"io"
 
+	"github.com/mia0x75/parserkit/lex"
+
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/types"
 )
@@ -86,15 +88,28 @@ type List struct {
 func (n *List) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *List) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*List)
+	outer, ok := node.(*List)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	for i0 := range n.Items {
 		if n.Items[i0] != nil {
+			if !nodePresent(n.Items[i0]) {
+				return n, false
+			}
 			updated, ok := n.Items[i0].Accept(v)
-			if !ok {
+			if !ok || !nodePresent(updated) {
 				return n, false
 			}
 			n.Items[i0] = updated
@@ -111,11 +126,21 @@ type String struct {
 func (n *String) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *String) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*String)
+	outer, ok := node.(*String)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -127,11 +152,21 @@ type Integer struct {
 func (n *Integer) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Integer) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*Integer)
+	outer, ok := node.(*Integer)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -143,11 +178,21 @@ type Float struct {
 func (n *Float) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Float) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*Float)
+	outer, ok := node.(*Float)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -159,11 +204,21 @@ type Boolean struct {
 func (n *Boolean) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Boolean) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*Boolean)
+	outer, ok := node.(*Boolean)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -175,11 +230,21 @@ type BitString struct {
 func (n *BitString) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *BitString) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*BitString)
+	outer, ok := node.(*BitString)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -202,61 +267,116 @@ type CreateStmt struct {
 func (n *CreateStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateStmt)
+	outer, ok := node.(*CreateStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.TableElts != nil {
+		if !nodePresent(n.TableElts) {
+			return n, false
+		}
 		updated, ok := n.TableElts.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.TableElts = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.TableElts = replacement
 	}
 	if n.InhRelations != nil {
+		if !nodePresent(n.InhRelations) {
+			return n, false
+		}
 		updated, ok := n.InhRelations.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.InhRelations = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.InhRelations = replacement
 	}
 	if n.Partbound != nil {
+		if !nodePresent(n.Partbound) {
+			return n, false
+		}
 		updated, ok := n.Partbound.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Partbound = updated
 	}
 	if n.Partspec != nil {
+		if !nodePresent(n.Partspec) {
+			return n, false
+		}
 		updated, ok := n.Partspec.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Partspec = updated.(*PartitionSpec)
+		replacement, ok := updated.(*PartitionSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Partspec = replacement
 	}
 	for i0 := range n.Constraints {
 		if n.Constraints[i0] != nil {
+			if !nodePresent(n.Constraints[i0]) {
+				return n, false
+			}
 			updated, ok := n.Constraints[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Constraints[i0] = updated.(*ColumnOption)
+			replacement, ok := updated.(*ColumnOption)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Constraints[i0] = replacement
 		}
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -274,38 +394,72 @@ type ViewStmt struct {
 func (n *ViewStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ViewStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*ViewStmt)
+	outer, ok := node.(*ViewStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.View != nil {
+		if !nodePresent(n.View) {
+			return n, false
+		}
 		updated, ok := n.View.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.View = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.View = replacement
 	}
 	if n.Aliases != nil {
+		if !nodePresent(n.Aliases) {
+			return n, false
+		}
 		updated, ok := n.Aliases.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Aliases = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Aliases = replacement
 	}
 	if n.Query != nil {
+		if !nodePresent(n.Query) {
+			return n, false
+		}
 		updated, ok := n.Query.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Query = updated
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -341,52 +495,100 @@ type IndexStmt struct {
 func (n *IndexStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*IndexStmt)
+	outer, ok := node.(*IndexStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.IndexParams != nil {
+		if !nodePresent(n.IndexParams) {
+			return n, false
+		}
 		updated, ok := n.IndexParams.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.IndexParams = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.IndexParams = replacement
 	}
 	if n.IndexIncludingParams != nil {
+		if !nodePresent(n.IndexIncludingParams) {
+			return n, false
+		}
 		updated, ok := n.IndexIncludingParams.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.IndexIncludingParams = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.IndexIncludingParams = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	if n.WhereClause != nil {
+		if !nodePresent(n.WhereClause) {
+			return n, false
+		}
 		updated, ok := n.WhereClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.WhereClause = updated
 	}
 	if n.ExcludeOpNames != nil {
+		if !nodePresent(n.ExcludeOpNames) {
+			return n, false
+		}
 		updated, ok := n.ExcludeOpNames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ExcludeOpNames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ExcludeOpNames = replacement
 	}
 	return v.Leave(n)
 }
@@ -403,18 +605,35 @@ type DropStmt struct {
 func (n *DropStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DropStmt)
+	outer, ok := node.(*DropStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	for i0 := range n.Objects {
 		if n.Objects[i0] != nil {
+			if !nodePresent(n.Objects[i0]) {
+				return n, false
+			}
 			updated, ok := n.Objects[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Objects[i0] = updated.(*TableName)
+			replacement, ok := updated.(*TableName)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Objects[i0] = replacement
 		}
 	}
 	return v.Leave(n)
@@ -434,21 +653,41 @@ type AlterTableCmd struct {
 func (n *AlterTableCmd) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTableCmd) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterTableCmd)
+	outer, ok := node.(*AlterTableCmd)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Newowner != nil {
+		if !nodePresent(n.Newowner) {
+			return n, false
+		}
 		updated, ok := n.Newowner.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Newowner = updated.(*RoleSpec)
+		replacement, ok := updated.(*RoleSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Newowner = replacement
 	}
 	if n.Def != nil {
+		if !nodePresent(n.Def) {
+			return n, false
+		}
 		updated, ok := n.Def.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Def = updated
@@ -468,17 +707,34 @@ type AlterTableMoveAllStmt struct {
 func (n *AlterTableMoveAllStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTableMoveAllStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterTableMoveAllStmt)
+	outer, ok := node.(*AlterTableMoveAllStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Roles != nil {
+		if !nodePresent(n.Roles) {
+			return n, false
+		}
 		updated, ok := n.Roles.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Roles = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Roles = replacement
 	}
 	return v.Leave(n)
 }
@@ -497,17 +753,34 @@ type RangeVar struct {
 func (n *RangeVar) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeVar) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RangeVar)
+	outer, ok := node.(*RangeVar)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Alias != nil {
+		if !nodePresent(n.Alias) {
+			return n, false
+		}
 		updated, ok := n.Alias.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Alias = updated.(*Alias)
+		replacement, ok := updated.(*Alias)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Alias = replacement
 	}
 	return v.Leave(n)
 }
@@ -521,17 +794,34 @@ type Alias struct {
 func (n *Alias) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *Alias) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*Alias)
+	outer, ok := node.(*Alias)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Colnames != nil {
+		if !nodePresent(n.Colnames) {
+			return n, false
+		}
 		updated, ok := n.Colnames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Colnames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Colnames = replacement
 	}
 	return v.Leave(n)
 }
@@ -543,7 +833,7 @@ type IntoClause struct {
 	AccessMethod   string
 	Options        *List
 	OnCommit       OnCommitAction
-	TableSpaceName string
+	TableSpaceName lex.Ident
 	ViewQuery      Node
 	SkipData       bool
 }
@@ -551,35 +841,69 @@ type IntoClause struct {
 func (n *IntoClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *IntoClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*IntoClause)
+	outer, ok := node.(*IntoClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Rel != nil {
+		if !nodePresent(n.Rel) {
+			return n, false
+		}
 		updated, ok := n.Rel.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Rel = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Rel = replacement
 	}
 	if n.ColNames != nil {
+		if !nodePresent(n.ColNames) {
+			return n, false
+		}
 		updated, ok := n.ColNames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ColNames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ColNames = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	if n.ViewQuery != nil {
+		if !nodePresent(n.ViewQuery) {
+			return n, false
+		}
 		updated, ok := n.ViewQuery.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.ViewQuery = updated
@@ -596,17 +920,34 @@ type ColumnRef struct {
 func (n *ColumnRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ColumnRef) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*ColumnRef)
+	outer, ok := node.(*ColumnRef)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Fields != nil {
+		if !nodePresent(n.Fields) {
+			return n, false
+		}
 		updated, ok := n.Fields.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Fields = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Fields = replacement
 	}
 	return v.Leave(n)
 }
@@ -622,21 +963,41 @@ type ResTarget struct {
 func (n *ResTarget) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ResTarget) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*ResTarget)
+	outer, ok := node.(*ResTarget)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Indirection != nil {
+		if !nodePresent(n.Indirection) {
+			return n, false
+		}
 		updated, ok := n.Indirection.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Indirection = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Indirection = replacement
 	}
 	if n.Val != nil {
+		if !nodePresent(n.Val) {
+			return n, false
+		}
 		updated, ok := n.Val.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Val = updated
@@ -654,14 +1015,27 @@ type MultiAssignRef struct {
 func (n *MultiAssignRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *MultiAssignRef) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*MultiAssignRef)
+	outer, ok := node.(*MultiAssignRef)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Source != nil {
+		if !nodePresent(n.Source) {
+			return n, false
+		}
 		updated, ok := n.Source.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Source = updated
@@ -681,28 +1055,51 @@ type A_Expr struct {
 func (n *A_Expr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Expr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*A_Expr)
+	outer, ok := node.(*A_Expr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Name != nil {
+		if !nodePresent(n.Name) {
+			return n, false
+		}
 		updated, ok := n.Name.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Name = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Name = replacement
 	}
 	if n.Lexpr != nil {
+		if !nodePresent(n.Lexpr) {
+			return n, false
+		}
 		updated, ok := n.Lexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Lexpr = updated
 	}
 	if n.Rexpr != nil {
+		if !nodePresent(n.Rexpr) {
+			return n, false
+		}
 		updated, ok := n.Rexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Rexpr = updated
@@ -720,14 +1117,27 @@ type A_Const struct {
 func (n *A_Const) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Const) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*A_Const)
+	outer, ok := node.(*A_Const)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Val != nil {
+		if !nodePresent(n.Val) {
+			return n, false
+		}
 		updated, ok := n.Val.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Val = updated
@@ -745,14 +1155,27 @@ type TypeCast struct {
 func (n *TypeCast) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TypeCast) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*TypeCast)
+	outer, ok := node.(*TypeCast)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Arg = updated
@@ -778,42 +1201,79 @@ type FuncCall struct {
 func (n *FuncCall) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *FuncCall) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*FuncCall)
+	outer, ok := node.(*FuncCall)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Funcname != nil {
+		if !nodePresent(n.Funcname) {
+			return n, false
+		}
 		updated, ok := n.Funcname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Funcname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Funcname = replacement
 	}
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	if n.AggOrder != nil {
+		if !nodePresent(n.AggOrder) {
+			return n, false
+		}
 		updated, ok := n.AggOrder.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.AggOrder = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.AggOrder = replacement
 	}
 	if n.AggFilter != nil {
+		if !nodePresent(n.AggFilter) {
+			return n, false
+		}
 		updated, ok := n.AggFilter.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.AggFilter = updated
 	}
 	if n.Over != nil {
+		if !nodePresent(n.Over) {
+			return n, false
+		}
 		updated, ok := n.Over.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Over = updated
@@ -832,14 +1292,27 @@ type NamedArgExpr struct {
 func (n *NamedArgExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *NamedArgExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*NamedArgExpr)
+	outer, ok := node.(*NamedArgExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Arg = updated
@@ -862,31 +1335,62 @@ type TypeName struct {
 func (n *TypeName) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TypeName) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*TypeName)
+	outer, ok := node.(*TypeName)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Names != nil {
+		if !nodePresent(n.Names) {
+			return n, false
+		}
 		updated, ok := n.Names.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Names = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Names = replacement
 	}
 	if n.Typmods != nil {
+		if !nodePresent(n.Typmods) {
+			return n, false
+		}
 		updated, ok := n.Typmods.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Typmods = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Typmods = replacement
 	}
 	if n.ArrayBounds != nil {
+		if !nodePresent(n.ArrayBounds) {
+			return n, false
+		}
 		updated, ok := n.ArrayBounds.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ArrayBounds = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ArrayBounds = replacement
 	}
 	return v.Leave(n)
 }
@@ -903,24 +1407,44 @@ type SortBy struct {
 func (n *SortBy) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SortBy) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*SortBy)
+	outer, ok := node.(*SortBy)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Node != nil {
+		if !nodePresent(n.Node) {
+			return n, false
+		}
 		updated, ok := n.Node.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Node = updated
 	}
 	if n.UseOp != nil {
+		if !nodePresent(n.UseOp) {
+			return n, false
+		}
 		updated, ok := n.UseOp.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.UseOp = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.UseOp = replacement
 	}
 	return v.Leave(n)
 }
@@ -945,66 +1469,120 @@ type CommonTableExpr struct {
 func (n *CommonTableExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CommonTableExpr)
+	outer, ok := node.(*CommonTableExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Aliascolnames != nil {
+		if !nodePresent(n.Aliascolnames) {
+			return n, false
+		}
 		updated, ok := n.Aliascolnames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Aliascolnames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Aliascolnames = replacement
 	}
 	if n.Ctequery != nil {
+		if !nodePresent(n.Ctequery) {
+			return n, false
+		}
 		updated, ok := n.Ctequery.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Ctequery = updated
 	}
 	if n.SearchClause != nil {
+		if !nodePresent(n.SearchClause) {
+			return n, false
+		}
 		updated, ok := n.SearchClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.SearchClause = updated
 	}
 	if n.CycleClause != nil {
+		if !nodePresent(n.CycleClause) {
+			return n, false
+		}
 		updated, ok := n.CycleClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.CycleClause = updated
 	}
 	if n.Ctecolnames != nil {
+		if !nodePresent(n.Ctecolnames) {
+			return n, false
+		}
 		updated, ok := n.Ctecolnames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Ctecolnames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Ctecolnames = replacement
 	}
 	if n.Ctecoltypes != nil {
+		if !nodePresent(n.Ctecoltypes) {
+			return n, false
+		}
 		updated, ok := n.Ctecoltypes.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Ctecoltypes = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Ctecoltypes = replacement
 	}
 	if n.Ctecoltypmods != nil {
+		if !nodePresent(n.Ctecoltypmods) {
+			return n, false
+		}
 		updated, ok := n.Ctecoltypmods.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Ctecoltypmods = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Ctecoltypmods = replacement
 	}
 	if n.Ctecolcollations != nil {
+		if !nodePresent(n.Ctecolcollations) {
+			return n, false
+		}
 		updated, ok := n.Ctecolcollations.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Ctecolcollations = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Ctecolcollations = replacement
 	}
 	return v.Leave(n)
 }
@@ -1020,17 +1598,34 @@ type CTESearchClause struct {
 func (n *CTESearchClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CTESearchClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CTESearchClause)
+	outer, ok := node.(*CTESearchClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.SearchColList != nil {
+		if !nodePresent(n.SearchColList) {
+			return n, false
+		}
 		updated, ok := n.SearchColList.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.SearchColList = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.SearchColList = replacement
 	}
 	return v.Leave(n)
 }
@@ -1052,28 +1647,51 @@ type CTECycleClause struct {
 func (n *CTECycleClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CTECycleClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CTECycleClause)
+	outer, ok := node.(*CTECycleClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.CycleColList != nil {
+		if !nodePresent(n.CycleColList) {
+			return n, false
+		}
 		updated, ok := n.CycleColList.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.CycleColList = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.CycleColList = replacement
 	}
 	if n.CycleMarkValue != nil {
+		if !nodePresent(n.CycleMarkValue) {
+			return n, false
+		}
 		updated, ok := n.CycleMarkValue.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.CycleMarkValue = updated
 	}
 	if n.CycleMarkDefault != nil {
+		if !nodePresent(n.CycleMarkDefault) {
+			return n, false
+		}
 		updated, ok := n.CycleMarkDefault.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.CycleMarkDefault = updated
@@ -1084,18 +1702,28 @@ func (n *CTECycleClause) Accept(v Visitor) (Node, bool) {
 type RoleSpec struct {
 	node
 	Roletype int
-	Rolename string
+	Rolename lex.Ident
 	Location ParseLoc
 }
 
 func (n *RoleSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RoleSpec) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RoleSpec)
+	outer, ok := node.(*RoleSpec)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -1109,24 +1737,44 @@ type CollateClause struct {
 func (n *CollateClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CollateClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CollateClause)
+	outer, ok := node.(*CollateClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Arg = updated
 	}
 	if n.Collname != nil {
+		if !nodePresent(n.Collname) {
+			return n, false
+		}
 		updated, ok := n.Collname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Collname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Collname = replacement
 	}
 	return v.Leave(n)
 }
@@ -1141,17 +1789,34 @@ type PartitionSpec struct {
 func (n *PartitionSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PartitionSpec) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*PartitionSpec)
+	outer, ok := node.(*PartitionSpec)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.PartParams != nil {
+		if !nodePresent(n.PartParams) {
+			return n, false
+		}
 		updated, ok := n.PartParams.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.PartParams = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.PartParams = replacement
 	}
 	return v.Leave(n)
 }
@@ -1168,31 +1833,58 @@ type PartitionElem struct {
 func (n *PartitionElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PartitionElem) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*PartitionElem)
+	outer, ok := node.(*PartitionElem)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
 	}
 	if n.Collation != nil {
+		if !nodePresent(n.Collation) {
+			return n, false
+		}
 		updated, ok := n.Collation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Collation = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Collation = replacement
 	}
 	if n.Opclass != nil {
+		if !nodePresent(n.Opclass) {
+			return n, false
+		}
 		updated, ok := n.Opclass.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opclass = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opclass = replacement
 	}
 	return v.Leave(n)
 }
@@ -1207,24 +1899,48 @@ type PartitionCmd struct {
 func (n *PartitionCmd) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PartitionCmd) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*PartitionCmd)
+	outer, ok := node.(*PartitionCmd)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Name != nil {
+		if !nodePresent(n.Name) {
+			return n, false
+		}
 		updated, ok := n.Name.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Name = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Name = replacement
 	}
 	if n.Bound != nil {
+		if !nodePresent(n.Bound) {
+			return n, false
+		}
 		updated, ok := n.Bound.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Bound = updated.(*PartitionBoundSpec)
+		replacement, ok := updated.(*PartitionBoundSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Bound = replacement
 	}
 	return v.Leave(n)
 }
@@ -1240,21 +1956,41 @@ type InferClause struct {
 func (n *InferClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *InferClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*InferClause)
+	outer, ok := node.(*InferClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.IndexElems != nil {
+		if !nodePresent(n.IndexElems) {
+			return n, false
+		}
 		updated, ok := n.IndexElems.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.IndexElems = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.IndexElems = replacement
 	}
 	if n.WhereClause != nil {
+		if !nodePresent(n.WhereClause) {
+			return n, false
+		}
 		updated, ok := n.WhereClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.WhereClause = updated
@@ -1274,14 +2010,27 @@ type DefElem struct {
 func (n *DefElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DefElem) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DefElem)
+	outer, ok := node.(*DefElem)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Arg = updated
@@ -1299,17 +2048,34 @@ type LockingClause struct {
 func (n *LockingClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *LockingClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*LockingClause)
+	outer, ok := node.(*LockingClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.LockedRels != nil {
+		if !nodePresent(n.LockedRels) {
+			return n, false
+		}
 		updated, ok := n.LockedRels.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.LockedRels = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.LockedRels = replacement
 	}
 	return v.Leave(n)
 }
@@ -1321,11 +2087,21 @@ type A_Star struct {
 func (n *A_Star) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Star) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*A_Star)
+	outer, ok := node.(*A_Star)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -1339,21 +2115,37 @@ type A_Indices struct {
 func (n *A_Indices) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Indices) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*A_Indices)
+	outer, ok := node.(*A_Indices)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Lidx != nil {
+		if !nodePresent(n.Lidx) {
+			return n, false
+		}
 		updated, ok := n.Lidx.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Lidx = updated
 	}
 	if n.Uidx != nil {
+		if !nodePresent(n.Uidx) {
+			return n, false
+		}
 		updated, ok := n.Uidx.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Uidx = updated
@@ -1370,24 +2162,44 @@ type A_Indirection struct {
 func (n *A_Indirection) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_Indirection) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*A_Indirection)
+	outer, ok := node.(*A_Indirection)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Arg = updated
 	}
 	if n.Indirection != nil {
+		if !nodePresent(n.Indirection) {
+			return n, false
+		}
 		updated, ok := n.Indirection.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Indirection = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Indirection = replacement
 	}
 	return v.Leave(n)
 }
@@ -1407,35 +2219,65 @@ type WindowDef struct {
 func (n *WindowDef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *WindowDef) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*WindowDef)
+	outer, ok := node.(*WindowDef)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.PartitionClause != nil {
+		if !nodePresent(n.PartitionClause) {
+			return n, false
+		}
 		updated, ok := n.PartitionClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.PartitionClause = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.PartitionClause = replacement
 	}
 	if n.OrderClause != nil {
+		if !nodePresent(n.OrderClause) {
+			return n, false
+		}
 		updated, ok := n.OrderClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OrderClause = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OrderClause = replacement
 	}
 	if n.StartOffset != nil {
+		if !nodePresent(n.StartOffset) {
+			return n, false
+		}
 		updated, ok := n.StartOffset.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.StartOffset = updated
 	}
 	if n.EndOffset != nil {
+		if !nodePresent(n.EndOffset) {
+			return n, false
+		}
 		updated, ok := n.EndOffset.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.EndOffset = updated
@@ -1459,52 +2301,92 @@ type JoinExpr struct {
 func (n *JoinExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JoinExpr)
+	outer, ok := node.(*JoinExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Larg != nil {
+		if !nodePresent(n.Larg) {
+			return n, false
+		}
 		updated, ok := n.Larg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Larg = updated
 	}
 	if n.Rarg != nil {
+		if !nodePresent(n.Rarg) {
+			return n, false
+		}
 		updated, ok := n.Rarg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Rarg = updated
 	}
 	if n.UsingClause != nil {
+		if !nodePresent(n.UsingClause) {
+			return n, false
+		}
 		updated, ok := n.UsingClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.UsingClause = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.UsingClause = replacement
 	}
 	if n.JoinUsing != nil {
+		if !nodePresent(n.JoinUsing) {
+			return n, false
+		}
 		updated, ok := n.JoinUsing.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.JoinUsing = updated.(*Alias)
+		replacement, ok := updated.(*Alias)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.JoinUsing = replacement
 	}
 	if n.Quals != nil {
+		if !nodePresent(n.Quals) {
+			return n, false
+		}
 		updated, ok := n.Quals.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Quals = updated
 	}
 	if n.Alias != nil {
+		if !nodePresent(n.Alias) {
+			return n, false
+		}
 		updated, ok := n.Alias.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Alias = updated.(*Alias)
+		replacement, ok := updated.(*Alias)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Alias = replacement
 	}
 	return v.Leave(n)
 }
@@ -1518,21 +2400,41 @@ type FromExpr struct {
 func (n *FromExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *FromExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*FromExpr)
+	outer, ok := node.(*FromExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Fromlist != nil {
+		if !nodePresent(n.Fromlist) {
+			return n, false
+		}
 		updated, ok := n.Fromlist.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Fromlist = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Fromlist = replacement
 	}
 	if n.Quals != nil {
+		if !nodePresent(n.Quals) {
+			return n, false
+		}
 		updated, ok := n.Quals.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Quals = updated
@@ -1555,38 +2457,72 @@ type IndexElem struct {
 func (n *IndexElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *IndexElem) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*IndexElem)
+	outer, ok := node.(*IndexElem)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
 	}
 	if n.Collation != nil {
+		if !nodePresent(n.Collation) {
+			return n, false
+		}
 		updated, ok := n.Collation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Collation = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Collation = replacement
 	}
 	if n.Opclass != nil {
+		if !nodePresent(n.Opclass) {
+			return n, false
+		}
 		updated, ok := n.Opclass.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opclass = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opclass = replacement
 	}
 	if n.Opclassopts != nil {
+		if !nodePresent(n.Opclassopts) {
+			return n, false
+		}
 		updated, ok := n.Opclassopts.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opclassopts = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opclassopts = replacement
 	}
 	return v.Leave(n)
 }
@@ -1600,11 +2536,21 @@ type ParamRef struct {
 func (n *ParamRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ParamRef) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*ParamRef)
+	outer, ok := node.(*ParamRef)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -1618,11 +2564,21 @@ type CurrentOfExpr struct {
 func (n *CurrentOfExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CurrentOfExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CurrentOfExpr)
+	outer, ok := node.(*CurrentOfExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -1639,28 +2595,51 @@ type SubLink struct {
 func (n *SubLink) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SubLink) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*SubLink)
+	outer, ok := node.(*SubLink)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Testexpr != nil {
+		if !nodePresent(n.Testexpr) {
+			return n, false
+		}
 		updated, ok := n.Testexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Testexpr = updated
 	}
 	if n.OperName != nil {
+		if !nodePresent(n.OperName) {
+			return n, false
+		}
 		updated, ok := n.OperName.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OperName = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OperName = replacement
 	}
 	if n.Subselect != nil {
+		if !nodePresent(n.Subselect) {
+			return n, false
+		}
 		updated, ok := n.Subselect.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Subselect = updated
@@ -1678,17 +2657,34 @@ type BoolExpr struct {
 func (n *BoolExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *BoolExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*BoolExpr)
+	outer, ok := node.(*BoolExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	return v.Leave(n)
 }
@@ -1706,14 +2702,27 @@ type NullTest struct {
 func (n *NullTest) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *NullTest) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*NullTest)
+	outer, ok := node.(*NullTest)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Arg = updated
@@ -1733,14 +2742,27 @@ type BooleanTest struct {
 func (n *BooleanTest) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *BooleanTest) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*BooleanTest)
+	outer, ok := node.(*BooleanTest)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Arg = updated
@@ -1758,24 +2780,44 @@ type RangeSubselect struct {
 func (n *RangeSubselect) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeSubselect) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RangeSubselect)
+	outer, ok := node.(*RangeSubselect)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Subquery != nil {
+		if !nodePresent(n.Subquery) {
+			return n, false
+		}
 		updated, ok := n.Subquery.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Subquery = updated
 	}
 	if n.Alias != nil {
+		if !nodePresent(n.Alias) {
+			return n, false
+		}
 		updated, ok := n.Alias.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Alias = updated.(*Alias)
+		replacement, ok := updated.(*Alias)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Alias = replacement
 	}
 	return v.Leave(n)
 }
@@ -1793,31 +2835,62 @@ type RangeFunction struct {
 func (n *RangeFunction) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeFunction) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RangeFunction)
+	outer, ok := node.(*RangeFunction)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Functions != nil {
+		if !nodePresent(n.Functions) {
+			return n, false
+		}
 		updated, ok := n.Functions.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Functions = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Functions = replacement
 	}
 	if n.Alias != nil {
+		if !nodePresent(n.Alias) {
+			return n, false
+		}
 		updated, ok := n.Alias.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Alias = updated.(*Alias)
+		replacement, ok := updated.(*Alias)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Alias = replacement
 	}
 	if n.Coldeflist != nil {
+		if !nodePresent(n.Coldeflist) {
+			return n, false
+		}
 		updated, ok := n.Coldeflist.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Coldeflist = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Coldeflist = replacement
 	}
 	return v.Leave(n)
 }
@@ -1834,35 +2907,65 @@ type RangeTableSample struct {
 func (n *RangeTableSample) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RangeTableSample)
+	outer, ok := node.(*RangeTableSample)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Relation = updated
 	}
 	if n.Method != nil {
+		if !nodePresent(n.Method) {
+			return n, false
+		}
 		updated, ok := n.Method.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Method = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Method = replacement
 	}
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	if n.Repeatable != nil {
+		if !nodePresent(n.Repeatable) {
+			return n, false
+		}
 		updated, ok := n.Repeatable.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Repeatable = updated
@@ -1882,31 +2985,62 @@ type TableLikeClause struct {
 func (n *TableLikeClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TableLikeClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*TableLikeClause)
+	outer, ok := node.(*TableLikeClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.Columns != nil {
+		if !nodePresent(n.Columns) {
+			return n, false
+		}
 		updated, ok := n.Columns.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Columns = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Columns = replacement
 	}
 	if n.AncillaryData != nil {
+		if !nodePresent(n.AncillaryData) {
+			return n, false
+		}
 		updated, ok := n.AncillaryData.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.AncillaryData = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.AncillaryData = replacement
 	}
 	return v.Leave(n)
 }
@@ -1921,21 +3055,37 @@ type CaseWhen struct {
 func (n *CaseWhen) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CaseWhen) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CaseWhen)
+	outer, ok := node.(*CaseWhen)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
 	}
 	if n.Result != nil {
+		if !nodePresent(n.Result) {
+			return n, false
+		}
 		updated, ok := n.Result.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Result = updated
@@ -1954,17 +3104,34 @@ type CoalesceExpr struct {
 func (n *CoalesceExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CoalesceExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CoalesceExpr)
+	outer, ok := node.(*CoalesceExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	return v.Leave(n)
 }
@@ -1981,17 +3148,34 @@ type MinMaxExpr struct {
 func (n *MinMaxExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *MinMaxExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*MinMaxExpr)
+	outer, ok := node.(*MinMaxExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	return v.Leave(n)
 }
@@ -2013,17 +3197,34 @@ type NullIfExpr struct {
 func (n *NullIfExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *NullIfExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*NullIfExpr)
+	outer, ok := node.(*NullIfExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	return v.Leave(n)
 }
@@ -2037,17 +3238,34 @@ type A_ArrayExpr struct {
 func (n *A_ArrayExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *A_ArrayExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*A_ArrayExpr)
+	outer, ok := node.(*A_ArrayExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Elements != nil {
+		if !nodePresent(n.Elements) {
+			return n, false
+		}
 		updated, ok := n.Elements.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Elements = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Elements = replacement
 	}
 	return v.Leave(n)
 }
@@ -2063,24 +3281,48 @@ type GroupingFunc struct {
 func (n *GroupingFunc) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *GroupingFunc) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*GroupingFunc)
+	outer, ok := node.(*GroupingFunc)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	if n.Refs != nil {
+		if !nodePresent(n.Refs) {
+			return n, false
+		}
 		updated, ok := n.Refs.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Refs = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Refs = replacement
 	}
 	return v.Leave(n)
 }
@@ -2109,45 +3351,82 @@ type WindowClause struct {
 func (n *WindowClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *WindowClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*WindowClause)
+	outer, ok := node.(*WindowClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.PartitionClause != nil {
+		if !nodePresent(n.PartitionClause) {
+			return n, false
+		}
 		updated, ok := n.PartitionClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.PartitionClause = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.PartitionClause = replacement
 	}
 	if n.OrderClause != nil {
+		if !nodePresent(n.OrderClause) {
+			return n, false
+		}
 		updated, ok := n.OrderClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OrderClause = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OrderClause = replacement
 	}
 	if n.StartOffset != nil {
+		if !nodePresent(n.StartOffset) {
+			return n, false
+		}
 		updated, ok := n.StartOffset.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.StartOffset = updated
 	}
 	if n.EndOffset != nil {
+		if !nodePresent(n.EndOffset) {
+			return n, false
+		}
 		updated, ok := n.EndOffset.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.EndOffset = updated
 	}
 	if n.RunCondition != nil {
+		if !nodePresent(n.RunCondition) {
+			return n, false
+		}
 		updated, ok := n.RunCondition.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.RunCondition = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.RunCondition = replacement
 	}
 	return v.Leave(n)
 }
@@ -2164,17 +3443,34 @@ type TruncateStmt struct {
 func (n *TruncateStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TruncateStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*TruncateStmt)
+	outer, ok := node.(*TruncateStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relations != nil {
+		if !nodePresent(n.Relations) {
+			return n, false
+		}
 		updated, ok := n.Relations.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relations = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relations = replacement
 	}
 	return v.Leave(n)
 }
@@ -2191,24 +3487,48 @@ type CreateSeqStmt struct {
 func (n *CreateSeqStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateSeqStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateSeqStmt)
+	outer, ok := node.(*CreateSeqStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Sequence != nil {
+		if !nodePresent(n.Sequence) {
+			return n, false
+		}
 		updated, ok := n.Sequence.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Sequence = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Sequence = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -2224,24 +3544,48 @@ type AlterSeqStmt struct {
 func (n *AlterSeqStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterSeqStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterSeqStmt)
+	outer, ok := node.(*AlterSeqStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Sequence != nil {
+		if !nodePresent(n.Sequence) {
+			return n, false
+		}
 		updated, ok := n.Sequence.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Sequence = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Sequence = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -2257,14 +3601,27 @@ type FunctionParameter struct {
 func (n *FunctionParameter) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *FunctionParameter) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*FunctionParameter)
+	outer, ok := node.(*FunctionParameter)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Defexpr != nil {
+		if !nodePresent(n.Defexpr) {
+			return n, false
+		}
 		updated, ok := n.Defexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Defexpr = updated
@@ -2283,24 +3640,48 @@ type CreateEnumStmt struct {
 func (n *CreateEnumStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateEnumStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateEnumStmt)
+	outer, ok := node.(*CreateEnumStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.TypeName != nil {
+		if !nodePresent(n.TypeName) {
+			return n, false
+		}
 		updated, ok := n.TypeName.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.TypeName = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.TypeName = replacement
 	}
 	if n.Vals != nil {
+		if !nodePresent(n.Vals) {
+			return n, false
+		}
 		updated, ok := n.Vals.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Vals = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Vals = replacement
 	}
 	return v.Leave(n)
 }
@@ -2318,17 +3699,34 @@ type AlterEnumStmt struct {
 func (n *AlterEnumStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterEnumStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterEnumStmt)
+	outer, ok := node.(*AlterEnumStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Typname != nil {
+		if !nodePresent(n.Typname) {
+			return n, false
+		}
 		updated, ok := n.Typname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Typname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Typname = replacement
 	}
 	return v.Leave(n)
 }
@@ -2344,32 +3742,63 @@ type CreateDomainStmt struct {
 func (n *CreateDomainStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateDomainStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateDomainStmt)
+	outer, ok := node.(*CreateDomainStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Domainname != nil {
+		if !nodePresent(n.Domainname) {
+			return n, false
+		}
 		updated, ok := n.Domainname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Domainname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Domainname = replacement
 	}
 	if n.CollClause != nil {
+		if !nodePresent(n.CollClause) {
+			return n, false
+		}
 		updated, ok := n.CollClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.CollClause = updated.(*CollateClause)
+		replacement, ok := updated.(*CollateClause)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.CollClause = replacement
 	}
 	for i0 := range n.Constraints {
 		if n.Constraints[i0] != nil {
+			if !nodePresent(n.Constraints[i0]) {
+				return n, false
+			}
 			updated, ok := n.Constraints[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Constraints[i0] = updated.(*ColumnOption)
+			replacement, ok := updated.(*ColumnOption)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Constraints[i0] = replacement
 		}
 	}
 	return v.Leave(n)
@@ -2388,21 +3817,41 @@ type AlterDomainStmt struct {
 func (n *AlterDomainStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterDomainStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterDomainStmt)
+	outer, ok := node.(*AlterDomainStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Typname != nil {
+		if !nodePresent(n.Typname) {
+			return n, false
+		}
 		updated, ok := n.Typname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Typname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Typname = replacement
 	}
 	if n.Def != nil {
+		if !nodePresent(n.Def) {
+			return n, false
+		}
 		updated, ok := n.Def.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Def = updated
@@ -2432,59 +3881,114 @@ type CreateTrigStmt struct {
 func (n *CreateTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateTrigStmt)
+	outer, ok := node.(*CreateTrigStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.Funcname != nil {
+		if !nodePresent(n.Funcname) {
+			return n, false
+		}
 		updated, ok := n.Funcname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Funcname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Funcname = replacement
 	}
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	if n.Columns != nil {
+		if !nodePresent(n.Columns) {
+			return n, false
+		}
 		updated, ok := n.Columns.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Columns = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Columns = replacement
 	}
 	if n.WhenClause != nil {
+		if !nodePresent(n.WhenClause) {
+			return n, false
+		}
 		updated, ok := n.WhenClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.WhenClause = updated
 	}
 	if n.TransitionRels != nil {
+		if !nodePresent(n.TransitionRels) {
+			return n, false
+		}
 		updated, ok := n.TransitionRels.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.TransitionRels = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.TransitionRels = replacement
 	}
 	if n.Constrrel != nil {
+		if !nodePresent(n.Constrrel) {
+			return n, false
+		}
 		updated, ok := n.Constrrel.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Constrrel = updated.(*RangeVar)
+		replacement, ok := updated.(*RangeVar)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Constrrel = replacement
 	}
 	return v.Leave(n)
 }
@@ -2500,17 +4004,34 @@ type AccessPriv struct {
 func (n *AccessPriv) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AccessPriv) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AccessPriv)
+	outer, ok := node.(*AccessPriv)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Cols != nil {
+		if !nodePresent(n.Cols) {
+			return n, false
+		}
 		updated, ok := n.Cols.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Cols = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Cols = replacement
 	}
 	return v.Leave(n)
 }
@@ -2527,24 +4048,44 @@ type CreateTableAsStmt struct {
 func (n *CreateTableAsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateTableAsStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateTableAsStmt)
+	outer, ok := node.(*CreateTableAsStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Query != nil {
+		if !nodePresent(n.Query) {
+			return n, false
+		}
 		updated, ok := n.Query.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Query = updated
 	}
 	if n.Into != nil {
+		if !nodePresent(n.Into) {
+			return n, false
+		}
 		updated, ok := n.Into.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Into = updated.(*IntoClause)
+		replacement, ok := updated.(*IntoClause)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Into = replacement
 	}
 	return v.Leave(n)
 }
@@ -2559,24 +4100,48 @@ type VacuumRelation struct {
 func (n *VacuumRelation) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *VacuumRelation) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*VacuumRelation)
+	outer, ok := node.(*VacuumRelation)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.VaCols != nil {
+		if !nodePresent(n.VaCols) {
+			return n, false
+		}
 		updated, ok := n.VaCols.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.VaCols = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.VaCols = replacement
 	}
 	return v.Leave(n)
 }
@@ -2594,17 +4159,34 @@ type TransactionStmt struct {
 func (n *TransactionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TransactionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*TransactionStmt)
+	outer, ok := node.(*TransactionStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -2621,17 +4203,34 @@ type LockStmt struct {
 func (n *LockStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *LockStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*LockStmt)
+	outer, ok := node.(*LockStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relations != nil {
+		if !nodePresent(n.Relations) {
+			return n, false
+		}
 		updated, ok := n.Relations.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relations = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relations = replacement
 	}
 	return v.Leave(n)
 }
@@ -2651,52 +4250,96 @@ type SetOperationStmt struct {
 func (n *SetOperationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*SetOperationStmt)
+	outer, ok := node.(*SetOperationStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Larg != nil {
+		if !nodePresent(n.Larg) {
+			return n, false
+		}
 		updated, ok := n.Larg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Larg = updated
 	}
 	if n.Rarg != nil {
+		if !nodePresent(n.Rarg) {
+			return n, false
+		}
 		updated, ok := n.Rarg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Rarg = updated
 	}
 	if n.ColTypes != nil {
+		if !nodePresent(n.ColTypes) {
+			return n, false
+		}
 		updated, ok := n.ColTypes.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ColTypes = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ColTypes = replacement
 	}
 	if n.ColTypmods != nil {
+		if !nodePresent(n.ColTypmods) {
+			return n, false
+		}
 		updated, ok := n.ColTypmods.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ColTypmods = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ColTypmods = replacement
 	}
 	if n.ColCollations != nil {
+		if !nodePresent(n.ColCollations) {
+			return n, false
+		}
 		updated, ok := n.ColCollations.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ColCollations = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ColCollations = replacement
 	}
 	if n.GroupClauses != nil {
+		if !nodePresent(n.GroupClauses) {
+			return n, false
+		}
 		updated, ok := n.GroupClauses.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.GroupClauses = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.GroupClauses = replacement
 	}
 	return v.Leave(n)
 }
@@ -2713,11 +4356,21 @@ type SortGroupClause struct {
 func (n *SortGroupClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SortGroupClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*SortGroupClause)
+	outer, ok := node.(*SortGroupClause)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -2736,21 +4389,41 @@ type RenameStmt struct {
 func (n *RenameStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RenameStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RenameStmt)
+	outer, ok := node.(*RenameStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.Object != nil {
+		if !nodePresent(n.Object) {
+			return n, false
+		}
 		updated, ok := n.Object.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Object = updated
@@ -2770,21 +4443,41 @@ type AlterObjectSchemaStmt struct {
 func (n *AlterObjectSchemaStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterObjectSchemaStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterObjectSchemaStmt)
+	outer, ok := node.(*AlterObjectSchemaStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.Object != nil {
+		if !nodePresent(n.Object) {
+			return n, false
+		}
 		updated, ok := n.Object.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Object = updated
@@ -2803,31 +4496,58 @@ type AlterOwnerStmt struct {
 func (n *AlterOwnerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterOwnerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterOwnerStmt)
+	outer, ok := node.(*AlterOwnerStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.Object != nil {
+		if !nodePresent(n.Object) {
+			return n, false
+		}
 		updated, ok := n.Object.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Object = updated
 	}
 	if n.Newowner != nil {
+		if !nodePresent(n.Newowner) {
+			return n, false
+		}
 		updated, ok := n.Newowner.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Newowner = updated.(*RoleSpec)
+		replacement, ok := updated.(*RoleSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Newowner = replacement
 	}
 	return v.Leave(n)
 }
@@ -2841,11 +4561,21 @@ type CheckPointStmt struct {
 func (n *CheckPointStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CheckPointStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CheckPointStmt)
+	outer, ok := node.(*CheckPointStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -2857,11 +4587,21 @@ type ClosePortalStmt struct {
 func (n *ClosePortalStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ClosePortalStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*ClosePortalStmt)
+	outer, ok := node.(*ClosePortalStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -2874,18 +4614,35 @@ type ConstraintsSetStmt struct {
 func (n *ConstraintsSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ConstraintsSetStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*ConstraintsSetStmt)
+	outer, ok := node.(*ConstraintsSetStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	for i0 := range n.Constraints {
 		if n.Constraints[i0] != nil {
+			if !nodePresent(n.Constraints[i0]) {
+				return n, false
+			}
 			updated, ok := n.Constraints[i0].Accept(v)
 			if !ok {
 				return n, false
 			}
-			n.Constraints[i0] = updated.(*ColumnOption)
+			replacement, ok := updated.(*ColumnOption)
+			if !ok || !nodePresent(replacement) {
+				return n, false
+			}
+			n.Constraints[i0] = replacement
 		}
 	}
 	return v.Leave(n)
@@ -2902,17 +4659,34 @@ type VariableSetStmt struct {
 func (n *VariableSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *VariableSetStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*VariableSetStmt)
+	outer, ok := node.(*VariableSetStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	return v.Leave(n)
 }
@@ -2925,11 +4699,21 @@ type VariableShowStmt struct {
 func (n *VariableShowStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *VariableShowStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*VariableShowStmt)
+	outer, ok := node.(*VariableShowStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -2947,14 +4731,27 @@ type SecLabelStmt struct {
 func (n *SecLabelStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SecLabelStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*SecLabelStmt)
+	outer, ok := node.(*SecLabelStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Object != nil {
+		if !nodePresent(n.Object) {
+			return n, false
+		}
 		updated, ok := n.Object.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Object = updated
@@ -2972,17 +4769,34 @@ type CreateRoleStmt struct {
 func (n *CreateRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateRoleStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateRoleStmt)
+	outer, ok := node.(*CreateRoleStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -2997,24 +4811,48 @@ type AlterRoleStmt struct {
 func (n *AlterRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterRoleStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterRoleStmt)
+	outer, ok := node.(*AlterRoleStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Role != nil {
+		if !nodePresent(n.Role) {
+			return n, false
+		}
 		updated, ok := n.Role.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Role = updated.(*RoleSpec)
+		replacement, ok := updated.(*RoleSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Role = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3029,21 +4867,41 @@ type AlterRoleSetStmt struct {
 func (n *AlterRoleSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterRoleSetStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterRoleSetStmt)
+	outer, ok := node.(*AlterRoleSetStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Role != nil {
+		if !nodePresent(n.Role) {
+			return n, false
+		}
 		updated, ok := n.Role.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Role = updated.(*RoleSpec)
+		replacement, ok := updated.(*RoleSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Role = replacement
 	}
 	if n.Setstmt != nil {
+		if !nodePresent(n.Setstmt) {
+			return n, false
+		}
 		updated, ok := n.Setstmt.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Setstmt = updated
@@ -3060,17 +4918,34 @@ type DropRoleStmt struct {
 func (n *DropRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropRoleStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DropRoleStmt)
+	outer, ok := node.(*DropRoleStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Roles != nil {
+		if !nodePresent(n.Roles) {
+			return n, false
+		}
 		updated, ok := n.Roles.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Roles = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Roles = replacement
 	}
 	return v.Leave(n)
 }
@@ -3084,38 +4959,68 @@ type CreatedbStmt struct {
 func (n *CreatedbStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatedbStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreatedbStmt)
+	outer, ok := node.(*CreatedbStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
 
 type AlterDatabaseSetStmt struct {
 	stmtNode
-	Dbname  string
+	Dbname  lex.Ident
 	Setstmt Node
 }
 
 func (n *AlterDatabaseSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterDatabaseSetStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterDatabaseSetStmt)
+	outer, ok := node.(*AlterDatabaseSetStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Setstmt != nil {
+		if !nodePresent(n.Setstmt) {
+			return n, false
+		}
 		updated, ok := n.Setstmt.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Setstmt = updated
@@ -3125,7 +5030,7 @@ func (n *AlterDatabaseSetStmt) Accept(v Visitor) (Node, bool) {
 
 type DropdbStmt struct {
 	stmtNode
-	Dbname    string
+	Dbname    lex.Ident
 	MissingOk bool
 	Options   *List
 }
@@ -3133,17 +5038,34 @@ type DropdbStmt struct {
 func (n *DropdbStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropdbStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DropdbStmt)
+	outer, ok := node.(*DropdbStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3156,14 +5078,27 @@ type AlterSystemStmt struct {
 func (n *AlterSystemStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterSystemStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterSystemStmt)
+	outer, ok := node.(*AlterSystemStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Setstmt != nil {
+		if !nodePresent(n.Setstmt) {
+			return n, false
+		}
 		updated, ok := n.Setstmt.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Setstmt = updated
@@ -3179,17 +5114,34 @@ type AlterCollationStmt struct {
 func (n *AlterCollationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterCollationStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterCollationStmt)
+	outer, ok := node.(*AlterCollationStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Collname != nil {
+		if !nodePresent(n.Collname) {
+			return n, false
+		}
 		updated, ok := n.Collname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Collname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Collname = replacement
 	}
 	return v.Leave(n)
 }
@@ -3208,31 +5160,62 @@ type DefineStmt struct {
 func (n *DefineStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DefineStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DefineStmt)
+	outer, ok := node.(*DefineStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Defnames != nil {
+		if !nodePresent(n.Defnames) {
+			return n, false
+		}
 		updated, ok := n.Defnames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Defnames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Defnames = replacement
 	}
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	if n.Definition != nil {
+		if !nodePresent(n.Definition) {
+			return n, false
+		}
 		updated, ok := n.Definition.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Definition = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Definition = replacement
 	}
 	return v.Leave(n)
 }
@@ -3246,24 +5229,48 @@ type CompositeTypeStmt struct {
 func (n *CompositeTypeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CompositeTypeStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CompositeTypeStmt)
+	outer, ok := node.(*CompositeTypeStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Typevar != nil {
+		if !nodePresent(n.Typevar) {
+			return n, false
+		}
 		updated, ok := n.Typevar.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Typevar = updated.(*RangeVar)
+		replacement, ok := updated.(*RangeVar)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Typevar = replacement
 	}
 	if n.Coldeflist != nil {
+		if !nodePresent(n.Coldeflist) {
+			return n, false
+		}
 		updated, ok := n.Coldeflist.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Coldeflist = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Coldeflist = replacement
 	}
 	return v.Leave(n)
 }
@@ -3277,24 +5284,48 @@ type CreateRangeStmt struct {
 func (n *CreateRangeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateRangeStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateRangeStmt)
+	outer, ok := node.(*CreateRangeStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.TypeName != nil {
+		if !nodePresent(n.TypeName) {
+			return n, false
+		}
 		updated, ok := n.TypeName.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.TypeName = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.TypeName = replacement
 	}
 	if n.Params != nil {
+		if !nodePresent(n.Params) {
+			return n, false
+		}
 		updated, ok := n.Params.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Params = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Params = replacement
 	}
 	return v.Leave(n)
 }
@@ -3309,24 +5340,48 @@ type ObjectWithArgs struct {
 func (n *ObjectWithArgs) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *ObjectWithArgs) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*ObjectWithArgs)
+	outer, ok := node.(*ObjectWithArgs)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Objname != nil {
+		if !nodePresent(n.Objname) {
+			return n, false
+		}
 		updated, ok := n.Objname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Objname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Objname = replacement
 	}
 	if n.Objargs != nil {
+		if !nodePresent(n.Objargs) {
+			return n, false
+		}
 		updated, ok := n.Objargs.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Objargs = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Objargs = replacement
 	}
 	return v.Leave(n)
 }
@@ -3342,24 +5397,48 @@ type CreateEventTrigStmt struct {
 func (n *CreateEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateEventTrigStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateEventTrigStmt)
+	outer, ok := node.(*CreateEventTrigStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Whenclause != nil {
+		if !nodePresent(n.Whenclause) {
+			return n, false
+		}
 		updated, ok := n.Whenclause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Whenclause = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Whenclause = replacement
 	}
 	if n.Funcname != nil {
+		if !nodePresent(n.Funcname) {
+			return n, false
+		}
 		updated, ok := n.Funcname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Funcname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Funcname = replacement
 	}
 	return v.Leave(n)
 }
@@ -3373,11 +5452,21 @@ type AlterEventTrigStmt struct {
 func (n *AlterEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterEventTrigStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterEventTrigStmt)
+	outer, ok := node.(*AlterEventTrigStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -3395,31 +5484,58 @@ type RuleStmt struct {
 func (n *RuleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RuleStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RuleStmt)
+	outer, ok := node.(*RuleStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.WhereClause != nil {
+		if !nodePresent(n.WhereClause) {
+			return n, false
+		}
 		updated, ok := n.WhereClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.WhereClause = updated
 	}
 	if n.Actions != nil {
+		if !nodePresent(n.Actions) {
+			return n, false
+		}
 		updated, ok := n.Actions.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Actions = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Actions = replacement
 	}
 	return v.Leave(n)
 }
@@ -3437,31 +5553,62 @@ type CreatePLangStmt struct {
 func (n *CreatePLangStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatePLangStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreatePLangStmt)
+	outer, ok := node.(*CreatePLangStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Plhandler != nil {
+		if !nodePresent(n.Plhandler) {
+			return n, false
+		}
 		updated, ok := n.Plhandler.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Plhandler = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Plhandler = replacement
 	}
 	if n.Plinline != nil {
+		if !nodePresent(n.Plinline) {
+			return n, false
+		}
 		updated, ok := n.Plinline.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Plinline = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Plinline = replacement
 	}
 	if n.Plvalidator != nil {
+		if !nodePresent(n.Plvalidator) {
+			return n, false
+		}
 		updated, ok := n.Plvalidator.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Plvalidator = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Plvalidator = replacement
 	}
 	return v.Leave(n)
 }
@@ -3476,11 +5623,21 @@ type TriggerTransition struct {
 func (n *TriggerTransition) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *TriggerTransition) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*TriggerTransition)
+	outer, ok := node.(*TriggerTransition)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -3494,24 +5651,48 @@ type CreateFdwStmt struct {
 func (n *CreateFdwStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateFdwStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateFdwStmt)
+	outer, ok := node.(*CreateFdwStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.FuncOptions != nil {
+		if !nodePresent(n.FuncOptions) {
+			return n, false
+		}
 		updated, ok := n.FuncOptions.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FuncOptions = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FuncOptions = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3526,24 +5707,48 @@ type AlterFdwStmt struct {
 func (n *AlterFdwStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterFdwStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterFdwStmt)
+	outer, ok := node.(*AlterFdwStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.FuncOptions != nil {
+		if !nodePresent(n.FuncOptions) {
+			return n, false
+		}
 		updated, ok := n.FuncOptions.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FuncOptions = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FuncOptions = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3561,17 +5766,34 @@ type CreateForeignServerStmt struct {
 func (n *CreateForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateForeignServerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateForeignServerStmt)
+	outer, ok := node.(*CreateForeignServerStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3587,17 +5809,34 @@ type AlterForeignServerStmt struct {
 func (n *AlterForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterForeignServerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterForeignServerStmt)
+	outer, ok := node.(*AlterForeignServerStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3612,17 +5851,34 @@ type CreateForeignTableStmt struct {
 func (n *CreateForeignTableStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateForeignTableStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateForeignTableStmt)
+	outer, ok := node.(*CreateForeignTableStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3638,24 +5894,48 @@ type CreateUserMappingStmt struct {
 func (n *CreateUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateUserMappingStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateUserMappingStmt)
+	outer, ok := node.(*CreateUserMappingStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.User != nil {
+		if !nodePresent(n.User) {
+			return n, false
+		}
 		updated, ok := n.User.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.User = updated.(*RoleSpec)
+		replacement, ok := updated.(*RoleSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.User = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3670,24 +5950,48 @@ type AlterUserMappingStmt struct {
 func (n *AlterUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterUserMappingStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterUserMappingStmt)
+	outer, ok := node.(*AlterUserMappingStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.User != nil {
+		if !nodePresent(n.User) {
+			return n, false
+		}
 		updated, ok := n.User.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.User = updated.(*RoleSpec)
+		replacement, ok := updated.(*RoleSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.User = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3702,17 +6006,34 @@ type DropUserMappingStmt struct {
 func (n *DropUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropUserMappingStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DropUserMappingStmt)
+	outer, ok := node.(*DropUserMappingStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.User != nil {
+		if !nodePresent(n.User) {
+			return n, false
+		}
 		updated, ok := n.User.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.User = updated.(*RoleSpec)
+		replacement, ok := updated.(*RoleSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.User = replacement
 	}
 	return v.Leave(n)
 }
@@ -3727,17 +6048,34 @@ type CreateExtensionStmt struct {
 func (n *CreateExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateExtensionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateExtensionStmt)
+	outer, ok := node.(*CreateExtensionStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3751,17 +6089,34 @@ type AlterExtensionStmt struct {
 func (n *AlterExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterExtensionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterExtensionStmt)
+	outer, ok := node.(*AlterExtensionStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -3782,14 +6137,27 @@ func (n *AlterExtensionContentsStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *AlterExtensionContentsStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterExtensionContentsStmt)
+	outer, ok := node.(*AlterExtensionContentsStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Object != nil {
+		if !nodePresent(n.Object) {
+			return n, false
+		}
 		updated, ok := n.Object.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Object = updated
@@ -3806,11 +6174,21 @@ type DropTableSpaceStmt struct {
 func (n *DropTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropTableSpaceStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DropTableSpaceStmt)
+	outer, ok := node.(*DropTableSpaceStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -3824,17 +6202,34 @@ type CreateAmStmt struct {
 func (n *CreateAmStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateAmStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateAmStmt)
+	outer, ok := node.(*CreateAmStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.HandlerName != nil {
+		if !nodePresent(n.HandlerName) {
+			return n, false
+		}
 		updated, ok := n.HandlerName.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.HandlerName = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.HandlerName = replacement
 	}
 	return v.Leave(n)
 }
@@ -3853,35 +6248,65 @@ type CreatePolicyStmt struct {
 func (n *CreatePolicyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatePolicyStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreatePolicyStmt)
+	outer, ok := node.(*CreatePolicyStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Table != nil {
+		if !nodePresent(n.Table) {
+			return n, false
+		}
 		updated, ok := n.Table.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Table = updated.(*RangeVar)
+		replacement, ok := updated.(*RangeVar)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Table = replacement
 	}
 	if n.Roles != nil {
+		if !nodePresent(n.Roles) {
+			return n, false
+		}
 		updated, ok := n.Roles.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Roles = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Roles = replacement
 	}
 	if n.Qual != nil {
+		if !nodePresent(n.Qual) {
+			return n, false
+		}
 		updated, ok := n.Qual.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Qual = updated
 	}
 	if n.WithCheck != nil {
+		if !nodePresent(n.WithCheck) {
+			return n, false
+		}
 		updated, ok := n.WithCheck.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.WithCheck = updated
@@ -3901,35 +6326,65 @@ type AlterPolicyStmt struct {
 func (n *AlterPolicyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterPolicyStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterPolicyStmt)
+	outer, ok := node.(*AlterPolicyStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Table != nil {
+		if !nodePresent(n.Table) {
+			return n, false
+		}
 		updated, ok := n.Table.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Table = updated.(*RangeVar)
+		replacement, ok := updated.(*RangeVar)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Table = replacement
 	}
 	if n.Roles != nil {
+		if !nodePresent(n.Roles) {
+			return n, false
+		}
 		updated, ok := n.Roles.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Roles = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Roles = replacement
 	}
 	if n.Qual != nil {
+		if !nodePresent(n.Qual) {
+			return n, false
+		}
 		updated, ok := n.Qual.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Qual = updated
 	}
 	if n.WithCheck != nil {
+		if !nodePresent(n.WithCheck) {
+			return n, false
+		}
 		updated, ok := n.WithCheck.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.WithCheck = updated
@@ -3948,24 +6403,48 @@ type CreatePublicationStmt struct {
 func (n *CreatePublicationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreatePublicationStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreatePublicationStmt)
+	outer, ok := node.(*CreatePublicationStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	if n.Pubobjects != nil {
+		if !nodePresent(n.Pubobjects) {
+			return n, false
+		}
 		updated, ok := n.Pubobjects.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Pubobjects = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Pubobjects = replacement
 	}
 	return v.Leave(n)
 }
@@ -3982,24 +6461,48 @@ type AlterPublicationStmt struct {
 func (n *AlterPublicationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterPublicationStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterPublicationStmt)
+	outer, ok := node.(*AlterPublicationStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	if n.Pubobjects != nil {
+		if !nodePresent(n.Pubobjects) {
+			return n, false
+		}
 		updated, ok := n.Pubobjects.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Pubobjects = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Pubobjects = replacement
 	}
 	return v.Leave(n)
 }
@@ -4015,17 +6518,34 @@ type PublicationObjSpec struct {
 func (n *PublicationObjSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PublicationObjSpec) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*PublicationObjSpec)
+	outer, ok := node.(*PublicationObjSpec)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Pubtable != nil {
+		if !nodePresent(n.Pubtable) {
+			return n, false
+		}
 		updated, ok := n.Pubtable.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Pubtable = updated.(*PublicationTable)
+		replacement, ok := updated.(*PublicationTable)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Pubtable = replacement
 	}
 	return v.Leave(n)
 }
@@ -4040,31 +6560,58 @@ type PublicationTable struct {
 func (n *PublicationTable) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *PublicationTable) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*PublicationTable)
+	outer, ok := node.(*PublicationTable)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.WhereClause != nil {
+		if !nodePresent(n.WhereClause) {
+			return n, false
+		}
 		updated, ok := n.WhereClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.WhereClause = updated
 	}
 	if n.Columns != nil {
+		if !nodePresent(n.Columns) {
+			return n, false
+		}
 		updated, ok := n.Columns.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Columns = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Columns = replacement
 	}
 	return v.Leave(n)
 }
@@ -4080,24 +6627,48 @@ type CreateSubscriptionStmt struct {
 func (n *CreateSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateSubscriptionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateSubscriptionStmt)
+	outer, ok := node.(*CreateSubscriptionStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Publication != nil {
+		if !nodePresent(n.Publication) {
+			return n, false
+		}
 		updated, ok := n.Publication.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Publication = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Publication = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -4114,24 +6685,48 @@ type AlterSubscriptionStmt struct {
 func (n *AlterSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterSubscriptionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterSubscriptionStmt)
+	outer, ok := node.(*AlterSubscriptionStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Publication != nil {
+		if !nodePresent(n.Publication) {
+			return n, false
+		}
 		updated, ok := n.Publication.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Publication = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Publication = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -4146,11 +6741,21 @@ type DropSubscriptionStmt struct {
 func (n *DropSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *DropSubscriptionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*DropSubscriptionStmt)
+	outer, ok := node.(*DropSubscriptionStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -4166,28 +6771,51 @@ type AlterObjectDependsStmt struct {
 func (n *AlterObjectDependsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterObjectDependsStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterObjectDependsStmt)
+	outer, ok := node.(*AlterObjectDependsStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Relation != nil {
+		if !nodePresent(n.Relation) {
+			return n, false
+		}
 		updated, ok := n.Relation.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relation = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relation = replacement
 	}
 	if n.Object != nil {
+		if !nodePresent(n.Object) {
+			return n, false
+		}
 		updated, ok := n.Object.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Object = updated
 	}
 	if n.Extname != nil {
+		if !nodePresent(n.Extname) {
+			return n, false
+		}
 		updated, ok := n.Extname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Extname = updated
@@ -4204,24 +6832,48 @@ type AlterOperatorStmt struct {
 func (n *AlterOperatorStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterOperatorStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterOperatorStmt)
+	outer, ok := node.(*AlterOperatorStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Opername != nil {
+		if !nodePresent(n.Opername) {
+			return n, false
+		}
 		updated, ok := n.Opername.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opername = updated.(*ObjectWithArgs)
+		replacement, ok := updated.(*ObjectWithArgs)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opername = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -4235,24 +6887,48 @@ type AlterTypeStmt struct {
 func (n *AlterTypeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTypeStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterTypeStmt)
+	outer, ok := node.(*AlterTypeStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.TypeName != nil {
+		if !nodePresent(n.TypeName) {
+			return n, false
+		}
 		updated, ok := n.TypeName.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.TypeName = updated.(*TableName)
+		replacement, ok := updated.(*TableName)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.TypeName = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -4268,24 +6944,48 @@ func (n *AlterDefaultPrivilegesStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *AlterDefaultPrivilegesStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterDefaultPrivilegesStmt)
+	outer, ok := node.(*AlterDefaultPrivilegesStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	if n.Action != nil {
+		if !nodePresent(n.Action) {
+			return n, false
+		}
 		updated, ok := n.Action.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Action = updated.(*GrantStmt)
+		replacement, ok := updated.(*GrantStmt)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Action = replacement
 	}
 	return v.Leave(n)
 }
@@ -4299,24 +6999,48 @@ type AlterTSDictionaryStmt struct {
 func (n *AlterTSDictionaryStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterTSDictionaryStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterTSDictionaryStmt)
+	outer, ok := node.(*AlterTSDictionaryStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Dictname != nil {
+		if !nodePresent(n.Dictname) {
+			return n, false
+		}
 		updated, ok := n.Dictname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Dictname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Dictname = replacement
 	}
 	if n.Options != nil {
+		if !nodePresent(n.Options) {
+			return n, false
+		}
 		updated, ok := n.Options.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Options = replacement
 	}
 	return v.Leave(n)
 }
@@ -4337,31 +7061,62 @@ func (n *AlterTSConfigurationStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *AlterTSConfigurationStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterTSConfigurationStmt)
+	outer, ok := node.(*AlterTSConfigurationStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Cfgname != nil {
+		if !nodePresent(n.Cfgname) {
+			return n, false
+		}
 		updated, ok := n.Cfgname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Cfgname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Cfgname = replacement
 	}
 	if n.Tokentype != nil {
+		if !nodePresent(n.Tokentype) {
+			return n, false
+		}
 		updated, ok := n.Tokentype.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Tokentype = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Tokentype = replacement
 	}
 	if n.Dicts != nil {
+		if !nodePresent(n.Dicts) {
+			return n, false
+		}
 		updated, ok := n.Dicts.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Dicts = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Dicts = replacement
 	}
 	return v.Leave(n)
 }
@@ -4379,38 +7134,76 @@ type CreateStatsStmt struct {
 func (n *CreateStatsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateStatsStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateStatsStmt)
+	outer, ok := node.(*CreateStatsStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Defnames != nil {
+		if !nodePresent(n.Defnames) {
+			return n, false
+		}
 		updated, ok := n.Defnames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Defnames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Defnames = replacement
 	}
 	if n.StatTypes != nil {
+		if !nodePresent(n.StatTypes) {
+			return n, false
+		}
 		updated, ok := n.StatTypes.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.StatTypes = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.StatTypes = replacement
 	}
 	if n.Exprs != nil {
+		if !nodePresent(n.Exprs) {
+			return n, false
+		}
 		updated, ok := n.Exprs.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Exprs = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Exprs = replacement
 	}
 	if n.Relations != nil {
+		if !nodePresent(n.Relations) {
+			return n, false
+		}
 		updated, ok := n.Relations.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Relations = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Relations = replacement
 	}
 	return v.Leave(n)
 }
@@ -4424,14 +7217,27 @@ type StatsElem struct {
 func (n *StatsElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *StatsElem) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*StatsElem)
+	outer, ok := node.(*StatsElem)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
@@ -4449,17 +7255,34 @@ type AlterStatsStmt struct {
 func (n *AlterStatsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterStatsStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterStatsStmt)
+	outer, ok := node.(*AlterStatsStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Defnames != nil {
+		if !nodePresent(n.Defnames) {
+			return n, false
+		}
 		updated, ok := n.Defnames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Defnames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Defnames = replacement
 	}
 	return v.Leave(n)
 }
@@ -4477,31 +7300,62 @@ type CreateOpClassStmt struct {
 func (n *CreateOpClassStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateOpClassStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateOpClassStmt)
+	outer, ok := node.(*CreateOpClassStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Opclassname != nil {
+		if !nodePresent(n.Opclassname) {
+			return n, false
+		}
 		updated, ok := n.Opclassname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opclassname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opclassname = replacement
 	}
 	if n.Opfamilyname != nil {
+		if !nodePresent(n.Opfamilyname) {
+			return n, false
+		}
 		updated, ok := n.Opfamilyname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opfamilyname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opfamilyname = replacement
 	}
 	if n.Items != nil {
+		if !nodePresent(n.Items) {
+			return n, false
+		}
 		updated, ok := n.Items.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Items = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Items = replacement
 	}
 	return v.Leave(n)
 }
@@ -4519,31 +7373,62 @@ type CreateOpClassItem struct {
 func (n *CreateOpClassItem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateOpClassItem) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateOpClassItem)
+	outer, ok := node.(*CreateOpClassItem)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Name != nil {
+		if !nodePresent(n.Name) {
+			return n, false
+		}
 		updated, ok := n.Name.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Name = updated.(*ObjectWithArgs)
+		replacement, ok := updated.(*ObjectWithArgs)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Name = replacement
 	}
 	if n.OrderFamily != nil {
+		if !nodePresent(n.OrderFamily) {
+			return n, false
+		}
 		updated, ok := n.OrderFamily.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OrderFamily = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OrderFamily = replacement
 	}
 	if n.ClassArgs != nil {
+		if !nodePresent(n.ClassArgs) {
+			return n, false
+		}
 		updated, ok := n.ClassArgs.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ClassArgs = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ClassArgs = replacement
 	}
 	return v.Leave(n)
 }
@@ -4557,17 +7442,34 @@ type CreateOpFamilyStmt struct {
 func (n *CreateOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateOpFamilyStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateOpFamilyStmt)
+	outer, ok := node.(*CreateOpFamilyStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Opfamilyname != nil {
+		if !nodePresent(n.Opfamilyname) {
+			return n, false
+		}
 		updated, ok := n.Opfamilyname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opfamilyname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opfamilyname = replacement
 	}
 	return v.Leave(n)
 }
@@ -4583,24 +7485,48 @@ type AlterOpFamilyStmt struct {
 func (n *AlterOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *AlterOpFamilyStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*AlterOpFamilyStmt)
+	outer, ok := node.(*AlterOpFamilyStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Opfamilyname != nil {
+		if !nodePresent(n.Opfamilyname) {
+			return n, false
+		}
 		updated, ok := n.Opfamilyname.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Opfamilyname = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Opfamilyname = replacement
 	}
 	if n.Items != nil {
+		if !nodePresent(n.Items) {
+			return n, false
+		}
 		updated, ok := n.Items.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Items = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Items = replacement
 	}
 	return v.Leave(n)
 }
@@ -4617,17 +7543,34 @@ type CreateCastStmt struct {
 func (n *CreateCastStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateCastStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateCastStmt)
+	outer, ok := node.(*CreateCastStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Func != nil {
+		if !nodePresent(n.Func) {
+			return n, false
+		}
 		updated, ok := n.Func.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Func = updated.(*ObjectWithArgs)
+		replacement, ok := updated.(*ObjectWithArgs)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Func = replacement
 	}
 	return v.Leave(n)
 }
@@ -4644,24 +7587,48 @@ type CreateTransformStmt struct {
 func (n *CreateTransformStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateTransformStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateTransformStmt)
+	outer, ok := node.(*CreateTransformStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Fromsql != nil {
+		if !nodePresent(n.Fromsql) {
+			return n, false
+		}
 		updated, ok := n.Fromsql.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Fromsql = updated.(*ObjectWithArgs)
+		replacement, ok := updated.(*ObjectWithArgs)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Fromsql = replacement
 	}
 	if n.Tosql != nil {
+		if !nodePresent(n.Tosql) {
+			return n, false
+		}
 		updated, ok := n.Tosql.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Tosql = updated.(*ObjectWithArgs)
+		replacement, ok := updated.(*ObjectWithArgs)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Tosql = replacement
 	}
 	return v.Leave(n)
 }
@@ -4678,24 +7645,48 @@ type CreateConversionStmt struct {
 func (n *CreateConversionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *CreateConversionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*CreateConversionStmt)
+	outer, ok := node.(*CreateConversionStmt)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.ConversionName != nil {
+		if !nodePresent(n.ConversionName) {
+			return n, false
+		}
 		updated, ok := n.ConversionName.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ConversionName = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ConversionName = replacement
 	}
 	if n.FuncName != nil {
+		if !nodePresent(n.FuncName) {
+			return n, false
+		}
 		updated, ok := n.FuncName.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FuncName = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FuncName = replacement
 	}
 	return v.Leave(n)
 }
@@ -4710,11 +7701,21 @@ type SQLValueFunction struct {
 func (n *SQLValueFunction) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SQLValueFunction) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*SQLValueFunction)
+	outer, ok := node.(*SQLValueFunction)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -4729,11 +7730,21 @@ type SetToDefault struct {
 func (n *SetToDefault) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *SetToDefault) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*SetToDefault)
+	outer, ok := node.(*SetToDefault)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -4758,31 +7769,62 @@ type XmlExpr struct {
 func (n *XmlExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *XmlExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*XmlExpr)
+	outer, ok := node.(*XmlExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.NamedArgs != nil {
+		if !nodePresent(n.NamedArgs) {
+			return n, false
+		}
 		updated, ok := n.NamedArgs.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.NamedArgs = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.NamedArgs = replacement
 	}
 	if n.ArgNames != nil {
+		if !nodePresent(n.ArgNames) {
+			return n, false
+		}
 		updated, ok := n.ArgNames.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ArgNames = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ArgNames = replacement
 	}
 	if n.Args != nil {
+		if !nodePresent(n.Args) {
+			return n, false
+		}
 		updated, ok := n.Args.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Args = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Args = replacement
 	}
 	return v.Leave(n)
 }
@@ -4799,14 +7841,27 @@ type XmlSerialize struct {
 func (n *XmlSerialize) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *XmlSerialize) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*XmlSerialize)
+	outer, ok := node.(*XmlSerialize)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
@@ -4828,45 +7883,82 @@ type RangeTableFunc struct {
 func (n *RangeTableFunc) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RangeTableFunc)
+	outer, ok := node.(*RangeTableFunc)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Docexpr != nil {
+		if !nodePresent(n.Docexpr) {
+			return n, false
+		}
 		updated, ok := n.Docexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Docexpr = updated
 	}
 	if n.Rowexpr != nil {
+		if !nodePresent(n.Rowexpr) {
+			return n, false
+		}
 		updated, ok := n.Rowexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Rowexpr = updated
 	}
 	if n.Namespaces != nil {
+		if !nodePresent(n.Namespaces) {
+			return n, false
+		}
 		updated, ok := n.Namespaces.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Namespaces = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Namespaces = replacement
 	}
 	if n.Columns != nil {
+		if !nodePresent(n.Columns) {
+			return n, false
+		}
 		updated, ok := n.Columns.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Columns = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Columns = replacement
 	}
 	if n.Alias != nil {
+		if !nodePresent(n.Alias) {
+			return n, false
+		}
 		updated, ok := n.Alias.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Alias = updated.(*Alias)
+		replacement, ok := updated.(*Alias)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Alias = replacement
 	}
 	return v.Leave(n)
 }
@@ -4885,21 +7977,37 @@ type RangeTableFuncCol struct {
 func (n *RangeTableFuncCol) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *RangeTableFuncCol) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*RangeTableFuncCol)
+	outer, ok := node.(*RangeTableFuncCol)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Colexpr != nil {
+		if !nodePresent(n.Colexpr) {
+			return n, false
+		}
 		updated, ok := n.Colexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Colexpr = updated
 	}
 	if n.Coldefexpr != nil {
+		if !nodePresent(n.Coldefexpr) {
+			return n, false
+		}
 		updated, ok := n.Coldefexpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Coldefexpr = updated
@@ -4921,11 +8029,21 @@ type JsonFormat struct {
 func (n *JsonFormat) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonFormat) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonFormat)
+	outer, ok := node.(*JsonFormat)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	return v.Leave(n)
 }
 
@@ -4939,17 +8057,34 @@ type JsonReturning struct {
 func (n *JsonReturning) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonReturning) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonReturning)
+	outer, ok := node.(*JsonReturning)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.FormatClause != nil {
+		if !nodePresent(n.FormatClause) {
+			return n, false
+		}
 		updated, ok := n.FormatClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FormatClause = updated.(*JsonFormat)
+		replacement, ok := updated.(*JsonFormat)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FormatClause = replacement
 	}
 	return v.Leave(n)
 }
@@ -4964,31 +8099,54 @@ type JsonValueExpr struct {
 func (n *JsonValueExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonValueExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonValueExpr)
+	outer, ok := node.(*JsonValueExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.RawExpr != nil {
+		if !nodePresent(n.RawExpr) {
+			return n, false
+		}
 		updated, ok := n.RawExpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.RawExpr = updated
 	}
 	if n.FormattedExpr != nil {
+		if !nodePresent(n.FormattedExpr) {
+			return n, false
+		}
 		updated, ok := n.FormattedExpr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.FormattedExpr = updated
 	}
 	if n.FormatClause != nil {
+		if !nodePresent(n.FormatClause) {
+			return n, false
+		}
 		updated, ok := n.FormatClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FormatClause = updated.(*JsonFormat)
+		replacement, ok := updated.(*JsonFormat)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FormatClause = replacement
 	}
 	return v.Leave(n)
 }
@@ -5002,17 +8160,34 @@ type JsonOutput struct {
 func (n *JsonOutput) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonOutput) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonOutput)
+	outer, ok := node.(*JsonOutput)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Returning != nil {
+		if !nodePresent(n.Returning) {
+			return n, false
+		}
 		updated, ok := n.Returning.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Returning = updated.(*JsonReturning)
+		replacement, ok := updated.(*JsonReturning)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Returning = replacement
 	}
 	return v.Leave(n)
 }
@@ -5026,17 +8201,34 @@ type JsonArgument struct {
 func (n *JsonArgument) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonArgument) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonArgument)
+	outer, ok := node.(*JsonArgument)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Val != nil {
+		if !nodePresent(n.Val) {
+			return n, false
+		}
 		updated, ok := n.Val.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Val = updated.(*JsonValueExpr)
+		replacement, ok := updated.(*JsonValueExpr)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Val = replacement
 	}
 	return v.Leave(n)
 }
@@ -5058,21 +8250,37 @@ type JsonBehavior struct {
 func (n *JsonBehavior) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonBehavior) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonBehavior)
+	outer, ok := node.(*JsonBehavior)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
 	}
 	if n.Coerce != nil {
+		if !nodePresent(n.Coerce) {
+			return n, false
+		}
 		updated, ok := n.Coerce.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Coerce = updated
@@ -5100,52 +8308,100 @@ type JsonFuncExpr struct {
 func (n *JsonFuncExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonFuncExpr)
+	outer, ok := node.(*JsonFuncExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.ContextItem != nil {
+		if !nodePresent(n.ContextItem) {
+			return n, false
+		}
 		updated, ok := n.ContextItem.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ContextItem = updated.(*JsonValueExpr)
+		replacement, ok := updated.(*JsonValueExpr)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ContextItem = replacement
 	}
 	if n.Pathspec != nil {
+		if !nodePresent(n.Pathspec) {
+			return n, false
+		}
 		updated, ok := n.Pathspec.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Pathspec = updated
 	}
 	if n.Passing != nil {
+		if !nodePresent(n.Passing) {
+			return n, false
+		}
 		updated, ok := n.Passing.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Passing = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Passing = replacement
 	}
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	if n.OnEmpty != nil {
+		if !nodePresent(n.OnEmpty) {
+			return n, false
+		}
 		updated, ok := n.OnEmpty.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnEmpty = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnEmpty = replacement
 	}
 	if n.OnError != nil {
+		if !nodePresent(n.OnError) {
+			return n, false
+		}
 		updated, ok := n.OnError.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnError = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnError = replacement
 	}
 	return v.Leave(n)
 }
@@ -5161,14 +8417,27 @@ type JsonTablePathSpec struct {
 func (n *JsonTablePathSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonTablePathSpec) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonTablePathSpec)
+	outer, ok := node.(*JsonTablePathSpec)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.String != nil {
+		if !nodePresent(n.String) {
+			return n, false
+		}
 		updated, ok := n.String.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.String = updated
@@ -5196,45 +8465,90 @@ type JsonTableColumn struct {
 func (n *JsonTableColumn) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonTableColumn)
+	outer, ok := node.(*JsonTableColumn)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Pathspec != nil {
+		if !nodePresent(n.Pathspec) {
+			return n, false
+		}
 		updated, ok := n.Pathspec.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Pathspec = updated.(*JsonTablePathSpec)
+		replacement, ok := updated.(*JsonTablePathSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Pathspec = replacement
 	}
 	if n.FormatClause != nil {
+		if !nodePresent(n.FormatClause) {
+			return n, false
+		}
 		updated, ok := n.FormatClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FormatClause = updated.(*JsonFormat)
+		replacement, ok := updated.(*JsonFormat)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FormatClause = replacement
 	}
 	if n.Columns != nil {
+		if !nodePresent(n.Columns) {
+			return n, false
+		}
 		updated, ok := n.Columns.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Columns = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Columns = replacement
 	}
 	if n.OnEmpty != nil {
+		if !nodePresent(n.OnEmpty) {
+			return n, false
+		}
 		updated, ok := n.OnEmpty.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnEmpty = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnEmpty = replacement
 	}
 	if n.OnError != nil {
+		if !nodePresent(n.OnError) {
+			return n, false
+		}
 		updated, ok := n.OnError.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnError = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnError = replacement
 	}
 	return v.Leave(n)
 }
@@ -5254,52 +8568,104 @@ type JsonTable struct {
 func (n *JsonTable) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonTable) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonTable)
+	outer, ok := node.(*JsonTable)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.ContextItem != nil {
+		if !nodePresent(n.ContextItem) {
+			return n, false
+		}
 		updated, ok := n.ContextItem.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.ContextItem = updated.(*JsonValueExpr)
+		replacement, ok := updated.(*JsonValueExpr)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.ContextItem = replacement
 	}
 	if n.Pathspec != nil {
+		if !nodePresent(n.Pathspec) {
+			return n, false
+		}
 		updated, ok := n.Pathspec.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Pathspec = updated.(*JsonTablePathSpec)
+		replacement, ok := updated.(*JsonTablePathSpec)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Pathspec = replacement
 	}
 	if n.Passing != nil {
+		if !nodePresent(n.Passing) {
+			return n, false
+		}
 		updated, ok := n.Passing.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Passing = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Passing = replacement
 	}
 	if n.Columns != nil {
+		if !nodePresent(n.Columns) {
+			return n, false
+		}
 		updated, ok := n.Columns.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Columns = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Columns = replacement
 	}
 	if n.OnError != nil {
+		if !nodePresent(n.OnError) {
+			return n, false
+		}
 		updated, ok := n.OnError.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.OnError = updated.(*JsonBehavior)
+		replacement, ok := updated.(*JsonBehavior)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.OnError = replacement
 	}
 	if n.Alias != nil {
+		if !nodePresent(n.Alias) {
+			return n, false
+		}
 		updated, ok := n.Alias.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Alias = updated.(*Alias)
+		replacement, ok := updated.(*Alias)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Alias = replacement
 	}
 	return v.Leave(n)
 }
@@ -5313,24 +8679,44 @@ type JsonKeyValue struct {
 func (n *JsonKeyValue) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonKeyValue) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonKeyValue)
+	outer, ok := node.(*JsonKeyValue)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Key != nil {
+		if !nodePresent(n.Key) {
+			return n, false
+		}
 		updated, ok := n.Key.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Key = updated
 	}
 	if n.Value != nil {
+		if !nodePresent(n.Value) {
+			return n, false
+		}
 		updated, ok := n.Value.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Value = updated.(*JsonValueExpr)
+		replacement, ok := updated.(*JsonValueExpr)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Value = replacement
 	}
 	return v.Leave(n)
 }
@@ -5346,24 +8732,48 @@ type JsonParseExpr struct {
 func (n *JsonParseExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonParseExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonParseExpr)
+	outer, ok := node.(*JsonParseExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(*JsonValueExpr)
+		replacement, ok := updated.(*JsonValueExpr)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Expr = replacement
 	}
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	return v.Leave(n)
 }
@@ -5378,24 +8788,44 @@ type JsonScalarExpr struct {
 func (n *JsonScalarExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonScalarExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonScalarExpr)
+	outer, ok := node.(*JsonScalarExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
 	}
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	return v.Leave(n)
 }
@@ -5410,24 +8840,48 @@ type JsonSerializeExpr struct {
 func (n *JsonSerializeExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonSerializeExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonSerializeExpr)
+	outer, ok := node.(*JsonSerializeExpr)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Expr = updated.(*JsonValueExpr)
+		replacement, ok := updated.(*JsonValueExpr)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Expr = replacement
 	}
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	return v.Leave(n)
 }
@@ -5444,24 +8898,48 @@ type JsonObjectConstructor struct {
 func (n *JsonObjectConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonObjectConstructor) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonObjectConstructor)
+	outer, ok := node.(*JsonObjectConstructor)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Exprs != nil {
+		if !nodePresent(n.Exprs) {
+			return n, false
+		}
 		updated, ok := n.Exprs.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Exprs = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Exprs = replacement
 	}
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	return v.Leave(n)
 }
@@ -5477,24 +8955,48 @@ type JsonArrayConstructor struct {
 func (n *JsonArrayConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonArrayConstructor) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonArrayConstructor)
+	outer, ok := node.(*JsonArrayConstructor)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Exprs != nil {
+		if !nodePresent(n.Exprs) {
+			return n, false
+		}
 		updated, ok := n.Exprs.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Exprs = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Exprs = replacement
 	}
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	return v.Leave(n)
 }
@@ -5513,31 +9015,58 @@ func (n *JsonArrayQueryConstructor) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *JsonArrayQueryConstructor) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonArrayQueryConstructor)
+	outer, ok := node.(*JsonArrayQueryConstructor)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Query != nil {
+		if !nodePresent(n.Query) {
+			return n, false
+		}
 		updated, ok := n.Query.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Query = updated
 	}
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	if n.FormatClause != nil {
+		if !nodePresent(n.FormatClause) {
+			return n, false
+		}
 		updated, ok := n.FormatClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FormatClause = updated.(*JsonFormat)
+		replacement, ok := updated.(*JsonFormat)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FormatClause = replacement
 	}
 	return v.Leave(n)
 }
@@ -5554,38 +9083,72 @@ type JsonAggConstructor struct {
 func (n *JsonAggConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonAggConstructor) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonAggConstructor)
+	outer, ok := node.(*JsonAggConstructor)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Output != nil {
+		if !nodePresent(n.Output) {
+			return n, false
+		}
 		updated, ok := n.Output.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Output = updated.(*JsonOutput)
+		replacement, ok := updated.(*JsonOutput)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Output = replacement
 	}
 	if n.Agg_filter != nil {
+		if !nodePresent(n.Agg_filter) {
+			return n, false
+		}
 		updated, ok := n.Agg_filter.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Agg_filter = updated
 	}
 	if n.Agg_order != nil {
+		if !nodePresent(n.Agg_order) {
+			return n, false
+		}
 		updated, ok := n.Agg_order.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Agg_order = updated.(*List)
+		replacement, ok := updated.(*List)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Agg_order = replacement
 	}
 	if n.Over != nil {
+		if !nodePresent(n.Over) {
+			return n, false
+		}
 		updated, ok := n.Over.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Over = updated.(*WindowDef)
+		replacement, ok := updated.(*WindowDef)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Over = replacement
 	}
 	return v.Leave(n)
 }
@@ -5601,24 +9164,48 @@ type JsonObjectAgg struct {
 func (n *JsonObjectAgg) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonObjectAgg) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonObjectAgg)
+	outer, ok := node.(*JsonObjectAgg)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Constructor != nil {
+		if !nodePresent(n.Constructor) {
+			return n, false
+		}
 		updated, ok := n.Constructor.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Constructor = updated.(*JsonAggConstructor)
+		replacement, ok := updated.(*JsonAggConstructor)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Constructor = replacement
 	}
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(*JsonKeyValue)
+		replacement, ok := updated.(*JsonKeyValue)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Arg = replacement
 	}
 	return v.Leave(n)
 }
@@ -5633,24 +9220,48 @@ type JsonArrayAgg struct {
 func (n *JsonArrayAgg) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonArrayAgg) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonArrayAgg)
+	outer, ok := node.(*JsonArrayAgg)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Constructor != nil {
+		if !nodePresent(n.Constructor) {
+			return n, false
+		}
 		updated, ok := n.Constructor.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Constructor = updated.(*JsonAggConstructor)
+		replacement, ok := updated.(*JsonAggConstructor)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Constructor = replacement
 	}
 	if n.Arg != nil {
+		if !nodePresent(n.Arg) {
+			return n, false
+		}
 		updated, ok := n.Arg.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Arg = updated.(*JsonValueExpr)
+		replacement, ok := updated.(*JsonValueExpr)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.Arg = replacement
 	}
 	return v.Leave(n)
 }
@@ -5669,24 +9280,44 @@ type JsonIsPredicate struct {
 func (n *JsonIsPredicate) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
 
 func (n *JsonIsPredicate) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	node, skip := v.Enter(n)
+	if !nodePresent(node) {
+		return n, false
+	}
 	if skip {
 		return v.Leave(node)
 	}
-	n = node.(*JsonIsPredicate)
+	outer, ok := node.(*JsonIsPredicate)
+	if !ok || outer == nil {
+		return node, false
+	}
+	n = outer
 	if n.Expr != nil {
+		if !nodePresent(n.Expr) {
+			return n, false
+		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		n.Expr = updated
 	}
 	if n.FormatClause != nil {
+		if !nodePresent(n.FormatClause) {
+			return n, false
+		}
 		updated, ok := n.FormatClause.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.FormatClause = updated.(*JsonFormat)
+		replacement, ok := updated.(*JsonFormat)
+		if !ok || !nodePresent(replacement) {
+			return n, false
+		}
+		n.FormatClause = replacement
 	}
 	return v.Leave(n)
 }

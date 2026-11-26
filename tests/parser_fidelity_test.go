@@ -72,7 +72,7 @@ func TestIndirectionAndWindowFlags(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			n := mustParseOne(t, tc.sql).(*ast.SelectStmt)
-			if got := ast.ExprFlag(n.Fields.Fields[0].Expr); got != tc.flag {
+			if got := ast.ExprFlag(n.Fields.Items[0].Expr); got != tc.flag {
 				t.Fatalf("flags = %d, want %d", got, tc.flag)
 			}
 		})
@@ -162,11 +162,20 @@ func TestOperatorAndSetChains(t *testing.T) {
 		const count = 1000
 		sql := strings.Repeat("SELECT 1 UNION ALL ", count-1) + "SELECT 1"
 		n := mustParseOne(t, sql).(*ast.SetOprStmt)
-		if got := len(n.SelectList.Selects); got != count {
+		if got := len(setOperands(n)); got != count {
 			t.Fatalf("select count = %d, want %d", got, count)
 		}
 		if got := restoreString(t, n); got != sql {
 			t.Fatal("set operation order or ALL changed")
 		}
 	})
+}
+
+// setOperands returns the query blocks of a set operation tree.
+func setOperands(node ast.QueryNode) []ast.QueryNode {
+	set, ok := node.(*ast.SetOprStmt)
+	if !ok {
+		return []ast.QueryNode{node}
+	}
+	return append(setOperands(set.Left), setOperands(set.Right)...)
 }

@@ -27,6 +27,76 @@ func mustParseSelect(t *testing.T, sql string) *ast.SelectStmt {
 	return stmt
 }
 
+// limitClauseNode returns the dialect limit of a query block.
+func limitClauseNode(t *testing.T, node ast.LimitNode) *ast.Limit {
+	t.Helper()
+	limit, ok := node.(*ast.Limit)
+	if !ok {
+		t.Fatalf("limit = %T, want *ast.Limit", node)
+	}
+	return limit
+}
+
+// fromClause returns the dialect from clause of a query block.
+func fromClause(t *testing.T, node ast.FromClauseNode) *ast.FromClause {
+	t.Helper()
+	clause, ok := node.(*ast.FromClause)
+	if !ok {
+		t.Fatalf("from clause = %T, want *ast.FromClause", node)
+	}
+	return clause
+}
+
+// groupClause returns the dialect grouping clause of a query block.
+func groupClause(t *testing.T, node ast.GroupByClauseNode) *ast.GroupByClause {
+	t.Helper()
+	clause, ok := node.(*ast.GroupByClause)
+	if !ok {
+		t.Fatalf("group by clause = %T, want *ast.GroupByClause", node)
+	}
+	return clause
+}
+
+// orderClause returns the dialect ordering clause of a query block.
+func orderClause(t *testing.T, node ast.OrderByClauseNode) *ast.OrderByClause {
+	t.Helper()
+	clause, ok := node.(*ast.OrderByClause)
+	if !ok {
+		t.Fatalf("order by clause = %T, want *ast.OrderByClause", node)
+	}
+	return clause
+}
+
+// windowSpec returns the dialect window specification of a query block.
+func windowSpec(t *testing.T, node ast.WindowSpecNode) *ast.WindowSpec {
+	t.Helper()
+	spec, ok := node.(*ast.WindowSpec)
+	if !ok {
+		t.Fatalf("window spec = %T, want *ast.WindowSpec", node)
+	}
+	return spec
+}
+
+// groupItem returns the dialect grouping item of a group by list.
+func groupItem(t *testing.T, node ast.GroupItemNode) *ast.GroupItem {
+	t.Helper()
+	item, ok := node.(*ast.GroupItem)
+	if !ok {
+		t.Fatalf("group item = %T, want *ast.GroupItem", node)
+	}
+	return item
+}
+
+// orderItem returns the dialect sorting item of an order by list.
+func orderItem(t *testing.T, node ast.OrderItemNode) *ast.OrderItem {
+	t.Helper()
+	item, ok := node.(*ast.OrderItem)
+	if !ok {
+		t.Fatalf("order item = %T, want *ast.OrderItem", node)
+	}
+	return item
+}
+
 func leftmostTableSource(n ast.ResultSetNode) (*ast.TableSource, bool) {
 	for {
 		switch v := n.(type) {
@@ -44,21 +114,21 @@ func leftmostTableSource(n ast.ResultSetNode) (*ast.TableSource, bool) {
 func TestParseSQLSimpleSelect(t *testing.T) {
 	st := mustParseSelect(t, "SELECT id, name FROM users WHERE status = $1;")
 
-	if st.Fields == nil || len(st.Fields.Fields) != 2 {
+	if st.Fields == nil || len(st.Fields.Items) != 2 {
 		t.Fatalf("expected 2 columns, got %#v", st.Fields)
 	}
-	if got := st.Fields.Fields[0].Expr.(*ast.ColumnNameExpr).Name.Name.O; got != "id" {
+	if got := st.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Name.O; got != "id" {
 		t.Fatalf("column 1 = %q, want id", got)
 	}
-	if got := st.Fields.Fields[1].Expr.(*ast.ColumnNameExpr).Name.Name.O; got != "name" {
+	if got := st.Fields.Items[1].Expr.(*ast.ColumnNameExpr).Name.Name.O; got != "name" {
 		t.Fatalf("column 2 = %q, want name", got)
 	}
-	if st.From == nil || st.From.TableRefs == nil {
+	if st.From == nil || fromClause(t, st.From).Table == nil {
 		t.Fatal("expected FROM clause")
 	}
-	left, ok := st.From.TableRefs.Left.(*ast.TableSource)
+	left, ok := fromClause(t, st.From).Table.(*ast.TableSource)
 	if !ok {
-		t.Fatalf("expected TableSource, got %T", st.From.TableRefs.Left)
+		t.Fatalf("expected TableSource, got %T", fromClause(t, st.From).Table)
 	}
 	if got := left.Source.(*ast.TableName).Name.Parts[0].Name; got != "users" {
 		t.Fatalf("table = %q, want users", got)
@@ -77,30 +147,34 @@ JOIN customers c ON o.customer_id = c.id
 WHERE o.created_at > $1 AND c.active = true;`
 	st := mustParseSelect(t, sql)
 
-	if st.From == nil || st.From.TableRefs == nil {
+	if st.From == nil || fromClause(t, st.From).Table == nil {
 		t.Fatal("expected FROM clause")
 	}
-	left, ok := leftmostTableSource(st.From.TableRefs)
+	left, ok := leftmostTableSource(fromClause(t, st.From).Table)
 	if !ok {
-		t.Fatalf("expected left TableSource, got %T", st.From.TableRefs.Left)
+		t.Fatalf("expected left TableSource, got %T", fromClause(t, st.From).Table)
 	}
 	if got := left.Source.(*ast.TableName).Name.Parts[0].Name; got != "orders" {
 		t.Fatalf("left table = %q, want orders", got)
 	}
-	if got := left.AsName.O; got != "o" {
+	if got := left.Alias.Name; got != "o" {
 		t.Fatalf("left alias = %q, want o", got)
 	}
-	right, ok := st.From.TableRefs.Right.(*ast.TableSource)
+	join, ok := fromClause(t, st.From).Table.(*ast.Join)
 	if !ok {
-		t.Fatalf("expected right TableSource, got %T", st.From.TableRefs.Right)
+		t.Fatalf("expected join, got %T", fromClause(t, st.From).Table)
+	}
+	right, ok := join.Right.(*ast.TableSource)
+	if !ok {
+		t.Fatalf("expected right TableSource, got %T", join.Right)
 	}
 	if got := right.Source.(*ast.TableName).Name.Parts[0].Name; got != "customers" {
 		t.Fatalf("right table = %q, want customers", got)
 	}
-	if got := right.AsName.O; got != "c" {
+	if got := right.Alias.Name; got != "c" {
 		t.Fatalf("right alias = %q, want c", got)
 	}
-	if st.From.TableRefs.On == nil {
+	if join.On == nil {
 		t.Fatal("expected ON condition")
 	}
 	if st.Where == nil {
@@ -120,22 +194,22 @@ ORDER BY cnt DESC
 LIMIT 10 OFFSET 2;`
 	st := mustParseSelect(t, sql)
 
-	if st.GroupBy == nil || len(st.GroupBy.Items) != 1 {
+	if st.GroupBy == nil || len(groupClause(t, st.GroupBy).Items) != 1 {
 		t.Fatalf("expected 1 GROUP BY item, got %#v", st.GroupBy)
 	}
 	if st.Having == nil {
 		t.Fatal("expected HAVING clause")
 	}
-	if st.OrderBy == nil || len(st.OrderBy.Items) != 1 {
+	if st.OrderBy == nil || len(orderClause(t, st.OrderBy).Items) != 1 {
 		t.Fatalf("expected 1 ORDER BY item, got %#v", st.OrderBy)
 	}
-	if !st.OrderBy.Items[0].Desc {
+	if !orderItem(t, orderClause(t, st.OrderBy).Items[0]).Desc {
 		t.Fatal("expected ORDER BY ... DESC")
 	}
 	if st.Limit == nil {
 		t.Fatal("expected LIMIT clause")
 	}
-	if st.Limit.Count == nil || st.Limit.Offset == nil {
+	if limitClauseNode(t, st.Limit).Count == nil || limitClauseNode(t, st.Limit).Offset == nil {
 		t.Fatalf("expected LIMIT and OFFSET, got %#v", st.Limit)
 	}
 }
@@ -163,16 +237,16 @@ func TestParseSQLDML(t *testing.T) {
 	if len(ins.Columns) != 2 {
 		t.Fatalf("expected 2 insert columns, got %d", len(ins.Columns))
 	}
-	if len(ins.Lists) != 2 {
-		t.Fatalf("expected 2 value rows, got %d", len(ins.Lists))
+	if len(ins.Values) != 2 {
+		t.Fatalf("expected 2 value rows, got %d", len(ins.Values))
 	}
 
 	upd, ok := mustParseOne(t, "UPDATE t SET a = 1, b = 2 WHERE c = 3;").(*ast.UpdateStmt)
 	if !ok {
 		t.Fatal("expected *ast.UpdateStmt")
 	}
-	if len(upd.List) != 2 {
-		t.Fatalf("expected 2 assignments, got %d", len(upd.List))
+	if len(upd.Assignments) != 2 {
+		t.Fatalf("expected 2 assignments, got %d", len(upd.Assignments))
 	}
 	if upd.Where == nil {
 		t.Fatal("expected UPDATE WHERE clause")
@@ -238,8 +312,8 @@ func TestParseSQLExpressions(t *testing.T) {
 			name: "case",
 			sql:  "SELECT CASE WHEN a = 1 THEN 2 ELSE 3 END FROM t;",
 			check: func(t *testing.T, st *ast.SelectStmt) {
-				if _, ok := st.Fields.Fields[0].Expr.(*ast.CaseExpr); !ok {
-					t.Fatalf("expected *ast.CaseExpr, got %T", st.Fields.Fields[0].Expr)
+				if _, ok := st.Fields.Items[0].Expr.(*ast.CaseExpr); !ok {
+					t.Fatalf("expected *ast.CaseExpr, got %T", st.Fields.Items[0].Expr)
 				}
 			},
 		},
@@ -247,8 +321,8 @@ func TestParseSQLExpressions(t *testing.T) {
 			name: "function call",
 			sql:  "SELECT COUNT(*) FROM t;",
 			check: func(t *testing.T, st *ast.SelectStmt) {
-				if _, ok := st.Fields.Fields[0].Expr.(*ast.AggregateFuncExpr); !ok {
-					t.Fatalf("expected *ast.AggregateFuncExpr, got %T", st.Fields.Fields[0].Expr)
+				if _, ok := st.Fields.Items[0].Expr.(*ast.AggregateFuncExpr); !ok {
+					t.Fatalf("expected *ast.AggregateFuncExpr, got %T", st.Fields.Items[0].Expr)
 				}
 			},
 		},
@@ -256,9 +330,9 @@ func TestParseSQLExpressions(t *testing.T) {
 			name: "qualified column",
 			sql:  "SELECT t.a FROM t;",
 			check: func(t *testing.T, st *ast.SelectStmt) {
-				e, ok := st.Fields.Fields[0].Expr.(*ast.ColumnNameExpr)
+				e, ok := st.Fields.Items[0].Expr.(*ast.ColumnNameExpr)
 				if !ok {
-					t.Fatalf("expected *ast.ColumnNameExpr, got %T", st.Fields.Fields[0].Expr)
+					t.Fatalf("expected *ast.ColumnNameExpr, got %T", st.Fields.Items[0].Expr)
 				}
 				if e.Name.Table.O != "t" || e.Name.Name.O != "a" {
 					t.Fatalf("got %s.%s, want t.a", e.Name.Table.O, e.Name.Name.O)
@@ -269,9 +343,12 @@ func TestParseSQLExpressions(t *testing.T) {
 			name: "qualified wildcard",
 			sql:  "SELECT t.* FROM t;",
 			check: func(t *testing.T, st *ast.SelectStmt) {
-				w := st.Fields.Fields[0].WildCard
-				if w == nil || w.Table.O != "t" {
-					t.Fatalf("expected t.*, got %#v", st.Fields.Fields[0])
+				w, ok := st.Fields.Items[0].Expr.(*ast.WildcardExpr)
+				if !ok || w == nil {
+					t.Fatalf("expected t.*, got %#v", st.Fields.Items[0])
+				}
+				if len(w.Qualifier.Parts) != 1 || w.Qualifier.Parts[0].Name != "t" {
+					t.Fatalf("expected t.*, got %#v", st.Fields.Items[0])
 				}
 			},
 		},
@@ -344,9 +421,9 @@ func TestParseSQLEmptyInput(t *testing.T) {
 
 func TestParseSQLQuotedIdentifier(t *testing.T) {
 	st := mustParseSelect(t, `SELECT "MyColumn" FROM t;`)
-	e, ok := st.Fields.Fields[0].Expr.(*ast.ColumnNameExpr)
+	e, ok := st.Fields.Items[0].Expr.(*ast.ColumnNameExpr)
 	if !ok {
-		t.Fatalf("expected *ast.ColumnNameExpr, got %T", st.Fields.Fields[0].Expr)
+		t.Fatalf("expected *ast.ColumnNameExpr, got %T", st.Fields.Items[0].Expr)
 	}
 	if got := e.Name.Name.O; got != "MyColumn" {
 		t.Fatalf("quoted identifier = %q, want MyColumn", got)
@@ -392,7 +469,7 @@ func TestParseSQLDropAndTruncate(t *testing.T) {
 	}
 
 	dropIndex, ok := mustParseOne(t, "DROP INDEX IF EXISTS s.ix;").(*ast.DropIndexStmt)
-	if !ok || !dropIndex.IfExists || dropIndex.IndexName != "ix" {
+	if !ok || !dropIndex.IfExists || len(dropIndex.IndexName.Parts) != 2 || dropIndex.IndexName.Parts[1].Name != "ix" {
 		t.Fatalf("unexpected drop index: %#v", dropIndex)
 	}
 
@@ -404,7 +481,7 @@ func TestParseSQLDropAndTruncate(t *testing.T) {
 
 func TestParseSQLCreateIndexAndView(t *testing.T) {
 	idx, ok := mustParseOne(t, "CREATE UNIQUE INDEX IF NOT EXISTS ix ON s.t (a, b);").(*ast.CreateIndexStmt)
-	if !ok || !idx.Unique || idx.IndexName != "ix" || idx.Table.Name.Parts[0].Name != "s" {
+	if !ok || !idx.Unique || len(idx.IndexName.Parts) != 1 || idx.IndexName.Parts[0].Name != "ix" || idx.Table.Name.Parts[0].Name != "s" {
 		t.Fatalf("unexpected create index: %#v", idx)
 	}
 	if len(idx.IndexColNames) != 2 {
@@ -415,7 +492,7 @@ func TestParseSQLCreateIndexAndView(t *testing.T) {
 	if !ok || !view.OrReplace || view.ViewName.Name.Parts[0].Name != "v" {
 		t.Fatalf("unexpected create view: %#v", view)
 	}
-	if len(view.Cols) != 2 || view.Cols[0].O != "a" {
+	if len(view.Cols) != 2 || view.Cols[0].Name != "a" {
 		t.Fatalf("view cols = %#v, want [a b]", view.Cols)
 	}
 	if _, ok := view.Select.(*ast.SelectStmt); !ok {
@@ -439,8 +516,11 @@ func TestParseSQLWithClause(t *testing.T) {
 	if st.With == nil || !st.With.IsRecursive || len(st.With.CTEs) != 1 {
 		t.Fatalf("unexpected with clause: %#v", st.With)
 	}
-	cte := st.With.CTEs[0]
-	if cte.Name.O != "t" || len(cte.ColNames) != 1 || cte.ColNames[0].O != "n" {
+	cte, ok := st.With.CTEs[0].(*ast.CommonTableExpression)
+	if !ok {
+		t.Fatalf("unexpected cte type %T", st.With.CTEs[0])
+	}
+	if cte.Name.Name != "t" || len(cte.Columns) != 1 || cte.Columns[0].Name != "n" {
 		t.Fatalf("unexpected cte: %#v", cte)
 	}
 	if _, ok := cte.Query.(*ast.SetOprStmt); !ok {
@@ -450,10 +530,10 @@ func TestParseSQLWithClause(t *testing.T) {
 
 func TestParseSQLInsertSelectAndReturning(t *testing.T) {
 	ins, ok := mustParseOne(t, "INSERT INTO s.t (a, b) SELECT a, b FROM u RETURNING a;").(*ast.InsertStmt)
-	if !ok || ins.Table.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.Parts[0].Name != "s" {
+	if !ok || ins.Table.(*ast.TableName).Name.Parts[0].Name != "s" {
 		t.Fatalf("unexpected insert: %#v", ins)
 	}
-	if len(ins.Columns) != 2 || ins.Select == nil || ins.Returning == nil {
+	if len(ins.Columns) != 2 || ins.Query == nil || ins.Returning == nil {
 		t.Fatalf("unexpected insert fields: %#v", ins)
 	}
 
@@ -473,17 +553,15 @@ func TestParseSQLSetOperationsChain(t *testing.T) {
 	if !ok {
 		t.Fatal("expected *ast.SetOprStmt")
 	}
-	selects := st.SelectList.Selects
-	if len(selects) != 3 {
-		t.Fatalf("selects = %d, want 3", len(selects))
+	if st.Operator != ast.Except {
+		t.Fatalf("outer set operator = %v, want EXCEPT", st.Operator)
 	}
-	second := selects[1].(*ast.SelectStmt)
-	if second.AfterSetOperator == nil || *second.AfterSetOperator != ast.UnionAll {
-		t.Fatalf("second set operator = %v, want UNION ALL", second.AfterSetOperator)
+	inner, ok := st.Left.(*ast.SetOprStmt)
+	if !ok {
+		t.Fatalf("left operand = %T, want *ast.SetOprStmt", st.Left)
 	}
-	third := selects[2].(*ast.SelectStmt)
-	if third.AfterSetOperator == nil || *third.AfterSetOperator != ast.Except {
-		t.Fatalf("third set operator = %v, want EXCEPT", third.AfterSetOperator)
+	if inner.Operator != ast.UnionAll {
+		t.Fatalf("inner set operator = %v, want UNION ALL", inner.Operator)
 	}
 }
 
@@ -514,8 +592,8 @@ func TestParseSQLUpdateFromAndDeleteUsing(t *testing.T) {
 	if !ok || upd.From == nil || upd.Returning == nil || upd.Where == nil {
 		t.Fatalf("unexpected update: %#v", upd)
 	}
-	if upd.From.TableRefs.Right == nil {
-		t.Fatal("expected joined FROM tables")
+	if _, ok := fromClause(t, upd.From).Table.(*ast.Join); !ok {
+		t.Fatalf("expected joined FROM tables, got %#v", fromClause(t, upd.From).Table)
 	}
 
 	del, ok := mustParseOne(t, "DELETE FROM t USING u, v WHERE t.id = u.id RETURNING *;").(*ast.DeleteStmt)
@@ -565,7 +643,7 @@ func TestParseSQLExplainAnalyzeAndCreateDatabase(t *testing.T) {
 	}
 
 	db, ok := mustParseOne(t, "CREATE DATABASE IF NOT EXISTS db;").(*ast.CreateDatabaseStmt)
-	if !ok || !db.IfNotExists || db.Name != "db" {
+	if !ok || !db.IfNotExists || db.Name.Name != "db" {
 		t.Fatalf("unexpected create database: %#v", db)
 	}
 }
@@ -606,16 +684,16 @@ func TestParseSQLWithDML(t *testing.T) {
 
 func TestParseSQLCaseExpressions(t *testing.T) {
 	simple := mustParseSelect(t, "SELECT CASE a WHEN 1 THEN 'x' WHEN 2 THEN 'y' ELSE 'z' END FROM t;")
-	ce, ok := simple.Fields.Fields[0].Expr.(*ast.CaseExpr)
+	ce, ok := simple.Fields.Items[0].Expr.(*ast.CaseExpr)
 	if !ok {
-		t.Fatalf("expected *ast.CaseExpr, got %T", simple.Fields.Fields[0].Expr)
+		t.Fatalf("expected *ast.CaseExpr, got %T", simple.Fields.Items[0].Expr)
 	}
 	if ce.Value == nil || len(ce.WhenClauses) != 2 || ce.ElseClause == nil {
 		t.Fatalf("unexpected simple case: %#v", ce)
 	}
 
 	searched := mustParseSelect(t, "SELECT CASE WHEN a = 1 THEN 'x' WHEN a = 2 THEN 'y' END FROM t;")
-	ce, ok = searched.Fields.Fields[0].Expr.(*ast.CaseExpr)
+	ce, ok = searched.Fields.Items[0].Expr.(*ast.CaseExpr)
 	if !ok || ce.Value != nil || len(ce.WhenClauses) != 2 || ce.ElseClause != nil {
 		t.Fatalf("unexpected searched case: %#v", ce)
 	}
@@ -623,10 +701,10 @@ func TestParseSQLCaseExpressions(t *testing.T) {
 
 func TestParseSQLGroupOrderAndIn(t *testing.T) {
 	st := mustParseSelect(t, "SELECT a FROM t GROUP BY a, b, c ORDER BY a DESC, b, c ASC, d LIMIT ALL;")
-	if st.GroupBy == nil || len(st.GroupBy.Items) != 3 {
+	if st.GroupBy == nil || len(groupClause(t, st.GroupBy).Items) != 3 {
 		t.Fatalf("group by items = %#v, want 3", st.GroupBy)
 	}
-	if st.OrderBy == nil || len(st.OrderBy.Items) != 4 {
+	if st.OrderBy == nil || len(orderClause(t, st.OrderBy).Items) != 4 {
 		t.Fatalf("order by items = %#v, want 4", st.OrderBy)
 	}
 	if st.Limit != nil {
@@ -642,7 +720,7 @@ func TestParseSQLGroupOrderAndIn(t *testing.T) {
 
 func TestParseSQLParenthesizedSetOperations(t *testing.T) {
 	st, ok := mustParseOne(t, "(SELECT 1) UNION (SELECT 2);").(*ast.SetOprStmt)
-	if !ok || len(st.SelectList.Selects) != 2 {
+	if !ok || st.Left == nil || st.Right == nil {
 		t.Fatalf("unexpected set operation: %#v", st)
 	}
 	single, ok := mustParseOne(t, "(SELECT 1);").(*ast.SelectStmt)
@@ -653,35 +731,39 @@ func TestParseSQLParenthesizedSetOperations(t *testing.T) {
 
 func TestParseSQLSelectDistinctAndJoinUsing(t *testing.T) {
 	st := mustParseSelect(t, "SELECT DISTINCT a FROM t JOIN u USING (id, tenant_id);")
-	if !st.SelectStmtOpts.Distinct {
+	if !st.Distinct {
 		t.Fatal("expected DISTINCT")
 	}
-	if st.From == nil || st.From.TableRefs == nil || st.From.TableRefs.Using == nil {
+	if st.From == nil || fromClause(t, st.From).Table == nil {
 		t.Fatalf("expected join USING, got %#v", st.From)
 	}
-	if len(st.From.TableRefs.Using) != 2 {
-		t.Fatalf("using columns = %d, want 2", len(st.From.TableRefs.Using))
+	join, ok := fromClause(t, st.From).Table.(*ast.Join)
+	if !ok || len(join.Using) != 2 {
+		t.Fatalf("expected join USING, got %#v", fromClause(t, st.From).Table)
+	}
+	if got := join.Using[0].Parts[0].Name + "," + join.Using[1].Parts[0].Name; got != "id,tenant_id" {
+		t.Fatalf("using columns = %q, want id,tenant_id", got)
 	}
 }
 
 func TestParseSQLWindowAndNullsOrder(t *testing.T) {
 	st := mustParseSelect(t, "SELECT ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC NULLS LAST) FROM employees;")
-	w, ok := st.Fields.Fields[0].Expr.(*ast.WindowFuncExpr)
+	w, ok := st.Fields.Items[0].Expr.(*ast.WindowFuncExpr)
 	if !ok {
-		t.Fatalf("expected *ast.WindowFuncExpr, got %T", st.Fields.Fields[0].Expr)
+		t.Fatalf("expected *ast.WindowFuncExpr, got %T", st.Fields.Items[0].Expr)
 	}
 	if w.Spec.PartitionBy == nil || w.Spec.OrderBy == nil || len(w.Spec.OrderBy.Items) != 1 {
 		t.Fatalf("unexpected window spec: %#v", w.Spec)
 	}
-	if w.Spec.OrderBy.Items[0].NullOrder != 2 || !w.Spec.OrderBy.Items[0].Desc {
+	if orderItem(t, w.Spec.OrderBy.Items[0]).NullOrder != 2 || !orderItem(t, w.Spec.OrderBy.Items[0]).Desc {
 		t.Fatalf("unexpected null ordering: %#v", w.Spec.OrderBy.Items[0])
 	}
 }
 
 func TestParseSQLJsonAndLikeOperators(t *testing.T) {
 	st := mustParseSelect(t, "SELECT data->'a'->>'b' FROM t WHERE name ILIKE 'x%' AND data @> '{\"k\":1}';")
-	if _, ok := st.Fields.Fields[0].Expr.(*ast.BinaryOperationExpr); !ok {
-		t.Fatalf("expected json binary expression, got %T", st.Fields.Fields[0].Expr)
+	if _, ok := st.Fields.Items[0].Expr.(*ast.BinaryOperationExpr); !ok {
+		t.Fatalf("expected json binary expression, got %T", st.Fields.Items[0].Expr)
 	}
 	if _, ok := st.Where.(*ast.BinaryOperationExpr); !ok {
 		t.Fatalf("expected and expression, got %T", st.Where)
@@ -690,12 +772,12 @@ func TestParseSQLJsonAndLikeOperators(t *testing.T) {
 
 func TestParseSQLCastAndExtract(t *testing.T) {
 	st := mustParseSelect(t, "SELECT length(name)::int, EXTRACT(year FROM now()) FROM t WHERE a::int < 5;")
-	if _, ok := st.Fields.Fields[0].Expr.(*ast.FuncCastExpr); !ok {
-		t.Fatalf("expected cast expression, got %T", st.Fields.Fields[0].Expr)
+	if _, ok := st.Fields.Items[0].Expr.(*ast.FuncCastExpr); !ok {
+		t.Fatalf("expected cast expression, got %T", st.Fields.Items[0].Expr)
 	}
-	fc, ok := st.Fields.Fields[1].Expr.(*ast.FuncCallExpr)
+	fc, ok := st.Fields.Items[1].Expr.(*ast.FuncCallExpr)
 	if !ok || len(fc.Name.Parts) != 1 || fc.Name.Parts[0].Name != "extract" {
-		t.Fatalf("expected extract call, got %#v", st.Fields.Fields[1].Expr)
+		t.Fatalf("expected extract call, got %#v", st.Fields.Items[1].Expr)
 	}
 	if _, ok := st.Where.(*ast.BinaryOperationExpr); !ok {
 		t.Fatalf("expected comparison with cast, got %T", st.Where)
@@ -719,27 +801,27 @@ func TestParseSQLCharacterVaryingSynonym(t *testing.T) {
 
 	st := mustParseSelect(t, "SELECT 'x'::CHARACTER VARYING(20), CAST('x' AS CHARACTER VARYING(20)), a::int b FROM t;")
 	for i := range 2 {
-		fc, ok := st.Fields.Fields[i].Expr.(*ast.FuncCastExpr)
+		fc, ok := st.Fields.Items[i].Expr.(*ast.FuncCastExpr)
 		if !ok {
-			t.Fatalf("field %d: expected cast, got %T", i, st.Fields.Fields[i].Expr)
+			t.Fatalf("field %d: expected cast, got %T", i, st.Fields.Items[i].Expr)
 		}
 		if fc.Tp == nil || fc.Tp.String() != `"varchar"(20)` {
 			t.Fatalf("field %d: type = %#v, want varchar(20)", i, fc.Tp)
 		}
 	}
-	if got := st.Fields.Fields[2].AsName.O; got != "b" {
+	if got := st.Fields.Items[2].Alias.Name; got != "b" {
 		t.Fatalf("alias = %q, want b", got)
 	}
 }
 
 func TestParseSQLQualifiedFunctionAndSoftKeywords(t *testing.T) {
 	st := mustParseSelect(t, "SELECT pg_catalog.lower(name), myschema.length(col) FROM t WHERE role = 'admin';")
-	if len(st.Fields.Fields) != 2 {
-		t.Fatalf("fields = %d, want 2", len(st.Fields.Fields))
+	if len(st.Fields.Items) != 2 {
+		t.Fatalf("fields = %d, want 2", len(st.Fields.Items))
 	}
-	fc, ok := st.Fields.Fields[0].Expr.(*ast.FuncCallExpr)
+	fc, ok := st.Fields.Items[0].Expr.(*ast.FuncCallExpr)
 	if !ok || len(fc.Name.Parts) != 2 || fc.Name.Parts[0].Name != "pg_catalog" || fc.Name.Parts[1].Name != "lower" {
-		t.Fatalf("expected qualified function, got %#v", st.Fields.Fields[0].Expr)
+		t.Fatalf("expected qualified function, got %#v", st.Fields.Items[0].Expr)
 	}
 	if st.Where == nil {
 		t.Fatal("expected where clause using soft keyword")
@@ -752,9 +834,9 @@ func TestParseSQLDistinctOnAndWindowFrame(t *testing.T) {
 		t.Fatalf("unexpected distinct on: %#v", st.SelectStmtOpts)
 	}
 	w := mustParseSelect(t, "SELECT SUM(amount) OVER (ORDER BY created_at ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM t;")
-	wf, ok := w.Fields.Fields[0].Expr.(*ast.WindowFuncExpr)
+	wf, ok := w.Fields.Items[0].Expr.(*ast.WindowFuncExpr)
 	if !ok || wf.Spec.Frame == nil || wf.Spec.Frame.Type != ast.Rows {
-		t.Fatalf("unexpected window frame: %#v", w.Fields.Fields[0].Expr)
+		t.Fatalf("unexpected window frame: %#v", w.Fields.Items[0].Expr)
 	}
 	start := wf.Spec.Frame.Extent.Start.WindowFrameBoundCore()
 	end := wf.Spec.Frame.Extent.End.WindowFrameBoundCore()
@@ -765,8 +847,12 @@ func TestParseSQLDistinctOnAndWindowFrame(t *testing.T) {
 
 func TestParseSQLLikeInternalAndNaturalJoin(t *testing.T) {
 	st := mustParseSelect(t, "SELECT * FROM a NATURAL LEFT JOIN b WHERE name !~~ 'x%';")
-	if st.From == nil || !st.From.TableRefs.NaturalJoin {
+	if st.From == nil || fromClause(t, st.From).Table == nil {
 		t.Fatalf("expected natural join, got %#v", st.From)
+	}
+	join, ok := fromClause(t, st.From).Table.(*ast.Join)
+	if !ok || !join.Natural {
+		t.Fatalf("expected natural join, got %#v", fromClause(t, st.From).Table)
 	}
 	pl, ok := st.Where.(*ast.PatternLikeExpr)
 	if !ok || !pl.Not {
@@ -816,15 +902,18 @@ func TestParseSQLDropBehaviorAndMaterialized(t *testing.T) {
 
 func TestParseSQLAtTimeZone(t *testing.T) {
 	st := mustParseSelect(t, "SELECT created_at AT TIME ZONE 'UTC' FROM events;")
-	fc, ok := st.Fields.Fields[0].Expr.(*ast.FuncCallExpr)
+	fc, ok := st.Fields.Items[0].Expr.(*ast.FuncCallExpr)
 	if !ok || len(fc.Name.Parts) != 1 || fc.Name.Parts[0].Name != "timezone" {
-		t.Fatalf("expected timezone call, got %#v", st.Fields.Fields[0].Expr)
+		t.Fatalf("expected timezone call, got %#v", st.Fields.Items[0].Expr)
 	}
 }
 
 func TestParseSQLLateralAndTableFunctions(t *testing.T) {
 	st := mustParseSelect(t, "SELECT * FROM products p CROSS JOIN LATERAL unnest(p.tags) AS tag(name);")
-	join := st.From.TableRefs
+	join, ok := fromClause(t, st.From).Table.(*ast.Join)
+	if !ok {
+		t.Fatalf("expected lateral join, got %#v", fromClause(t, st.From).Table)
+	}
 	right, ok := join.Right.(*ast.TableSource)
 	if !ok {
 		t.Fatalf("expected right TableSource, got %T", join.Right)
@@ -835,17 +924,21 @@ func TestParseSQLLateralAndTableFunctions(t *testing.T) {
 	if _, ok := right.Source.(*ast.TableFunction); !ok {
 		t.Fatalf("expected TableFunction, got %T", right.Source)
 	}
-	if right.AsName.L != "tag" {
-		t.Fatalf("alias = %q, want tag", right.AsName.O)
+	if right.Alias.Name != "tag" {
+		t.Fatalf("alias = %q, want tag", right.Alias.Name)
 	}
-	if len(right.ColumnAliases) != 1 || right.ColumnAliases[0].L != "name" {
-		t.Fatalf("column aliases = %#v, want [name]", right.ColumnAliases)
+	if len(right.Columns) != 1 || right.Columns[0].Name != "name" {
+		t.Fatalf("column aliases = %#v, want [name]", right.Columns)
 	}
 
 	st = mustParseSelect(t, "SELECT * FROM t, LATERAL (SELECT * FROM u WHERE u.tid = t.id) sub;")
-	right, ok = st.From.TableRefs.Right.(*ast.TableSource)
+	join, ok = fromClause(t, st.From).Table.(*ast.Join)
+	if !ok {
+		t.Fatalf("expected lateral join, got %#v", fromClause(t, st.From).Table)
+	}
+	right, ok = join.Right.(*ast.TableSource)
 	if !ok || !right.Lateral {
-		t.Fatalf("expected lateral subquery, got %#v", st.From.TableRefs.Right)
+		t.Fatalf("expected lateral subquery, got %#v", fromClause(t, st.From).Table)
 	}
 }
 
@@ -854,8 +947,8 @@ func TestParseSQLJSONExistsAndWildcardArgs(t *testing.T) {
 	if st.Where == nil {
 		t.Fatal("expected WHERE clause")
 	}
-	if _, ok := st.Fields.Fields[0].Expr.(*ast.FuncCallExpr); !ok {
-		t.Fatalf("expected function call, got %T", st.Fields.Fields[0].Expr)
+	if _, ok := st.Fields.Items[0].Expr.(*ast.FuncCallExpr); !ok {
+		t.Fatalf("expected function call, got %T", st.Fields.Items[0].Expr)
 	}
 
 	st = mustParseSelect(t, "SELECT * FROM t WHERE meta ? 'key' AND id = $1;")
@@ -888,8 +981,8 @@ func TestParseSQLWithDMLAndCTEDML(t *testing.T) {
 	if !ok || sel.With == nil {
 		t.Fatalf("expected select with CTE, got %#v", sel)
 	}
-	if _, ok := sel.With.CTEs[0].Query.(*ast.UpdateStmt); !ok {
-		t.Fatalf("expected update CTE query, got %T", sel.With.CTEs[0].Query)
+	if _, ok := sel.With.CTEs[0].CTECore().Query.(*ast.UpdateStmt); !ok {
+		t.Fatalf("expected update CTE query, got %T", sel.With.CTEs[0].CTECore().Query)
 	}
 }
 
@@ -998,14 +1091,14 @@ WHERE active_users.id = $2;`)
 	if st.With == nil || len(st.With.CTEs) != 1 {
 		t.Fatalf("expected 1 CTE, got %#v", st.With)
 	}
-	cte, ok := st.With.CTEs[0].Query.(*ast.SelectStmt)
+	cte, ok := st.With.CTEs[0].CTECore().Query.(*ast.SelectStmt)
 	if !ok {
-		t.Fatalf("expected select CTE query, got %T", st.With.CTEs[0].Query)
+		t.Fatalf("expected select CTE query, got %T", st.With.CTEs[0].CTECore().Query)
 	}
-	if len(cte.Fields.Fields) != 2 {
-		t.Fatalf("expected 2 CTE fields, got %d", len(cte.Fields.Fields))
+	if len(cte.Fields.Items) != 2 {
+		t.Fatalf("expected 2 CTE fields, got %d", len(cte.Fields.Items))
 	}
-	if got := cte.Fields.Fields[0].Expr.(*ast.ColumnNameExpr).Name.String(); got != "users.id" {
+	if got := cte.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.String(); got != "users.id" {
 		t.Fatalf("first CTE field = %q, want users.id", got)
 	}
 	if !hasTable(collectTables(cte), "", "users") {
@@ -1018,7 +1111,7 @@ WHERE active_users.id = $2;`)
 
 func TestParseSQLCTENestedTables(t *testing.T) {
 	st := mustParseSelect(t, `WITH ro AS (SELECT id FROM orders) SELECT * FROM ro JOIN customers c ON c.id = ro.id;`)
-	cte, ok := st.With.CTEs[0].Query.(*ast.SelectStmt)
+	cte, ok := st.With.CTEs[0].CTECore().Query.(*ast.SelectStmt)
 	if !ok {
 		t.Fatal("expected select CTE query")
 	}
@@ -1039,14 +1132,14 @@ func TestParseSQLCTEUpdate(t *testing.T) {
     UPDATE users SET active = true WHERE id = $1 RETURNING id
 )
 SELECT * FROM updated_users;`)
-	upd, ok := st.With.CTEs[0].Query.(*ast.UpdateStmt)
+	upd, ok := st.With.CTEs[0].CTECore().Query.(*ast.UpdateStmt)
 	if !ok {
-		t.Fatalf("expected update CTE query, got %T", st.With.CTEs[0].Query)
+		t.Fatalf("expected update CTE query, got %T", st.With.CTEs[0].CTECore().Query)
 	}
-	if len(upd.List) == 0 {
+	if len(upd.Assignments) == 0 {
 		t.Fatal("expected SET clauses in CTE update")
 	}
-	if upd.Returning == nil || len(upd.Returning.Fields) == 0 {
+	if upd.Returning == nil || len(upd.Returning.Items) == 0 {
 		t.Fatal("expected RETURNING in CTE update")
 	}
 	if !hasTable(collectTables(upd), "", "users") {
@@ -1062,7 +1155,7 @@ func TestParseSQLCTETablesExtraction(t *testing.T) {
     SELECT payload FROM slow_smoke.unindexed WHERE payload LIKE $1
 )
 SELECT COUNT(*) FROM expanded e1 JOIN expanded e2 ON e2.payload >= e1.payload;`)
-	if len(st.With.CTEs) != 1 || st.With.CTEs[0].Name.L != "expanded" {
+	if len(st.With.CTEs) != 1 || st.With.CTEs[0].CTECore().Name.Name != "expanded" {
 		t.Fatalf("unexpected CTEs: %#v", st.With.CTEs)
 	}
 	all := collectTables(st)
@@ -1107,19 +1200,19 @@ WHEN MATCHED THEN DELETE;`).(*ast.MergeStmt)
 	if !ok {
 		t.Fatal("expected *ast.MergeStmt")
 	}
-	left, ok := st.Table.TableRefs.Left.(*ast.TableSource)
+	left, ok := st.Table.Table.(*ast.TableSource)
 	if !ok {
-		t.Fatalf("expected target TableSource, got %T", st.Table.TableRefs.Left)
+		t.Fatalf("expected target TableSource, got %T", st.Table.Table)
 	}
 	target, ok := left.Source.(*ast.TableName)
-	if !ok || target.Name.Parts[0].Name != "customers" || left.AsName.L != "c" {
+	if !ok || target.Name.Parts[0].Name != "customers" || left.Alias.Name != "c" {
 		t.Fatalf("unexpected MERGE target: %#v", left)
 	}
-	src, ok := st.Source.TableRefs.Left.(*ast.TableSource)
+	src, ok := st.Source.Table.(*ast.TableSource)
 	if !ok {
-		t.Fatalf("expected source TableSource, got %T", st.Source.TableRefs.Left)
+		t.Fatalf("expected source TableSource, got %T", st.Source.Table)
 	}
-	if _, ok := src.Source.(*ast.SelectStmt); !ok || src.AsName.L != "s" {
+	if _, ok := src.Source.(*ast.SelectStmt); !ok || src.Alias.Name != "s" {
 		t.Fatalf("unexpected MERGE source: %#v", src)
 	}
 	if st.On == nil {
@@ -1161,7 +1254,7 @@ JOIN (
 	find = func(n ast.ResultSetNode) {
 		switch v := n.(type) {
 		case *ast.TableSource:
-			if v.AsName.L == "sq" {
+			if v.Alias.Name == "sq" {
 				sq = v
 			}
 			find(v.Source)
@@ -1172,7 +1265,7 @@ JOIN (
 			}
 		}
 	}
-	find(st.From.TableRefs)
+	find(fromClause(t, st.From).Table)
 	if sq == nil {
 		t.Fatal("expected derived table alias sq")
 	}
@@ -1180,7 +1273,7 @@ JOIN (
 	if !ok {
 		t.Fatalf("expected subquery, got %T", sq.Source)
 	}
-	if sub.GroupBy == nil || len(sub.GroupBy.Items) == 0 {
+	if sub.GroupBy == nil || len(groupClause(t, sub.GroupBy).Items) == 0 {
 		t.Fatal("expected GROUP BY in subquery")
 	}
 }
@@ -1197,21 +1290,19 @@ SELECT user_id FROM banned_users;`).(*ast.SetOprStmt)
 	if !ok {
 		t.Fatal("expected *ast.SetOprStmt")
 	}
-	if st.SelectList == nil || len(st.SelectList.Selects) != 2 {
-		t.Fatalf("unexpected set operation list: %#v", st.SelectList)
+	if st.Operator != ast.ExceptAll {
+		t.Fatalf("outer operator = %v, want EXCEPT ALL", st.Operator)
 	}
-	nested, ok := st.SelectList.Selects[0].(*ast.SetOprStmt)
+	grouped, ok := st.Left.(*ast.QueryTailStmt)
+	if !ok || !grouped.Parenthesized {
+		t.Fatalf("expected parenthesized query, got %T", st.Left)
+	}
+	nested, ok := grouped.Query.(*ast.SetOprStmt)
 	if !ok {
-		t.Fatalf("expected nested set operation, got %T", st.SelectList.Selects[0])
+		t.Fatalf("expected nested set operation, got %T", st.Left)
 	}
-	if len(nested.SelectList.Selects) != 2 {
-		t.Fatalf("unexpected nested selects: %#v", nested.SelectList.Selects)
-	}
-	if op := nested.SelectList.Selects[1].(*ast.SelectStmt).AfterSetOperator; op == nil || *op != ast.Intersect {
-		t.Fatalf("nested operator = %v, want INTERSECT", op)
-	}
-	if op := st.SelectList.Selects[1].(*ast.SelectStmt).AfterSetOperator; op == nil || *op != ast.ExceptAll {
-		t.Fatalf("outer operator = %v, want EXCEPT ALL", op)
+	if nested.Operator != ast.Intersect {
+		t.Fatalf("nested operator = %v, want INTERSECT", nested.Operator)
 	}
 	all := collectTables(st)
 	for _, name := range []string{"logins", "payments", "banned_users"} {
@@ -1238,9 +1329,8 @@ func TestParseSQLSetOperationsTableDriven(t *testing.T) {
 			if !ok {
 				t.Fatalf("expected *ast.SetOprStmt")
 			}
-			right := st.SelectList.Selects[1].(*ast.SelectStmt)
-			if right.AfterSetOperator == nil || *right.AfterSetOperator != tc.op {
-				t.Fatalf("operator = %v, want %v", right.AfterSetOperator, tc.op)
+			if st.Operator != tc.op {
+				t.Fatalf("operator = %v, want %v", st.Operator, tc.op)
 			}
 			all := collectTables(st)
 			for _, name := range tc.wantTables {
@@ -1259,8 +1349,8 @@ func TestParseSQLSetOpBranchesKeepWhere(t *testing.T) {
 			if !ok {
 				t.Fatal("expected *ast.SetOprStmt")
 			}
-			for _, sel := range st.SelectList.Selects {
-				if sel.(*ast.SelectStmt).Where == nil {
+			for _, branch := range []ast.QueryNode{st.Left, st.Right} {
+				if branch.(*ast.SelectStmt).Where == nil {
 					t.Fatalf("%s branch is missing WHERE", op)
 				}
 			}
@@ -1284,11 +1374,14 @@ func TestParseSQLSetOpBranchLimit(t *testing.T) {
 	if !ok {
 		t.Fatal("expected *ast.SetOprStmt")
 	}
-	if st.Limit == nil || st.Limit.Count == nil {
+	if st.Tail.Limit == nil || limitClauseNode(t, st.Tail.Limit).Count == nil {
 		t.Fatal("expected top-level LIMIT")
 	}
-	branch := st.SelectList.Selects[1].(*ast.SelectStmt)
-	if branch.Limit == nil || branch.Limit.Count == nil {
+	branch, ok := st.Right.(*ast.SelectStmt)
+	if !ok {
+		t.Fatalf("right operand = %T, want *ast.SelectStmt", st.Right)
+	}
+	if branch.Limit == nil || limitClauseNode(t, branch.Limit).Count == nil {
 		t.Fatal("expected branch LIMIT")
 	}
 }
@@ -1351,11 +1444,10 @@ func TestParseSQLAdvancedExpressionsAndSetOps(t *testing.T) {
 	if !ok {
 		t.Fatal("expected *ast.SetOprStmt")
 	}
-	right := setOp.SelectList.Selects[1].(*ast.SelectStmt)
-	if right.AfterSetOperator == nil || *right.AfterSetOperator != ast.UnionAll {
-		t.Fatalf("operator = %v, want UNION ALL", right.AfterSetOperator)
+	if setOp.Operator != ast.UnionAll {
+		t.Fatalf("operator = %v, want UNION ALL", setOp.Operator)
 	}
-	if setOp.OrderBy == nil {
+	if setOp.Tail.OrderBy == nil {
 		t.Fatal("expected ORDER BY on set operation")
 	}
 	if !hasTable(collectTables(setOp), "", "archived_orders") {
@@ -1364,7 +1456,7 @@ func TestParseSQLAdvancedExpressionsAndSetOps(t *testing.T) {
 
 	ins, ok := mustParseOne(t, `INSERT INTO customers (name, email, signup_date)
 		VALUES ('John', 'john@example.com', NOW()) RETURNING id, created_at;`).(*ast.InsertStmt)
-	if !ok || len(ins.Columns) != 3 || ins.Returning == nil || len(ins.Returning.Fields) != 2 {
+	if !ok || len(ins.Columns) != 3 || ins.Returning == nil || len(ins.Returning.Items) != 2 {
 		t.Fatalf("unexpected insert: %#v", ins)
 	}
 
@@ -1373,7 +1465,7 @@ func TestParseSQLAdvancedExpressionsAndSetOps(t *testing.T) {
 		FROM discounts d
 		WHERE p.category_id = d.category_id AND d.expires_at > NOW()
 		RETURNING p.id, p.price;`).(*ast.UpdateStmt)
-	if !ok || len(upd.List) != 2 || upd.From == nil || upd.Returning == nil {
+	if !ok || len(upd.Assignments) != 2 || upd.From == nil || upd.Returning == nil {
 		t.Fatalf("unexpected update: %#v", upd)
 	}
 
@@ -1394,8 +1486,8 @@ func TestParseSQLExampleLibraryScenarios(t *testing.T) {
 	}
 
 	join := mustParseSelect(t, "SELECT orders.id, customers.name FROM orders JOIN customers ON customers.id = orders.customer_id;")
-	if join.From.TableRefs.On == nil {
-		t.Fatal("expected JOIN ON condition")
+	if j, ok := fromClause(t, join.From).Table.(*ast.Join); !ok || j.On == nil {
+		t.Fatalf("expected JOIN ON condition, got %#v", fromClause(t, join.From).Table)
 	}
 	if all := collectTables(join); !hasTable(all, "", "orders") || !hasTable(all, "", "customers") {
 		t.Fatalf("unexpected join tables: %#v", all)
@@ -1412,7 +1504,7 @@ func TestParseSQLExampleLibraryScenarios(t *testing.T) {
 	}
 
 	upd, ok := mustParseOne(t, "UPDATE products SET price = price * 1.1 WHERE category = $1 RETURNING id;").(*ast.UpdateStmt)
-	if !ok || len(upd.List) != 1 || upd.Returning == nil {
+	if !ok || len(upd.Assignments) != 1 || upd.Returning == nil {
 		t.Fatalf("unexpected update: %#v", upd)
 	}
 
@@ -1426,7 +1518,7 @@ func TestParseSQLExampleLibraryScenarios(t *testing.T) {
 	}
 
 	ins, ok := mustParseOne(t, "INSERT INTO metrics (id, payload) VALUES ($1, $2) RETURNING id;").(*ast.InsertStmt)
-	if !ok || len(ins.Columns) != 2 || ins.Returning == nil || len(ins.Lists) != 1 || len(ins.Lists[0]) != 2 {
+	if !ok || len(ins.Columns) != 2 || ins.Returning == nil || len(ins.Values) != 1 || len(ins.Values[0]) != 2 {
 		t.Fatalf("unexpected insert: %#v", ins)
 	}
 	if got := countParams(ins); got != 2 {
@@ -1468,7 +1560,7 @@ func TestParseSQLInsertOnConflictCapturesSetClauses(t *testing.T) {
 	if got := countParams(ins); got != 3 {
 		t.Fatalf("parameters = %d, want 3", got)
 	}
-	if ins.Returning == nil || len(ins.Returning.Fields) != 2 {
+	if ins.Returning == nil || len(ins.Returning.Items) != 2 {
 		t.Fatalf("unexpected RETURNING: %#v", ins.Returning)
 	}
 }
@@ -1532,7 +1624,7 @@ func TestParseSQLUserRoleAndPreparedStatements(t *testing.T) {
 
 	prep := mustParseOne(t, "PREPARE p (int, text) AS INSERT INTO t VALUES ($1, $2);")
 	st, ok := prep.(*ast.PrepareStmt)
-	if !ok || st.Name != "p" || len(st.Params) != 2 || st.Stmt == nil {
+	if !ok || st.Name.Name != "p" || len(st.Params) != 2 || st.Stmt == nil {
 		t.Fatalf("prepare = %#v", prep)
 	}
 	if st.Params[0].String() != `"int4"` || st.Params[1].String() != `"text"` {
@@ -1541,7 +1633,7 @@ func TestParseSQLUserRoleAndPreparedStatements(t *testing.T) {
 	if st, ok := mustParseOne(t, "EXECUTE p(1, 'x');").(*ast.ExecuteStmt); !ok || len(st.Args) != 2 {
 		t.Fatalf("execute = %#v", mustParseOne(t, "EXECUTE p(1, 'x');"))
 	}
-	if st, ok := mustParseOne(t, "DEALLOCATE PREPARE p;").(*ast.DeallocateStmt); !ok || st.Name != "p" || st.All {
+	if st, ok := mustParseOne(t, "DEALLOCATE PREPARE p;").(*ast.DeallocateStmt); !ok || st.Name.Name != "p" || st.All {
 		t.Fatalf("deallocate = %#v", mustParseOne(t, "DEALLOCATE PREPARE p;"))
 	}
 	if st, ok := mustParseOne(t, "DEALLOCATE ALL;").(*ast.DeallocateStmt); !ok || !st.All {
@@ -1600,7 +1692,7 @@ func TestParseSQLSetRoleAndPrepare(t *testing.T) {
 	if st, ok := mustParseOne(t, `SET SESSION AUTHORIZATION app;`).(*ast.VariableSetStmt); !ok || st.Name != "session_authorization" {
 		t.Fatalf("set session authorization = %#v", mustParseOne(t, `SET SESSION AUTHORIZATION app;`))
 	}
-	if st, ok := mustParseOne(t, `PREPARE p AS SELECT 1;`).(*ast.PrepareStmt); !ok || st.Name != "p" || st.Stmt == nil {
+	if st, ok := mustParseOne(t, `PREPARE p AS SELECT 1;`).(*ast.PrepareStmt); !ok || st.Name.Name != "p" || st.Stmt == nil {
 		t.Fatalf("prepare = %#v", mustParseOne(t, `PREPARE p AS SELECT 1;`))
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/format"
 )
@@ -84,15 +85,15 @@ func TestParseSQLSelectExpressionsAST(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			st := mustParseSelect(t, tc.sql)
-			if st.Fields == nil || len(st.Fields.Fields) != len(tc.checks) {
+			if st.Fields == nil || len(st.Fields.Items) != len(tc.checks) {
 				t.Fatalf("fields = %#v, want %d", st.Fields, len(tc.checks))
 			}
 			for i, want := range tc.checks {
-				field := st.Fields.Fields[i]
+				field := st.Fields.Items[i]
 				if got := squashSQL(restoreNode(t, field.Expr)); got != squashSQL(want.expr) {
 					t.Fatalf("field %d expr = %q, want %q", i, got, want.expr)
 				}
-				if got := field.AsName.O; got != want.alias {
+				if got := field.Alias.Name; got != want.alias {
 					t.Fatalf("field %d alias = %q, want %q", i, got, want.alias)
 				}
 			}
@@ -100,10 +101,10 @@ func TestParseSQLSelectExpressionsAST(t *testing.T) {
 	}
 
 	caseSt := mustParseSelect(t, `SELECT CASE WHEN status = 'shipped' THEN 'done' WHEN status = 'pending' THEN 'waiting' ELSE 'other' END AS state FROM orders;`)
-	if got := restoreNode(t, caseSt.Fields.Fields[0].Expr); !strings.Contains(got, "CASE") || !strings.Contains(got, "WHEN") {
+	if got := restoreNode(t, caseSt.Fields.Items[0].Expr); !strings.Contains(got, "CASE") || !strings.Contains(got, "WHEN") {
 		t.Fatalf("CASE expression not preserved: %q", got)
 	}
-	if got := caseSt.Fields.Fields[0].AsName.O; got != "state" {
+	if got := caseSt.Fields.Items[0].Alias.Name; got != "state" {
 		t.Fatalf("CASE alias = %q, want state", got)
 	}
 }
@@ -111,26 +112,26 @@ func TestParseSQLSelectExpressionsAST(t *testing.T) {
 // Ported from parser_ir_select_test.go: GROUP BY / HAVING / ORDER BY / LIMIT.
 func TestParseSQLSelectClausesAST(t *testing.T) {
 	st := mustParseSelect(t, `SELECT tenant, COUNT(*) AS cnt FROM events WHERE occurred_at >= $1 GROUP BY tenant HAVING COUNT(*) > 5 ORDER BY cnt DESC NULLS LAST LIMIT 10 OFFSET 2;`)
-	if st.GroupBy == nil || len(st.GroupBy.Items) != 1 {
+	if st.GroupBy == nil || len(groupClause(t, st.GroupBy).Items) != 1 {
 		t.Fatalf("group by = %#v, want 1 item", st.GroupBy)
 	}
-	if got := squashSQL(restoreNode(t, st.GroupBy.Items[0].Expr)); got != `"tenant"` {
+	if got := squashSQL(restoreNode(t, groupItem(t, groupClause(t, st.GroupBy).Items[0]).Expr)); got != `"tenant"` {
 		t.Fatalf("group by = %q, want tenant", got)
 	}
 	if st.Having == nil {
 		t.Fatal("expected HAVING")
 	}
-	if got := squashSQL(restoreNode(t, st.Having.Expr)); !strings.HasSuffix(got, ">5") {
+	if got := squashSQL(restoreNode(t, st.Having)); !strings.HasSuffix(got, ">5") {
 		t.Fatalf("having = %q", got)
 	}
-	if st.OrderBy == nil || len(st.OrderBy.Items) != 1 {
+	if st.OrderBy == nil || len(orderClause(t, st.OrderBy).Items) != 1 {
 		t.Fatalf("order by = %#v, want 1 item", st.OrderBy)
 	}
-	item := st.OrderBy.Items[0]
+	item := orderItem(t, orderClause(t, st.OrderBy).Items[0])
 	if !item.Desc || item.NullOrder != 2 {
 		t.Fatalf("order item = %#v, want DESC NULLS LAST", item)
 	}
-	if st.Limit == nil || st.Limit.Count == nil || st.Limit.Offset == nil {
+	if st.Limit == nil || limitClauseNode(t, st.Limit).Count == nil || limitClauseNode(t, st.Limit).Offset == nil {
 		t.Fatalf("limit = %#v, want COUNT and OFFSET", st.Limit)
 	}
 	if got := countParams(st); got != 1 {
@@ -165,18 +166,18 @@ func TestParseSQLSelectJoinsAST(t *testing.T) {
 	seen := map[ast.JoinType]bool{}
 	var natural bool
 	var conditions []string
-	walkJoins(st.From.TableRefs, func(j *ast.Join) {
-		if j.Tp != 0 {
-			seen[j.Tp] = true
+	walkJoins(fromClause(t, st.From).Table, func(j *ast.Join) {
+		if j.Type != pkast.JoinTypeUnknown {
+			seen[j.Type] = true
 		}
-		if j.NaturalJoin {
+		if j.Natural {
 			natural = true
 		}
 		if j.On != nil {
-			conditions = append(conditions, squashSQL(restoreNode(t, j.On.Expr)))
+			conditions = append(conditions, squashSQL(restoreNode(t, j.On)))
 		}
 	})
-	for _, wantTp := range []ast.JoinType{ast.RightJoin, ast.LeftJoin} {
+	for _, wantTp := range []ast.JoinType{pkast.JoinTypeRight, pkast.JoinTypeLeft} {
 		if !seen[wantTp] {
 			t.Fatalf("join types = %#v, missing %v", seen, wantTp)
 		}
@@ -203,17 +204,24 @@ func TestParseSQLSelectCTEAndSubqueriesAST(t *testing.T) {
 	if st.With == nil || len(st.With.CTEs) != 1 {
 		t.Fatalf("with = %#v, want 1 CTE", st.With)
 	}
-	if got := st.With.CTEs[0].Name.O; got != "active_users" {
+	cte, ok := st.With.CTEs[0].(*ast.CommonTableExpression)
+	if !ok {
+		t.Fatalf("CTE type = %T", st.With.CTEs[0])
+	}
+	if got := cte.Name.Name; got != "active_users" {
 		t.Fatalf("CTE name = %q", got)
 	}
-	if got := squashSQL(restoreNode(t, st.With.CTEs[0].Query)); !strings.Contains(got, `"id"FROM"users"`) {
+	if cte.Materialized != ast.CTEMaterializeAlways {
+		t.Fatalf("CTE materialization = %v", cte.Materialized)
+	}
+	if got := squashSQL(restoreNode(t, cte.Query)); !strings.Contains(got, `"id"FROM"users"`) {
 		t.Fatalf("CTE query = %q", got)
 	}
 	tables := collectTables(st)
 	if !hasTable(tables, "", "users") || !hasTable(tables, "", "active_users") {
 		t.Fatalf("tables = %#v, want users and active_users", tables)
 	}
-	if st.OrderBy == nil || len(st.OrderBy.Items) != 1 || !st.OrderBy.Items[0].Desc || st.OrderBy.Items[0].NullOrder != 2 {
+	if st.OrderBy == nil || len(orderClause(t, st.OrderBy).Items) != 1 || !orderItem(t, orderClause(t, st.OrderBy).Items[0]).Desc || orderItem(t, orderClause(t, st.OrderBy).Items[0]).NullOrder != 2 {
 		t.Fatalf("order by = %#v", st.OrderBy)
 	}
 
@@ -266,7 +274,7 @@ ORDER BY total_revenue DESC LIMIT 5;`)
 	}
 
 	foundLateral := false
-	walkJoins(st.From.TableRefs, func(j *ast.Join) {
+	walkJoins(fromClause(t, st.From).Table, func(j *ast.Join) {
 		if ts, ok := j.Right.(*ast.TableSource); ok && ts.Lateral {
 			foundLateral = true
 		}
@@ -278,7 +286,7 @@ ORDER BY total_revenue DESC LIMIT 5;`)
 
 func TestParseSQLSelectLineComment(t *testing.T) {
 	st := mustParseSelect(t, "SELECT id FROM users -- extra metadata\n;")
-	if st.Fields == nil || len(st.Fields.Fields) != 1 {
+	if st.Fields == nil || len(st.Fields.Items) != 1 {
 		t.Fatalf("fields = %#v, want 1", st.Fields)
 	}
 	if tables := collectTables(st); !hasTable(tables, "", "users") {
@@ -288,8 +296,11 @@ func TestParseSQLSelectLineComment(t *testing.T) {
 
 func TestParseSQLSelectWildcardSchemaTable(t *testing.T) {
 	st := mustParseSelect(t, `SELECT s.t.* FROM s.t;`)
-	wc := st.Fields.Fields[0].WildCard
-	if wc == nil || wc.Schema.O != "s" || wc.Table.O != "t" {
+	wc, ok := st.Fields.Items[0].Expr.(*ast.WildcardExpr)
+	if !ok || wc == nil {
+		t.Fatalf("wildcard = %#v, want s.t.*", st.Fields.Items[0].Expr)
+	}
+	if len(wc.Qualifier.Parts) != 2 || wc.Qualifier.Parts[0].Name != "s" || wc.Qualifier.Parts[1].Name != "t" {
 		t.Fatalf("wildcard = %#v, want s.t.*", wc)
 	}
 	if got := compactSQL(restoreNode(t, wc)); got != `"s"."t".*` {

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/lex"
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
@@ -29,15 +30,17 @@ import (
 	node      ast.Node
 	expr      ast.ExprNode
 	exprs     []ast.ExprNode
-	fields    []*ast.SelectField
+	fields    []*ast.SelectItem
 	froms     []ast.ResultSetNode
 	list      *ast.List
 	str       string
+	ident     lex.Ident
 	strp      *string
 	ival      int64
 	boolean   bool
 	ivalp     *int64
-	jtype     int        // for JoinType values
+	jtype     pkast.JoinType // for join types
+	joinqual  *joinQual
 	setop     int        // for SetOperation values
 	slimit    *SelectLimit  // for LIMIT/OFFSET
 	tp        *types.FieldType // for Typename values
@@ -50,8 +53,9 @@ import (
 	frame      ast.FrameExtent
 	bound      *ast.FrameBound
 	exclusion  pkast.WindowFrameExclusion
-	ctes       []*ast.CommonTableExpression
+	ctes       []ast.CTENode
 	colnames   []*ast.ColumnName
+	alias      *sourceAlias
 	colopts    []*ast.ColumnOption
 	assignments []*ast.Assignment
 	tps         []*types.FieldType
@@ -158,12 +162,12 @@ import (
 %type <expr>  where_clause where_or_current_clause
 %type <list>  func_name
 %type <froms>  from_clause
-%type <node>  table_ref relation_expr joined_table join_qual
+%type <node>  table_ref relation_expr joined_table
 %type <node>  func_table tablesample_clause
 %type <boolean>  opt_ordinality resource_group_type opt_force
 %type <boolean>  opt_table
 %type <expr>  opt_repeatable_clause
-%type <ival>  join_type
+%type <jtype>  join_type
 %type <list>  stmtmulti
 %type <fields>  opt_target_list
 %type <fields>  target_list
@@ -182,7 +186,7 @@ import (
 %type <node>  sortby indirection_el
 %type <expr>  func_arg_expr
 %type <str>   name ColId ColLabel attr_name
-%type <node>   opt_alias_clause alias_clause func_alias_clause
+%type <alias>  opt_alias_clause alias_clause func_alias_clause
 %type <str>   unreserved_keyword col_name_keyword type_func_name_keyword reserved_keyword
 %type <list>  opt_name_list name_list any_name qualified_name
 %type <ival>  opt_asc_desc
@@ -232,7 +236,7 @@ import (
 %type <exprs>      implicit_row
 %type <node>  InsertStmt insert_rest
 %type <node>  insert_target
-%type <colnames>  insert_column_list
+%type <exprs>   insert_column_list
 %type <fields>  returning_clause
 %type <node>  insert_column_item
 %type <node>  opt_on_conflict
@@ -244,6 +248,7 @@ import (
 %type <list>
 %type <node>
 %type <node>  opt_search_clause opt_cycle_clause
+%type <joinqual> join_qual
 %type <node>
 %type <node>  UpdateStmt
 %type <node>  DeleteStmt
@@ -262,7 +267,8 @@ import (
 %type <partspec>  OptPartitionSpec PartitionSpec_rule
 %type <list>  OptWith
 %type <ival>  OnCommitOption
-%type <str>   OptTableSpace OptAccessMethod
+%type <ident> OptTableSpace
+%type <str>   OptAccessMethod
 %type <list>  part_params OptInherit opt_collate
 %type <node>  part_elem
 %type <partbound>  PartitionBoundSpec ForValues
@@ -274,7 +280,8 @@ import (
 %type <list>  any_name_list
 %type <node>  IndexStmt
 %type <boolean>  opt_unique opt_concurrently
-%type <str>   opt_single_name access_method_clause
+%type <str>   opt_single_name
+%type <ident> access_method_clause
 %type <str>   opt_name
 %type <list>  index_params opt_include index_including_params
 %type <node>  index_elem
@@ -431,7 +438,7 @@ import (
 %type <keyactions> key_actions
 %type <list>  opt_c_include ExclusionConstraintList
 %type <list>  ExclusionConstraintElem
-%type <str>   OptConsTableSpace ExistingIndex
+%type <ident> OptConsTableSpace ExistingIndex
 %type <list>  hash_partbound
 %type <node>  hash_partbound_elem
 %type <node>  OptConstrFromTable
@@ -1122,12 +1129,16 @@ InsertStmt:
 	opt_with_clause INSERT INTO insert_target insert_rest opt_on_conflict returning_clause
 		{
 			n := $5.(*ast.InsertStmt)
-			n.Table = &ast.TableRefsClause{TableRefs: &ast.Join{Left: $4.(*ast.TableSource)}}
-			if vals, ok := n.Select.(*ast.ValuesStmt); ok {
+			if target, ok := $4.(*ast.TableSource); ok {
+				name, _ := target.Source.(*ast.TableName)
+				n.Table = name
+				n.TargetAlias = target.Alias
+			}
+			if vals, ok := n.Query.(*ast.ValuesStmt); ok {
 				for _, row := range vals.Rows {
-					n.Lists = append(n.Lists, row.Items)
+					n.Values = append(n.Values, row.Items)
 				}
-				n.Select = nil
+				n.Query = nil
 			}
 			if $6 != nil {
 				n.OnConflict = $6.(*ast.OnConflictClause)
@@ -1143,12 +1154,12 @@ InsertStmt:
 insert_target:
 	qualified_name
 		{
-			$$ = makeTableSource($1)
+			$$ = makeTableSource(yylex, $1, yyVAL.span)
 		}
 	| qualified_name AS ColId
 		{
-			ts := makeTableSource($1)
-			ts.AsName = model.NewCIStr($3)
+			ts := makeTableSource(yylex, $1, yyVAL.span)
+			ts.Alias = syntaxIdent(yylex, $3, yyS[yypt].span)
 			$$ = ts
 		}
 	;
@@ -1156,29 +1167,25 @@ insert_target:
 insert_rest:
 	SelectStmt
 		{
-			$$ = &ast.InsertStmt{
-				Select: $1.(ast.ResultSetNode),
-			}
+			$$ = &ast.InsertStmt{BaseInsertStmt: pkast.BaseInsertStmt{Query: $1.(ast.QueryNode)}}
 		}
 	| OVERRIDING override_kind VALUE_P SelectStmt
 		{
-			$$ = &ast.InsertStmt{
-				Select: $4.(ast.ResultSetNode),
-			}
+			$$ = &ast.InsertStmt{BaseInsertStmt: pkast.BaseInsertStmt{Query: $4.(ast.QueryNode)}}
 		}
 	| '(' insert_column_list ')' SelectStmt
 		{
-			$$ = &ast.InsertStmt{
+			$$ = &ast.InsertStmt{BaseInsertStmt: pkast.BaseInsertStmt{
 				Columns: $2,
-				Select:  $4.(ast.ResultSetNode),
-			}
+				Query:   $4.(ast.QueryNode),
+			}}
 		}
 	| '(' insert_column_list ')' OVERRIDING override_kind VALUE_P SelectStmt
 		{
-			$$ = &ast.InsertStmt{
+			$$ = &ast.InsertStmt{BaseInsertStmt: pkast.BaseInsertStmt{
 				Columns: $2,
-				Select:  $7.(ast.ResultSetNode),
-			}
+				Query:   $7.(ast.QueryNode),
+			}}
 		}
 	| DEFAULT VALUES
 		{
@@ -1188,15 +1195,19 @@ insert_rest:
 
 insert_column_list:
 	insert_column_item
-		{ $$ = []*ast.ColumnName{$1.(*ast.ColumnName)} }
+		{ $$ = []ast.ExprNode{$1.(ast.ExprNode)} }
 	| insert_column_list ',' insert_column_item
-		{ $$ = append($1, $3.(*ast.ColumnName)) }
+		{ $$ = append($1, $3.(ast.ExprNode)) }
 	;
 
 insert_column_item:
 	ColId opt_indirection
 		{
-			$$ = &ast.ColumnName{Name: model.NewCIStr($1)}
+			if $2 == nil {
+				$$ = ast.NewColumnNameExpr("", "", $1)
+			} else {
+				$$ = &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", $1), Indirection: $2}
+			}
 		}
 	;
 
@@ -1293,21 +1304,21 @@ set_clause:
 	'(' columnList ')' '=' a_expr
 		{
 			$$ = &ast.Assignment{
-				MultiColumns: columnNameListFromStrings($2),
-				Expr:         $5,
+				Target: &ast.RowTarget{Columns: columnNameListFromStrings($2)},
+				Expr:   $5,
 			}
 		}
 	| ColId '=' a_expr
 		{
 			$$ = &ast.Assignment{
-				Column: &ast.ColumnName{Name: model.NewCIStr($1)},
+				Target: ast.NewColumnNameExpr("", "", $1),
 				Expr:   $3,
 			}
 		}
 	| ColId indirection '=' a_expr
 		{
 			$$ = &ast.Assignment{
-				Column: &ast.ColumnName{Name: model.NewCIStr($1)},
+				Target: &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", $1), Indirection: $2},
 				Expr:   $4,
 			}
 		}
@@ -1324,10 +1335,10 @@ set_clause:
 UpdateStmt:
 	opt_with_clause UPDATE relation_expr_opt_alias SET set_clause_list from_clause where_or_current_clause returning_clause
 		{
-			n := &ast.UpdateStmt{
-				TableRefs: &ast.TableRefsClause{TableRefs: &ast.Join{Left: $3.(*ast.TableSource)}},
-				List:      $5,
-			}
+			n := &ast.UpdateStmt{BaseUpdateStmt: pkast.BaseUpdateStmt{
+				Table:       $3.(*ast.TableSource),
+				Assignments: $5,
+			}}
 			if $6 != nil {
 				n.From = fromClauseOfNodes($6)
 			}
@@ -1351,11 +1362,11 @@ UpdateStmt:
 DeleteStmt:
 	opt_with_clause DELETE_P FROM relation_expr_opt_alias using_clause where_or_current_clause returning_clause
 		{
-			n := &ast.DeleteStmt{
-				TableRefs: &ast.TableRefsClause{TableRefs: &ast.Join{Left: $4.(*ast.TableSource)}},
-			}
+			n := &ast.DeleteStmt{BaseDeleteStmt: pkast.BaseDeleteStmt{
+				Table: $4.(*ast.TableSource),
+			}}
 			if $5 != nil {
-				n.Using = fromClauseOfNodes($5)
+				n.Using = fromRelationOfNodes($5)
 			}
 			if $6 != nil {
 				n.Where = $6.(ast.ExprNode)
@@ -1378,12 +1389,14 @@ relation_expr_opt_alias:
 		{ $$ = $1 }
 	| relation_expr ColId
 		{
-			$1.(*ast.TableSource).AsName = model.NewCIStr($2)
+			$1.(*ast.TableSource).Alias = syntaxIdent(yylex, $2, yyS[yypt].span)
+			$1.SetSpan(yyVAL.span)
 			$$ = $1
 		}
 	| relation_expr AS ColId
 		{
-			$1.(*ast.TableSource).AsName = model.NewCIStr($3)
+			$1.(*ast.TableSource).Alias = syntaxIdent(yylex, $3, yyS[yypt].span)
+			$1.SetSpan(yyVAL.span)
 			$$ = $1
 		}
 	;
@@ -1672,7 +1685,7 @@ path_opt:
 CreateStmt:
 	CREATE OptTemp TABLE qualified_name '(' OptTableElementList ')' OptInherit OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTableSpace
 		{
-			table := relationName(makeRangeVar($4))
+			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $4)...))
 			table.Relpersistence = relpersistenceForTemp($2)
 			cols, constraints, likes := tableElements($6)
 			$$ = &ast.CreateTableStmt{
@@ -1691,7 +1704,7 @@ CreateStmt:
 		}
 	| CREATE OptTemp TABLE IF_P NOT EXISTS qualified_name '(' OptTableElementList ')' OptInherit OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTableSpace
 		{
-			table := relationName(makeRangeVar($7))
+			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $7)...))
 			table.Relpersistence = relpersistenceForTemp($2)
 			cols, constraints, likes := tableElements($9)
 			$$ = &ast.CreateTableStmt{
@@ -1711,13 +1724,13 @@ CreateStmt:
 		}
 	| CREATE OptTemp TABLE qualified_name OF any_name OptTypedTableElementList OptPartitionSpec
 		{
-			table := relationName(makeRangeVar($4))
+			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $4)...))
 			table.Relpersistence = relpersistenceForTemp($2)
 			cols, constraints, likes := tableElements($7)
 			$$ = &ast.CreateTableStmt{
 				Temporary:   $2 == 1,
 				Table:       table,
-				ReferTable:  tableNameFromList($6),
+				ReferTable:  syntaxTableName(syntaxName(syntaxIdents(yylex, $6)...)),
 				Cols:        cols,
 				Constraints: constraints,
 				LikeClauses: likes,
@@ -1726,14 +1739,14 @@ CreateStmt:
 		}
 	| CREATE OptTemp TABLE IF_P NOT EXISTS qualified_name OF any_name OptTypedTableElementList OptPartitionSpec
 		{
-			table := relationName(makeRangeVar($7))
+			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $7)...))
 			table.Relpersistence = relpersistenceForTemp($2)
 			cols, constraints, likes := tableElements($10)
 			$$ = &ast.CreateTableStmt{
 				Temporary:   $2 == 1,
 				IfNotExists: true,
 				Table:       table,
-				ReferTable:  tableNameFromList($9),
+				ReferTable:  syntaxTableName(syntaxName(syntaxIdents(yylex, $9)...)),
 				Cols:        cols,
 				Constraints: constraints,
 				LikeClauses: likes,
@@ -1742,13 +1755,13 @@ CreateStmt:
 		}
 	| CREATE OptTemp TABLE qualified_name PARTITION OF qualified_name OptTypedTableElementList partition_bound_spec OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTableSpace
 		{
-			table := relationName(makeRangeVar($4))
+			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $4)...))
 			table.Relpersistence = relpersistenceForTemp($2)
 			cols, constraints, likes := tableElements($8)
 			$$ = &ast.CreateTableStmt{
 				Temporary:      $2 == 1,
 				Table:          table,
-				ReferTable:     tableNameFromList($7),
+				ReferTable:     syntaxTableName(syntaxName(syntaxIdents(yylex, $7)...)),
 				Cols:           cols,
 				Constraints:    constraints,
 				LikeClauses: likes,
@@ -1802,8 +1815,8 @@ OnCommitOption:
 	;
 
 OptTableSpace:
-	TABLESPACE name				{ $$ = $2 }
-	| /* EMPTY */				{ $$ = "" }
+	TABLESPACE name				{ $$ = syntaxIdent(yylex, $2, yyS[yypt].span) }
+	| /* EMPTY */				{ $$ = lex.Ident{Span: loc.InvalidSpan()} }
 	;
 
 PartitionSpec_rule:
@@ -2146,7 +2159,7 @@ DomainConstraint:
 	CONSTRAINT name DomainConstraintElem
 		{
 			n := $3.(*ast.Constraint)
-			n.Name = $2
+			n.Name = syntaxIdent(yylex, $2, yyS[yypt-1].span)
 			$$ = n
 		}
 	| DomainConstraintElem
@@ -2181,7 +2194,7 @@ TableConstraint:
 	CONSTRAINT name ConstraintElem
 		{
 			n := $3.(*ast.Constraint)
-			n.Name = $2
+			n.Name = syntaxIdent(yylex, $2, yyS[yypt-1].span)
 			$$ = n
 		}
 	| ConstraintElem
@@ -2198,6 +2211,8 @@ ConstraintElem:
 				Keys:            makeIndexColNameList($4),
 				InitiallyValid:  true,
 				NullsNotDistinct: $2,
+				Including: syntaxIdents(yylex, $6),
+				IndexSpace: $8,
 			}
 			applyConstraintAttrs(n, $9)
 			$$ = n
@@ -2217,6 +2232,8 @@ ConstraintElem:
 			n := &ast.Constraint{
 				Tp:             ast.ConstraintPrimaryKey,
 				Keys:           makeIndexColNameList($4),
+				Including:      syntaxIdents(yylex, $6),
+				IndexSpace:     $8,
 				InitiallyValid: true,
 			}
 			applyConstraintAttrs(n, $9)
@@ -2271,9 +2288,17 @@ opt_column_list:
 
 columnList:
 	name
-		{ $$ = makeList(&ast.String{Str: $1}) }
+		{
+			item := &ast.String{Str: $1}
+			item.SetSpan(yyS[yypt].span)
+			$$ = makeList(item)
+		}
 	| columnList ',' name
-		{ $$ = appendList($1, &ast.String{Str: $3}) }
+		{
+			item := &ast.String{Str: $3}
+			item.SetSpan(yyS[yypt].span)
+			$$ = appendList($1, item)
+		}
 	;
 
 key_match:
@@ -2325,12 +2350,12 @@ opt_c_include:
 	;
 
 OptConsTableSpace:
-	USING INDEX TABLESPACE name { $$ = $4 }
-	| /* EMPTY */               { $$ = "" }
+	USING INDEX TABLESPACE name { $$ = syntaxIdent(yylex, $4, yyS[yypt].span) }
+	| /* EMPTY */               { $$ = lex.Ident{Span: loc.InvalidSpan()} }
 	;
 
 ExistingIndex:
-	USING INDEX name { $$ = $3 }
+	USING INDEX name { $$ = syntaxIdent(yylex, $3, yyS[yypt].span) }
 	;
 
 ExclusionConstraintList:
@@ -3964,22 +3989,22 @@ RenameStmt:
 	| ALTER DATABASE name RENAME TO name
 		{
 			$$ = &ast.AlterDatabaseStmt{
-				Name:     $3,
-				RenameTo: $6,
+				Name:     syntaxIdent(yylex, $3, yyS[yypt-3].span),
+				RenameTo: syntaxIdent(yylex, $6, yyS[yypt].span),
 			}
 		}
 	| ALTER TABLESPACE name RENAME TO name
 		{
 			$$ = &ast.AlterTablespaceStmt{
-				Name:     $3,
-				RenameTo: $6,
+				Name:     syntaxIdent(yylex, $3, yyS[yypt-3].span),
+				RenameTo: syntaxIdent(yylex, $6, yyS[yypt].span),
 			}
 		}
 	| ALTER ROLE RoleSpec RENAME TO name
 		{
 			$$ = &ast.RenameStmt{
 				RenameType: ast.OBJECT_ROLE,
-				Subname:    $3.(*ast.RoleSpec).Rolename,
+				Subname:    $3.(*ast.RoleSpec).Rolename.Name,
 				Newname:    $6,
 			}
 		}
@@ -3987,7 +4012,7 @@ RenameStmt:
 		{
 			$$ = &ast.RenameStmt{
 				RenameType: ast.OBJECT_ROLE,
-				Subname:    $3.(*ast.RoleSpec).Rolename,
+				Subname:    $3.(*ast.RoleSpec).Rolename.Name,
 				Newname:    $6,
 			}
 		}
@@ -4002,17 +4027,17 @@ RenameStmt:
 DropStmt:
 	DROP object_type_any_name IF_P EXISTS any_name_list opt_drop_behavior
 		{
-			$$ = dropObjectStmt(int($2), tableNamesFromNameList($5), true, int($6))
+			$$ = dropObjectStmt(int($2), syntaxTableNames(yylex, $5), true, int($6))
 		}
 	| DROP object_type_any_name any_name_list opt_drop_behavior
 		{
-			$$ = dropObjectStmt(int($2), tableNamesFromNameList($3), false, int($4))
+			$$ = dropObjectStmt(int($2), syntaxTableNames(yylex, $3), false, int($4))
 		}
 	/* DROP INDEX */
 	| DROP INDEX CONCURRENTLY IF_P EXISTS name
 		{
 			$$ = &ast.DropIndexStmt{
-				IndexName:    $6,
+				IndexName:    syntaxName(syntaxIdent(yylex, $6, yyS[yypt].span)),
 				Concurrently: true,
 				IfExists:     true,
 			}
@@ -4020,7 +4045,7 @@ DropStmt:
 	| DROP INDEX CONCURRENTLY name
 		{
 			$$ = &ast.DropIndexStmt{
-				IndexName:    $4,
+				IndexName:    syntaxName(syntaxIdent(yylex, $4, yyS[yypt].span)),
 				Concurrently: true,
 			}
 		}
@@ -4347,7 +4372,7 @@ IndexStmt:
 	ON relation_expr access_method_clause '(' index_params ')' opt_include opt_unique_null_treatment opt_reloptions OptTableSpace where_clause
 		{
 			$$ = &ast.CreateIndexStmt{
-				IndexName:     indexNameFromList($8),
+				IndexName:     indexNameFromList(yylex, $8),
 				Table:         relationName($10),
 				Unique:        $2,
 				NullsNotDistinct: $16,
@@ -4355,7 +4380,7 @@ IndexStmt:
 				Concurrently:  $4,
 				IndexColNames: indexElemColNames($13),
 				Include:       indexIncludeNames($15),
-				Using:         accessMethodName($11),
+				Using:         $11,
 				WithOptions:   $17,
 				Tablespace:    $18,
 				Where:         exprOrNil($19),
@@ -4365,14 +4390,14 @@ IndexStmt:
 	ON relation_expr access_method_clause '(' index_params ')' opt_include opt_unique_null_treatment opt_reloptions OptTableSpace where_clause
 		{
 			$$ = &ast.CreateIndexStmt{
-				IndexName:     indexNameFromList($5),
+				IndexName:     indexNameFromList(yylex, $5),
 				Table:         relationName($7),
 				Unique:        $2,
 				NullsNotDistinct: $13,
 				Concurrently:  $4,
 				IndexColNames: indexElemColNames($10),
 				Include:       indexIncludeNames($12),
-				Using:         accessMethodName($8),
+				Using:         $8,
 				WithOptions:   $14,
 				Tablespace:    $15,
 				Where:         exprOrNil($16),
@@ -4421,8 +4446,8 @@ opt_single_name:
 	;
 
 access_method_clause:
-	USING name  { $$ = $2 }
-	| /* EMPTY */ { $$ = "" }
+	USING name  { $$ = syntaxIdent(yylex, $2, yyS[yypt].span) }
+	| /* EMPTY */ { $$ = lex.Ident{Span: loc.InvalidSpan()} }
 	;
 
 index_params:
@@ -4514,12 +4539,12 @@ ViewStmt:
 	CREATE OptTemp VIEW qualified_name opt_column_list opt_reloptions
 	AS SelectStmt opt_check_option
 		{
-			rv := relationName(makeRangeVar($4))
+			rv := syntaxTableName(syntaxName(syntaxIdents(yylex, $4)...))
 			rv.Relpersistence = relpersistenceForTemp($2)
 			$$ = &ast.CreateViewStmt{
 				Temporary:      $2 != 0,
 				ViewName:       rv,
-				Cols:           columnNameStrings($5),
+				Cols:           syntaxIdents(yylex, $5),
 				WithOptions:    $6,
 				Select:         $8.(ast.StmtNode),
 				HasCheckOption: $9 != 0,
@@ -4529,13 +4554,13 @@ ViewStmt:
 	| CREATE OR REPLACE OptTemp VIEW qualified_name opt_column_list opt_reloptions
 	AS SelectStmt opt_check_option
 		{
-			rv := relationName(makeRangeVar($6))
+			rv := syntaxTableName(syntaxName(syntaxIdents(yylex, $6)...))
 			rv.Relpersistence = relpersistenceForTemp($4)
 			$$ = &ast.CreateViewStmt{
 				OrReplace:      true,
 				Temporary:      $4 != 0,
 				ViewName:       rv,
-				Cols:           columnNameStrings($7),
+				Cols:           syntaxIdents(yylex, $7),
 				WithOptions:    $8,
 				Select:         $10.(ast.StmtNode),
 				HasCheckOption: $11 != 0,
@@ -4545,31 +4570,29 @@ ViewStmt:
 	| CREATE OptTemp RECURSIVE VIEW qualified_name '(' columnList ')' opt_reloptions
 	AS SelectStmt opt_check_option
 		{
-			rv := relationName(makeRangeVar($5))
+			rv := syntaxTableName(syntaxName(syntaxIdents(yylex, $5)...))
 			rv.Relpersistence = relpersistenceForTemp($2)
-			cte := &ast.CommonTableExpression{
-				Name:     model.NewCIStr(nameString(rv.Name)),
-				ColNames: columnNameStrings($7),
-				Query:    $11.(ast.StmtNode),
-			}
-			wc := &ast.WithClause{
-				CTEs:        []*ast.CommonTableExpression{cte},
+			cte := &ast.CommonTableExpression{BaseCommonTableExpression: pkast.BaseCommonTableExpression{
+				Name:    lastNameIdent(rv.Name),
+				Columns: syntaxIdents(yylex, $7),
+				Query:   $11.(ast.StmtNode),
+			}}
+			wc := &ast.WithClause{BaseWithClause: pkast.BaseWithClause{
+				CTEs:        []ast.CTENode{cte},
 				IsRecursive: true,
-			}
+			}}
 			sel := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
-				Fields: &ast.FieldList{Fields: []*ast.SelectField{
-					{WildCard: &ast.WildCardField{}},
+				Fields: &ast.FieldList{Items: []*ast.SelectItem{
+					syntaxSelectItem(syntaxWildcard(ast.QualifiedName{}, loc.InvalidSpan()), lex.Ident{Span: loc.InvalidSpan()}, loc.InvalidSpan()),
 				}},
-				From: &ast.TableRefsClause{TableRefs: &ast.Join{
-					Left: &ast.TableSource{Source: syntaxTableName(rv.Name)},
-				}},
+				From: syntaxFromClause(syntaxTableSource(syntaxTableName(rv.Name), loc.InvalidSpan())),
 				With: wc,
 			}
 			$$ = &ast.CreateViewStmt{
 				Temporary:      $2 != 0,
 				ViewName:       rv,
-				Cols:           columnNameStrings($7),
+				Cols:           syntaxIdents(yylex, $7),
 				WithOptions:    $9,
 				Select:         sel,
 				HasCheckOption: $12 != 0,
@@ -4579,32 +4602,30 @@ ViewStmt:
 	| CREATE OR REPLACE OptTemp RECURSIVE VIEW qualified_name '(' columnList ')' opt_reloptions
 	AS SelectStmt opt_check_option
 		{
-			rv := relationName(makeRangeVar($7))
+			rv := syntaxTableName(syntaxName(syntaxIdents(yylex, $7)...))
 			rv.Relpersistence = relpersistenceForTemp($4)
-			cte := &ast.CommonTableExpression{
-				Name:     model.NewCIStr(nameString(rv.Name)),
-				ColNames: columnNameStrings($9),
-				Query:    $13.(ast.StmtNode),
-			}
-			wc := &ast.WithClause{
-				CTEs:        []*ast.CommonTableExpression{cte},
+			cte := &ast.CommonTableExpression{BaseCommonTableExpression: pkast.BaseCommonTableExpression{
+				Name:    lastNameIdent(rv.Name),
+				Columns: syntaxIdents(yylex, $9),
+				Query:   $13.(ast.StmtNode),
+			}}
+			wc := &ast.WithClause{BaseWithClause: pkast.BaseWithClause{
+				CTEs:        []ast.CTENode{cte},
 				IsRecursive: true,
-			}
+			}}
 			sel := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
-				Fields: &ast.FieldList{Fields: []*ast.SelectField{
-					{WildCard: &ast.WildCardField{}},
+				Fields: &ast.FieldList{Items: []*ast.SelectItem{
+					syntaxSelectItem(syntaxWildcard(ast.QualifiedName{}, loc.InvalidSpan()), lex.Ident{Span: loc.InvalidSpan()}, loc.InvalidSpan()),
 				}},
-				From: &ast.TableRefsClause{TableRefs: &ast.Join{
-					Left: &ast.TableSource{Source: syntaxTableName(rv.Name)},
-				}},
+				From: syntaxFromClause(syntaxTableSource(syntaxTableName(rv.Name), loc.InvalidSpan())),
 				With: wc,
 			}
 			$$ = &ast.CreateViewStmt{
 				OrReplace:      true,
 				Temporary:      $4 != 0,
 				ViewName:       rv,
-				Cols:           columnNameStrings($9),
+				Cols:           syntaxIdents(yylex, $9),
 				WithOptions:    $11,
 				Select:         sel,
 				HasCheckOption: $14 != 0,
@@ -5717,9 +5738,9 @@ RoleSpec:
 		{
 			$$ = &ast.RoleSpec{
 				Roletype: int(ast.ROLESPEC_CSTRING),
-				Rolename: $1,
+				Rolename: syntaxIdent(yylex, $1, yyS[yypt].span),
 			}
-			if $1 == "public" {
+			if $1 == "public" && $$.(*ast.RoleSpec).Rolename.Quote == lex.QuoteUnquoted {
 				$$.(*ast.RoleSpec).Roletype = int(ast.ROLESPEC_PUBLIC)
 			}
 		}
@@ -5830,14 +5851,14 @@ opt_granted_by:
 CreateRoleStmt:
 	CREATE ROLE RoleId opt_with OptRoleList
 		{
-			$$ = createUserStmt(true, $3, $5)
+			$$ = createUserStmt(true, syntaxIdent(yylex, $3, yyS[yypt-2].span), $5)
 		}
 	;
 
 CreateUserStmt:
 	CREATE USER RoleId opt_with OptRoleList
 		{
-			$$ = createUserStmt(false, $3, $5)
+			$$ = createUserStmt(false, syntaxIdent(yylex, $3, yyS[yypt-2].span), $5)
 		}
 	;
 
@@ -6155,14 +6176,14 @@ CreatedbStmt:
 	CREATE DATABASE name opt_with createdb_opt_list
 		{
 			$$ = &ast.CreateDatabaseStmt{
-				Name:    $3,
+				Name:    syntaxIdent(yylex, $3, yyS[yypt-2].span),
 				Options: databaseOptions($5),
 			}
 		}
 	| CREATE DATABASE IF_P NOT EXISTS name opt_with createdb_opt_list
 		{
 			$$ = &ast.CreateDatabaseStmt{
-				Name:        $6,
+				Name:        syntaxIdent(yylex, $6, yyS[yypt-2].span),
 				Options:     databaseOptions($8),
 				IfNotExists: true,
 			}
@@ -6235,22 +6256,22 @@ AlterDatabaseStmt:
 	ALTER DATABASE name WITH createdb_opt_list
 		{
 			$$ = &ast.AlterDatabaseStmt{
-				Name:  $3,
+				Name:  syntaxIdent(yylex, $3, yyS[yypt-2].span),
 				Options: defElemsToDatabaseOptions($5),
 			}
 		}
 	| ALTER DATABASE name createdb_opt_list
 		{
 			$$ = &ast.AlterDatabaseStmt{
-				Name:  $3,
+				Name:  syntaxIdent(yylex, $3, yyS[yypt-1].span),
 				Options: defElemsToDatabaseOptions($4),
 			}
 		}
 	| ALTER DATABASE name SET TABLESPACE name
 		{
 			$$ = &ast.AlterDatabaseStmt{
-				Name:  $3,
-				Tablespace: $6,
+				Name:  syntaxIdent(yylex, $3, yyS[yypt-3].span),
+				Tablespace: syntaxIdent(yylex, $6, yyS[yypt].span),
 			}
 		}
 	;
@@ -6259,7 +6280,7 @@ AlterDatabaseSetStmt:
 	ALTER DATABASE name SetResetClause
 		{
 			$$ = &ast.AlterDatabaseSetStmt{
-				Dbname:  $3,
+				Dbname:  syntaxIdent(yylex, $3, yyS[yypt-1].span),
 				Setstmt: $4,
 			}
 		}
@@ -6275,21 +6296,21 @@ DropdbStmt:
 	DROP DATABASE name
 		{
 			$$ = &ast.DropdbStmt{
-				Dbname:    $3,
+				Dbname:    syntaxIdent(yylex, $3, yyS[yypt].span),
 				MissingOk: false,
 			}
 		}
 	| DROP DATABASE IF_P EXISTS name
 		{
 			$$ = &ast.DropdbStmt{
-				Dbname:    $5,
+				Dbname:    syntaxIdent(yylex, $5, yyS[yypt].span),
 				MissingOk: true,
 			}
 		}
 	| DROP DATABASE name opt_with '(' drop_option_list ')'
 		{
 			$$ = &ast.DropdbStmt{
-				Dbname:    $3,
+				Dbname:    syntaxIdent(yylex, $3, yyS[yypt-5].span),
 				MissingOk: false,
 				Options:   $6,
 			}
@@ -6297,7 +6318,7 @@ DropdbStmt:
 	| DROP DATABASE IF_P EXISTS name opt_with '(' drop_option_list ')'
 		{
 			$$ = &ast.DropdbStmt{
-				Dbname:    $5,
+				Dbname:    syntaxIdent(yylex, $5, yyS[yypt-7].span),
 				MissingOk: true,
 				Options:   $8,
 			}
@@ -6349,20 +6370,20 @@ CreateSchemaStmt:
 	CREATE SCHEMA opt_single_name AUTHORIZATION RoleSpec OptSchemaEltList
 		{
 			$$ = &ast.CreateSchemaStmt{
-				Name:          $3,
+				Name:          syntaxIdent(yylex, $3, yyS[yypt-3].span),
 				Authorization: $5.(*ast.RoleSpec),
 			}
 		}
 	| CREATE SCHEMA ColId OptSchemaEltList
 		{
 			$$ = &ast.CreateSchemaStmt{
-				Name: $3,
+				Name: syntaxIdent(yylex, $3, yyS[yypt-1].span),
 			}
 		}
 	| CREATE SCHEMA IF_P NOT EXISTS opt_single_name AUTHORIZATION RoleSpec OptSchemaEltList
 		{
 			$$ = &ast.CreateSchemaStmt{
-				Name:          $6,
+				Name:          syntaxIdent(yylex, $6, yyS[yypt-3].span),
 				Authorization: $8.(*ast.RoleSpec),
 				IfNotExists:   true,
 			}
@@ -6370,7 +6391,7 @@ CreateSchemaStmt:
 	| CREATE SCHEMA IF_P NOT EXISTS ColId OptSchemaEltList
 		{
 			$$ = &ast.CreateSchemaStmt{
-				Name:        $6,
+				Name:        syntaxIdent(yylex, $6, yyS[yypt-1].span),
 				IfNotExists: true,
 			}
 		}
@@ -7254,7 +7275,7 @@ RoleId:
 			if spc.Roletype != int(ast.ROLESPEC_CSTRING) {
 				yylex.Error("role name cannot be a reserved keyword here")
 			}
-			$$ = spc.Rolename
+			$$ = spc.Rolename.Name
 		}
 	;
 
@@ -7339,9 +7360,11 @@ simple_select:
 		{
 			n := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
-				Fields:         &ast.FieldList{Fields: $3},
+				Fields:         &ast.FieldList{Items: $3},
 			}
+			n.Fields.SetSpan(yyS[yypt-6].span)
 			applySelectClauses(n, $5, $6, $7, $8, $9)
+			if n.From != nil { n.From.SetSpan(yyS[yypt-4].span) }
 			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
@@ -7349,11 +7372,13 @@ simple_select:
 		{
 			n := &ast.SelectStmt{
 				Distinct:      true,
-				SelectStmtOpts: &ast.SelectStmtOpts{Distinct: true},
-				Fields:         &ast.FieldList{Fields: $3},
+				SelectStmtOpts: &ast.SelectStmtOpts{},
+				Fields:         &ast.FieldList{Items: $3},
 			}
+			n.Fields.SetSpan(yyS[yypt-6].span)
 			n.DistinctOn = byItemsFromExprs($2)
 			applySelectClauses(n, $5, $6, $7, $8, $9)
+			if n.From != nil { n.From.SetSpan(yyS[yypt-4].span) }
 			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
@@ -7431,65 +7456,52 @@ opt_with_clause:
 with_clause:
 	WITH cte_list
 		{
-			$$ = &ast.WithClause{
-				CTEs: $2,
-			}
+			$$ = &ast.WithClause{BaseWithClause: pkast.BaseWithClause{CTEs: $2}}
 		}
 	| WITH_LA cte_list
 		{
-			$$ = &ast.WithClause{
-				CTEs: $2,
-			}
+			$$ = &ast.WithClause{BaseWithClause: pkast.BaseWithClause{CTEs: $2}}
 		}
 	| WITH RECURSIVE cte_list
 		{
-			$$ = &ast.WithClause{
-				CTEs:        $3,
-				IsRecursive: true,
-			}
+			$$ = &ast.WithClause{BaseWithClause: pkast.BaseWithClause{CTEs: $3, IsRecursive: true}}
 		}
 	;
 
 cte_list:
 	common_table_expr
 		{
-			$$ = []*ast.CommonTableExpression{$1.(*ast.CommonTableExpression)}
+			$$ = []ast.CTENode{$1.(ast.CTENode)}
 		}
 	| cte_list ',' common_table_expr
 		{
-			$$ = append($1, $3.(*ast.CommonTableExpression))
+			$$ = append($1, $3.(ast.CTENode))
 		}
 	;
 
 common_table_expr:
 	name opt_name_list AS opt_materialized '(' PreparableStmt ')' opt_search_clause opt_cycle_clause
 		{
-			cte := &ast.CommonTableExpression{
-				Name:         model.NewCIStr($1),
-				ColNames:   columnNameStrings($2),
-				Query:        $6.(ast.StmtNode),
-			}
-			if $8 != nil {
-				_ = $8
-			}
-			if $9 != nil {
-				_ = $9
-			}
+			cte := &ast.CommonTableExpression{BaseCommonTableExpression: pkast.BaseCommonTableExpression{
+				Name:    syntaxIdent(yylex, $1, yyS[yypt-8].span),
+				Columns: syntaxIdents(yylex, $2),
+				Query:   $6.(ast.StmtNode),
+			}}
+			cte.Materialized = ast.CTEMaterialize($4)
+			cte.Search = cteSearchClause($8)
+			cte.Cycle = cteCycleClause($9)
 			$$ = cte
 		}
 	| name '(' name_list ')' AS opt_materialized '(' PreparableStmt ')' opt_search_clause opt_cycle_clause
 		{
-			cte := &ast.CommonTableExpression{
-				Name:         model.NewCIStr($1),
-				ColNames:   columnNameStrings($3),
-				Query:        $8.(ast.StmtNode),
-			}
-			if $10 != nil {
-				_ = $10
-			}
-			if $11 != nil {
-				_ = $11
-			}
+			cte := &ast.CommonTableExpression{BaseCommonTableExpression: pkast.BaseCommonTableExpression{
+				Name:    syntaxIdent(yylex, $1, yyS[yypt-10].span),
+				Columns: syntaxIdents(yylex, $3),
+				Query:   $8.(ast.StmtNode),
+			}}
+			cte.Materialized = ast.CTEMaterialize($6)
+			cte.Search = cteSearchClause($10)
+			cte.Cycle = cteCycleClause($11)
 			$$ = cte
 		}
 	;
@@ -7579,34 +7591,31 @@ OptTempTableName:
 target_list:
 	target_el
 		{
-			$$ = []*ast.SelectField{$1.(*ast.SelectField)}
+			$$ = make([]*ast.SelectItem, 1, 4)
+			$$[0] = $1.(*ast.SelectItem)
 		}
 	| target_list ',' target_el
 		{
-			$$ = append($1, $3.(*ast.SelectField))
+			$$ = append($1, $3.(*ast.SelectItem))
 		}
 	;
 
 target_el:
 	a_expr AS ColLabel
 		{
-			$$ = &ast.SelectField{Expr: $1, AsName: model.NewCIStr($3)}
+			$$ = syntaxSelectItem($1, syntaxIdent(yylex, $3, yyS[yypt].span), yyVAL.span)
 		}
 	| a_expr IDENT
 		{
-			$$ = &ast.SelectField{Expr: $1, AsName: model.NewCIStr($2)}
+			$$ = syntaxSelectItem($1, syntaxIdent(yylex, $2, yyS[yypt].span), yyVAL.span)
 		}
 	| a_expr
 		{
-			if wc, ok := $1.(*ast.WildCardField); ok {
-				$$ = &ast.SelectField{WildCard: wc}
-			} else {
-				$$ = &ast.SelectField{Expr: $1}
-			}
+			$$ = syntaxSelectItem($1, lex.Ident{Span: loc.InvalidSpan()}, yyVAL.span)
 		}
 	| '*'
 		{
-			$$ = &ast.SelectField{WildCard: &ast.WildCardField{}}
+			$$ = syntaxSelectItem(syntaxWildcard(ast.QualifiedName{}, yyVAL.span), lex.Ident{Span: loc.InvalidSpan()}, yyVAL.span)
 		}
 	;
 
@@ -7631,87 +7640,81 @@ table_ref:
 	relation_expr opt_alias_clause
 		{
 			ts := $1.(*ast.TableSource)
-			if $2 != nil {
-				ts.AsName = model.NewCIStr(aliasName($2))
-			}
+			applySourceAlias(ts, $2)
+			ts.SetSpan(yyVAL.span)
 			$$ = ts
 		}
 	| select_with_parens opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $1.(ast.ResultSetNode)}
-			if $2 != nil {
-				ts.AsName = model.NewCIStr(aliasName($2))
-			}
+			ts := syntaxTableSource($1.(ast.ResultSetNode), yyVAL.span)
+			applySourceAlias(ts, $2)
 			$$ = ts
 		}
 	| joined_table
 		{
 			$$ = $1
+			$$.SetSpan(yyVAL.span)
 		}
 	| relation_expr opt_alias_clause tablesample_clause
 		{
 			ts := $1.(*ast.TableSource)
-			if $2 != nil {
-				ts.AsName = model.NewCIStr(aliasName($2))
-			}
+			applySourceAlias(ts, $2)
 			ts.TableSample = $3.(*ast.TableSample)
+			ts.SetSpan(yyVAL.span)
 			$$ = ts
 		}
 	| func_table func_alias_clause
 		{
 			ts := $1.(*ast.TableSource)
-			applyFunctionAlias(ts, $2)
+			applySourceAlias(ts, $2)
+			ts.SetSpan(yyVAL.span)
 			$$ = ts
 		}
 	| LATERAL_P func_table func_alias_clause
 		{
 			ts := $2.(*ast.TableSource)
 			ts.Lateral = true
-			applyFunctionAlias(ts, $3)
+			applySourceAlias(ts, $3)
+			ts.SetSpan(yyVAL.span)
 			$$ = ts
 		}
 	| LATERAL_P select_with_parens opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $2.(ast.ResultSetNode), Lateral: true}
-			if $3 != nil {
-				ts.AsName = model.NewCIStr(aliasName($3))
-			}
+			ts := syntaxTableSource($2.(ast.ResultSetNode), yyVAL.span)
+			ts.Lateral = true
+			applySourceAlias(ts, $3)
 			$$ = ts
 		}
 	| '(' joined_table ')' opt_alias_clause
 		{
-			$$ = $2
+			ts := syntaxTableSource($2.(ast.ResultSetNode), yyVAL.span)
+			applySourceAlias(ts, $4)
+			$$ = ts
 		}
 	| xmltable opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $1.(ast.ResultSetNode)}
-			if $2 != nil {
-				ts.AsName = model.NewCIStr(aliasName($2))
-			}
+			ts := syntaxTableSource($1.(ast.ResultSetNode), yyVAL.span)
+			applySourceAlias(ts, $2)
 			$$ = ts
 		}
 	| LATERAL_P xmltable opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $2.(ast.ResultSetNode), Lateral: true}
-			if $3 != nil {
-				ts.AsName = model.NewCIStr(aliasName($3))
-			}
+			ts := syntaxTableSource($2.(ast.ResultSetNode), yyVAL.span)
+			ts.Lateral = true
+			applySourceAlias(ts, $3)
 			$$ = ts
 		}
 	| json_table opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $1.(ast.ResultSetNode)}
-			if $2 != nil {
-				ts.AsName = model.NewCIStr(aliasName($2))
-			}
+			ts := syntaxTableSource($1.(ast.ResultSetNode), yyVAL.span)
+			applySourceAlias(ts, $2)
 			$$ = ts
 		}
 	| LATERAL_P json_table opt_alias_clause
 		{
-			ts := &ast.TableSource{Source: $2.(ast.ResultSetNode), Lateral: true}
-			if $3 != nil {
-				ts.AsName = model.NewCIStr(aliasName($3))
-			}
+			ts := syntaxTableSource($2.(ast.ResultSetNode), yyVAL.span)
+			ts.Lateral = true
+			applySourceAlias(ts, $3)
 			$$ = ts
 		}
 	;
@@ -7719,31 +7722,31 @@ table_ref:
 joined_table:
 	table_ref CROSS JOIN table_ref
 		{
-			$$ = makeJoin(ast.CrossJoin, $1, $4, nil, false)
+			$$ = makeJoin(pkast.JoinTypeCross, $1, $4, nil, false)
 		}
 	| table_ref join_type JOIN table_ref join_qual
 		{
-			$$ = makeJoin(joinTypeOf($2), $1, $4, $5, false)
+			$$ = makeJoin($2, $1, $4, $5, false)
 		}
 	| table_ref JOIN table_ref join_qual
 		{
-			$$ = makeJoin(ast.InnerJoin, $1, $3, $4, false)
+			$$ = makeJoin(pkast.JoinTypeInner, $1, $3, $4, false)
 		}
 	| table_ref NATURAL join_type JOIN table_ref
 		{
-			$$ = makeJoin(joinTypeOf($3), $1, $5, nil, true)
+			$$ = makeJoin($3, $1, $5, nil, true)
 		}
 	| table_ref NATURAL JOIN table_ref
 		{
-			$$ = makeJoin(ast.InnerJoin, $1, $4, nil, true)
+			$$ = makeJoin(pkast.JoinTypeInner, $1, $4, nil, true)
 		}
 	;
 
 join_type:
-	FULL opt_outer      { $$ = int64(ast.JOIN_FULL) }
-	| LEFT opt_outer    { $$ = int64(ast.JOIN_LEFT) }
-	| RIGHT opt_outer   { $$ = int64(ast.JOIN_RIGHT) }
-	| INNER_P           { $$ = int64(ast.JOIN_INNER) }
+	FULL opt_outer      { $$ = pkast.JoinTypeFull }
+	| LEFT opt_outer    { $$ = pkast.JoinTypeLeft }
+	| RIGHT opt_outer   { $$ = pkast.JoinTypeRight }
+	| INNER_P           { $$ = pkast.JoinTypeInner }
 	;
 
 opt_outer:
@@ -7756,15 +7759,18 @@ opt_outer:
 join_qual:
 	USING '(' name_list ')' opt_alias_clause
 		{
-			cond := &ast.OnCondition{Using: columnNamesFromList($3)}
+			qual := &joinQual{using: syntaxQualifiedNames(yylex, $3)}
 			if $5 != nil {
-				cond.JoinUsingAlias = $5.(*ast.Alias)
+				if len($5.columns) > 0 {
+					yylex.Error("USING alias cannot have column aliases")
+				}
+				qual.alias = $5.name
 			}
-			$$ = cond
+			$$ = qual
 		}
 	| ON a_expr
 		{
-			$$ = &ast.OnCondition{Expr: $2}
+			$$ = &joinQual{on: $2}
 		}
 	;
 
@@ -7772,21 +7778,21 @@ join_qual:
 relation_expr:
 	qualified_name
 		{
-			$$ = makeTableSource($1)
+			$$ = makeTableSource(yylex, $1, yyVAL.span)
 		}
 	| qualified_name '*'
 		{
-			$$ = makeTableSource($1)
+			$$ = makeTableSource(yylex, $1, yyVAL.span)
 		}
 	| ONLY qualified_name
 		{
-			ts := makeTableSource($2)
+			ts := makeTableSource(yylex, $2, yyVAL.span)
 			ts.Only = true
 			$$ = ts
 		}
 	| ONLY '(' qualified_name ')'
 		{
-			ts := makeTableSource($3)
+			ts := makeTableSource(yylex, $3, yyVAL.span)
 			ts.Only = true
 			$$ = ts
 		}
@@ -7801,21 +7807,15 @@ func_alias_clause:
 	alias_clause { $$ = $1 }
 	| AS '(' TableFuncElementList ')'
 		{
-			$$ = &ast.List{Items: []ast.Node{nil, $3}}
+			$$ = &sourceAlias{name: lex.Ident{Span: loc.InvalidSpan()}, defs: tableFuncElementDefs($3)}
 		}
 	| AS ColId '(' TableFuncElementList ')'
 		{
-			$$ = &ast.List{Items: []ast.Node{
-				&ast.Alias{Aliasname: $2},
-				$4,
-			}}
+			$$ = &sourceAlias{name: syntaxIdent(yylex, $2, yyS[yypt-3].span), defs: tableFuncElementDefs($4)}
 		}
 	| ColId '(' TableFuncElementList ')'
 		{
-			$$ = &ast.List{Items: []ast.Node{
-				&ast.Alias{Aliasname: $1},
-				$3,
-			}}
+			$$ = &sourceAlias{name: syntaxIdent(yylex, $1, yyS[yypt-3].span), defs: tableFuncElementDefs($3)}
 		}
 	| /* EMPTY */ { $$ = nil }
 	;
@@ -7823,36 +7823,36 @@ func_alias_clause:
 alias_clause:
 	AS ColId '(' name_list ')'
 		{
-			$$ = &ast.Alias{Aliasname: $2, Colnames: $4}
+			$$ = syntaxSourceAlias(yylex, $2, yyS[yypt-3].span, $4)
 		}
 	| AS ColId
 		{
-			$$ = &ast.Alias{Aliasname: $2}
+			$$ = syntaxSourceAlias(yylex, $2, yyS[yypt].span, nil)
 		}
 	| ColId '(' name_list ')'
 		{
-			$$ = &ast.Alias{Aliasname: $1, Colnames: $3}
+			$$ = syntaxSourceAlias(yylex, $1, yyS[yypt-3].span, $3)
 		}
 	| ColId
 		{
-			$$ = &ast.Alias{Aliasname: $1}
+			$$ = syntaxSourceAlias(yylex, $1, yyS[yypt].span, nil)
 		}
 	;
 
 func_table:
 	func_expr_windowless opt_ordinality
 		{
-			$$ = &ast.TableSource{Source: &ast.TableFunction{
+			$$ = syntaxTableSource(&ast.TableFunction{
 				Expr:           $1.(ast.ExprNode),
 				WithOrdinality: $2,
-			}}
+			}, yyVAL.span)
 		}
 	| ROWS FROM '(' rowsfrom_list ')' opt_ordinality
 		{
-			$$ = &ast.TableSource{Source: &ast.RowsFromExpr{
+			$$ = syntaxTableSource(&ast.RowsFromExpr{
 				Functions:      rowsFromFunctions($4),
 				WithOrdinality: $6,
-			}}
+			}, yyVAL.span)
 		}
 	;
 
@@ -7954,11 +7954,11 @@ group_by_list:
 	;
 
 group_by_item:
-	a_expr { $$ = &ast.ByItem{Expr: $1} }
-	| empty_grouping_set { $$ = &ast.ByItem{GroupingSet: $1.(*ast.GroupingSet)} }
-	| cube_clause { $$ = &ast.ByItem{GroupingSet: $1.(*ast.GroupingSet)} }
-	| rollup_clause { $$ = &ast.ByItem{GroupingSet: $1.(*ast.GroupingSet)} }
-	| grouping_sets_clause { $$ = &ast.ByItem{GroupingSet: $1.(*ast.GroupingSet)} }
+	a_expr { $$ = &ast.GroupItem{BaseGroupItem: pkast.BaseGroupItem{Expr: $1}} }
+	| empty_grouping_set { $$ = &ast.GroupItem{GroupingSet: $1.(*ast.GroupingSet)} }
+	| cube_clause { $$ = &ast.GroupItem{GroupingSet: $1.(*ast.GroupingSet)} }
+	| rollup_clause { $$ = &ast.GroupItem{GroupingSet: $1.(*ast.GroupingSet)} }
+	| grouping_sets_clause { $$ = &ast.GroupItem{GroupingSet: $1.(*ast.GroupingSet)} }
 	;
 
 empty_grouping_set:
@@ -8019,7 +8019,7 @@ sortby_list:
 sortby:
 	a_expr USING qual_all_Op opt_nulls_order
 		{
-			item := &ast.ByItem{Expr: $1, UseOp: operatorName($3)}
+			item := &ast.OrderItem{Expr: $1, UseOp: operatorName($3)}
 			switch $4 {
 			case int64(ast.SORTBY_NULLS_FIRST):
 				item.NullOrder = 1
@@ -8030,7 +8030,7 @@ sortby:
 		}
 	| a_expr opt_asc_desc opt_nulls_order
 		{
-			item := &ast.ByItem{Expr: $1}
+			item := &ast.OrderItem{Expr: $1}
 			if $2 == int64(ast.SORTBY_DESC) {
 				item.Desc = true
 			}
@@ -8912,7 +8912,7 @@ window_specification:
 		{
 			spec := &ast.WindowSpec{Ref: syntaxIdent(yylex, $2, yyS[yypt-4].span)}
 			if $3 != nil {
-				spec.PartitionBy = &ast.PartitionByClause{Items: byItemsFromExprs($3)}
+				spec.PartitionBy = &ast.PartitionByClause{Items: orderItemsFromExprs($3)}
 			}
 			if $4 != nil {
 				spec.OrderBy = $4.(*ast.OrderByClause)
@@ -9985,7 +9985,7 @@ columnref:
 		}
 	| ColId indirection
 		{
-			$$ = columnRefWithIndirection($1, $2)
+			$$ = columnRefWithIndirection(yylex, syntaxIdent(yylex, $1, yyS[yypt-1].span), $2, yyVAL.span)
 		}
 	;
 
@@ -10004,10 +10004,12 @@ indirection_el:
 	'.' attr_name
 		{
 			$$ = &ast.String{Str: $2}
+			$$.SetSpan(yyS[yypt].span)
 		}
 	| '.' '*'
 		{
 			$$ = &ast.A_Star{}
+			$$.SetSpan(yyVAL.span)
 		}
 	| '[' a_expr ']'
 		{
@@ -10134,11 +10136,15 @@ name:
 qualified_name:
 	ColId
 		{
-			$$ = makeList(&ast.String{Str: $1})
+			name := &ast.String{Str: $1}
+			name.SetSpan(yyS[yypt].span)
+			$$ = makeList(name)
 		}
 	| ColId indirection
 		{
-			$$ = prependList(&ast.String{Str: $1}, $2)
+			name := &ast.String{Str: $1}
+			name.SetSpan(yyS[yypt-1].span)
+			$$ = prependList(name, $2)
 			if len($$.Items) > 3 { yylex.Error("too many dotted names in relation") }
 			for _, item := range $2.Items {
 				if _, ok := item.(*ast.String); !ok { yylex.Error("invalid indirection in relation name") }
@@ -10149,11 +10155,15 @@ qualified_name:
 any_name:
 	ColId
 		{
-			$$ = makeList(&ast.String{Str: $1})
+			part := &ast.String{Str: $1}
+			part.SetSpan(yyS[yypt].span)
+			$$ = makeList(part)
 		}
 	| ColId '.' any_name
 		{
-			$$ = prependList(&ast.String{Str: $1}, $3)
+			part := &ast.String{Str: $1}
+			part.SetSpan(yyS[yypt-2].span)
+			$$ = prependList(part, $3)
 		}
 	;
 
@@ -10167,11 +10177,15 @@ opt_name_list:
 name_list:
 	name
 		{
-			$$ = makeList(&ast.String{Str: $1})
+			name := &ast.String{Str: $1}
+			name.SetSpan(yyS[yypt].span)
+			$$ = makeList(name)
 		}
 	| name_list ',' name
 		{
-			$$ = appendList($1, &ast.String{Str: $3})
+			name := &ast.String{Str: $3}
+			name.SetSpan(yyS[yypt].span)
+			$$ = appendList($1, name)
 		}
 	;
 
@@ -11243,7 +11257,7 @@ PrepareStmt:
 	PREPARE name prep_type_clause AS PreparableStmt
 		{
 			$$ = &ast.PrepareStmt{
-				Name:   $2,
+				Name:   syntaxIdent(yylex, $2, yyS[yypt-3].span),
 				Params: $3,
 				Stmt:   $5.(ast.StmtNode),
 			}
@@ -11278,7 +11292,7 @@ ExecuteStmt:
 	EXECUTE name execute_param_clause
 		{
 			$$ = &ast.ExecuteStmt{
-				Name: $2,
+				Name: syntaxIdent(yylex, $2, yyS[yypt-1].span),
 				Args: exprsFromList($3),
 			}
 		}
@@ -11293,13 +11307,13 @@ DeallocateStmt:
 	DEALLOCATE name
 		{
 			$$ = &ast.DeallocateStmt{
-				Name: $2,
+				Name: syntaxIdent(yylex, $2, yyS[yypt].span),
 			}
 		}
 	| DEALLOCATE PREPARE name
 		{
 			$$ = &ast.DeallocateStmt{
-				Name: $3,
+				Name: syntaxIdent(yylex, $3, yyS[yypt].span),
 			}
 		}
 	| DEALLOCATE ALL
@@ -12097,8 +12111,8 @@ MergeStmt:
 	opt_with_clause MERGE INTO relation_expr_opt_alias USING table_ref ON a_expr merge_when_list returning_clause
 		{
 			m := &ast.MergeStmt{
-				Table:  &ast.TableRefsClause{TableRefs: &ast.Join{Left: resultSetNodeOf($4)}},
-				Source: &ast.TableRefsClause{TableRefs: &ast.Join{Left: resultSetNodeOf($6)}},
+				Table:  syntaxFromClause(resultSetNodeOf($4)),
+				Source: syntaxFromClause(resultSetNodeOf($6)),
 				On:     $8,
 				Whens:  mergeWhenClauses($9),
 			}
@@ -13513,7 +13527,7 @@ CreateTableSpaceStmt:
 	CREATE TABLESPACE name OptTableSpaceOwner LOCATION Sconst opt_reloptions
 		{
 			$$ = &ast.CreateTablespaceStmt{
-				Name:     $3,
+				Name:     syntaxIdent(yylex, $3, yyS[yypt-4].span),
 				Owner:    roleSpecOrNil($4),
 				Location: $6,
 				Options:  $7,
@@ -13546,13 +13560,13 @@ DropTableSpaceStmt:
 	DROP TABLESPACE name
 		{
 			$$ = &ast.DropTablespaceStmt{
-				Name: $3,
+				Name: syntaxIdent(yylex, $3, yyS[yypt].span),
 			}
 		}
 	| DROP TABLESPACE IF_P EXISTS name
 		{
 			$$ = &ast.DropTablespaceStmt{
-				Name:     $5,
+				Name:     syntaxIdent(yylex, $5, yyS[yypt].span),
 				IfExists: true,
 			}
 		}
@@ -13562,7 +13576,7 @@ AlterTblSpcStmt:
 	ALTER TABLESPACE name SET reloptions
 		{
 			$$ = &ast.AlterTablespaceStmt{
-				Name:    $3,
+				Name:    syntaxIdent(yylex, $3, yyS[yypt-2].span),
 				Action:  "SET",
 				Options: $5,
 			}
@@ -13570,7 +13584,7 @@ AlterTblSpcStmt:
 	| ALTER TABLESPACE name RESET reloptions
 		{
 			$$ = &ast.AlterTablespaceStmt{
-				Name:    $3,
+				Name:    syntaxIdent(yylex, $3, yyS[yypt-2].span),
 				Action:  "RESET",
 				Options: $5,
 			}
@@ -16213,6 +16227,20 @@ const (
 )
 
 // Helper functions called from grammar actions
+
+// setSyntaxSpan stamps a default production span without replacing a more
+// precise span set by a grammar action.
+// shortcut: nodes created in an inner production keep its narrower span when
+// an outer pass-through rule reuses them, so statement spans may not cover the
+// full text; widen explicitly in a grammar action when exact statement bounds matter.
+func setSyntaxSpan(node ast.Node, span loc.Span) {
+	if !ast.NodePresent(node) || !span.Valid() {
+		return
+	}
+	if !node.Span().Valid() {
+		node.SetSpan(span)
+	}
+}
 
 // setParseResult stores the parse result in the lexer adapter.
 func setParseResult(lex yyLexer, result *ast.List) {

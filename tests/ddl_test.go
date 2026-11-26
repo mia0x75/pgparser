@@ -375,8 +375,8 @@ func optionCount(l *ast.List) int {
 func groupingSets(t *testing.T, sql string) [][]ast.ExprNode {
 	t.Helper()
 	stmt := mustParseOne(t, sql).(*ast.SelectStmt)
-	if stmt.GroupBy == nil || len(stmt.GroupBy.Items) != 1 || stmt.GroupBy.Items[0].GroupingSet == nil {
+	if stmt.GroupBy == nil || len(groupClause(t, stmt.GroupBy).Items) != 1 || groupItem(t, groupClause(t, stmt.GroupBy).Items[0]).GroupingSet == nil {
 		t.Fatalf("%q has no grouping set", sql)
 	}
-	return stmt.GroupBy.Items[0].GroupingSet.Sets
+	return groupItem(t, groupClause(t, stmt.GroupBy).Items[0]).GroupingSet.Sets
 }

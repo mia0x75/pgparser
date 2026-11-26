@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/lex"
 
 	pgparser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
@@ -454,7 +455,7 @@ func TestIdentifierTruncationKeepsValidUTF8(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sel := mustParseOne(t, tc.sql).(*ast.SelectStmt)
-			got := sel.Fields.Fields[0].Expr.(*ast.ColumnNameExpr).Name.Name.O
+			got := sel.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Name.O
 			if !utf8.ValidString(got) || got != tc.want {
 				t.Fatalf("identifier = %q, want %q", got, tc.want)
 			}
@@ -513,7 +514,7 @@ func TestRejectsInvalidUnicodeEscapes(t *testing.T) {
 	} {
 		t.Run(tc.sql, func(t *testing.T) {
 			sel := mustParseOne(t, tc.sql).(*ast.SelectStmt)
-			if got := sel.Fields.Fields[0].Expr.(ast.ValueExpr).GetValue(); got != tc.want {
+			if got := sel.Fields.Items[0].Expr.(ast.ValueExpr).GetValue(); got != tc.want {
 				t.Fatalf("decoded = %q, want %q", got, tc.want)
 			}
 			restoreString(t, sel)
@@ -672,14 +673,12 @@ func TestRestoreRejectsInvalidAST(t *testing.T) {
 		{"invalid FK action columns", &ast.OnDeleteOpt{ReferOpt: ast.ReferOptionCascade, Columns: []*ast.ColumnName{column}}},
 		{"missing index target", &ast.IndexColName{}},
 		{"conflicting index targets", &ast.IndexColName{Column: column, Expr: ast.NewValueExpr(int64(1))}},
-		{"missing assignment target", &ast.Assignment{Expr: ast.NewValueExpr(int64(1))}},
-		{"missing assignment value", &ast.Assignment{Column: column}},
-		{"conflicting assignment targets", &ast.Assignment{Column: column, MultiColumns: []*ast.ColumnName{column}, Expr: ast.NewValueExpr(int64(1))}},
-		{"nil assignment target", &ast.Assignment{MultiColumns: []*ast.ColumnName{nil}, Expr: ast.NewValueExpr(int64(1))}},
-		{"nil database option", &ast.CreateDatabaseStmt{Name: "d", Options: []*ast.DatabaseOption{nil}}},
-		{"missing database option name", &ast.CreateDatabaseStmt{Name: "d", Options: []*ast.DatabaseOption{{}}}},
-		{"invalid connection limit", &ast.CreateDatabaseStmt{Name: "d", Options: []*ast.DatabaseOption{{Tp: ast.DatabaseOptionConnectionLimit, Value: "1; SELECT 1"}}}},
-		{"conflicting database actions", &ast.AlterDatabaseStmt{Name: "d", RenameTo: "renamed", Tablespace: "ts"}},
+		{"missing assignment value", &ast.UpdateStmt{Table: &ast.TableSource{}, Assignments: []*ast.Assignment{{Target: ast.NewColumnNameExpr("", "", "c")}}}},
+		{"nil assignment target", &ast.UpdateStmt{Table: &ast.TableSource{}, Assignments: []*ast.Assignment{{Target: (*ast.ColumnNameExpr)(nil), Expr: ast.NewValueExpr(int64(1))}}}},
+		{"nil database option", &ast.CreateDatabaseStmt{Name: lex.Ident{Name: "d"}, Options: []*ast.DatabaseOption{nil}}},
+		{"missing database option name", &ast.CreateDatabaseStmt{Name: lex.Ident{Name: "d"}, Options: []*ast.DatabaseOption{{}}}},
+		{"invalid connection limit", &ast.CreateDatabaseStmt{Name: lex.Ident{Name: "d"}, Options: []*ast.DatabaseOption{{Tp: ast.DatabaseOptionConnectionLimit, Value: "1; SELECT 1"}}}},
+		{"conflicting database actions", &ast.AlterDatabaseStmt{Name: lex.Ident{Name: "d"}, RenameTo: lex.Ident{Name: "renamed"}, Tablespace: lex.Ident{Name: "ts"}}},
 		{"missing routine name", &ast.CreateFunctionStmt{}},
 		{"nil routine option", &ast.CreateFunctionStmt{Name: table, Options: []*ast.DefElem{nil}}},
 		{"invalid routine WINDOW", &ast.CreateFunctionStmt{Name: table, Options: []*ast.DefElem{{Defname: "window", Arg: &ast.Integer{Ival: 0}}}}},
@@ -710,6 +709,7 @@ func TestVisitorWritesBackRestoredChildren(t *testing.T) {
 		{`COPY (SELECT 1) TO STDOUT`, `COPY (SELECT 2) TO STDOUT`},
 		{`SELECT 1 FROM t FOR UPDATE OF c FOR SHARE`, `SELECT 2 FROM "t" FOR UPDATE OF "renamed" FOR SHARE`},
 		{`SELECT 1 UNION SELECT 1 FOR UPDATE OF c`, `SELECT 2 UNION SELECT 2 FOR UPDATE OF "renamed"`},
+		{`SELECT 1 GROUP BY GROUPING SETS ((1), ())`, `SELECT 2 GROUP BY GROUPING SETS ((2), ())`},
 		{`CREATE TABLE t (c int REFERENCES parent(c) ON DELETE SET NULL (c))`,
 			`CREATE TABLE "t" ("renamed" "int4" REFERENCES "parent"("renamed") ON DELETE SET NULL ("renamed"))`},
 		{`UPDATE t SET (c, b) = ROW(1, 1)`, `UPDATE "t" SET ("renamed", "b")=ROW(2,2)`},
@@ -721,7 +721,8 @@ func TestVisitorWritesBackRestoredChildren(t *testing.T) {
 		{`CREATE SCHEMA s AUTHORIZATION CURRENT_USER`, `CREATE SCHEMA "s" AUTHORIZATION "rewritten_role"`},
 		{`CREATE TABLESPACE ts OWNER CURRENT_ROLE LOCATION 'mock_location'`,
 			`CREATE TABLESPACE "ts" OWNER "rewritten_role" LOCATION 'mock_location'`},
-		{`SELECT 1 FROM t INNER JOIN u USING (c) AS j`, `SELECT 2 FROM "t" INNER JOIN "u" USING ("renamed") AS "j"`},
+		// The shared join core keeps USING columns as names, so a visitor cannot rewrite them.
+		{`SELECT 1 FROM t INNER JOIN u USING (c) AS j`, `SELECT 2 FROM "t" INNER JOIN "u" USING ("c") AS "j"`},
 	} {
 		t.Run(tc.sql, func(t *testing.T) {
 			stmt := mustParseOne(t, tc.sql)
@@ -752,7 +753,7 @@ func TestVisitorWritesBackRestoredChildren(t *testing.T) {
 					}
 					return &copy
 				case *ast.RoleSpec:
-					return &ast.RoleSpec{Roletype: int(ast.ROLESPEC_CSTRING), Rolename: "rewritten_role"}
+					return &ast.RoleSpec{Roletype: int(ast.ROLESPEC_CSTRING), Rolename: lex.Ident{Name: "rewritten_role"}}
 				}
 				return n
 			}}
@@ -818,10 +819,10 @@ func TestRestoreAdditionalPostgreSQLSyntax(t *testing.T) {
 
 func TestDatabaseRestoreValidationDoesNotWrite(t *testing.T) {
 	for _, stmt := range []ast.StmtNode{
-		&ast.CreateDatabaseStmt{Name: "d", Options: []*ast.DatabaseOption{{Tp: ast.DatabaseOptionOwner, Value: "app"}, nil}},
-		&ast.CreateDatabaseStmt{Name: "d", Options: []*ast.DatabaseOption{{Tp: ast.DatabaseOptionConnectionLimit, Value: "invalid"}}},
-		&ast.AlterDatabaseStmt{Name: "d", Options: []*ast.DatabaseOption{{}}},
-		&ast.AlterDatabaseStmt{Name: "d", RenameTo: "other", Tablespace: "ts"},
+		&ast.CreateDatabaseStmt{Name: lex.Ident{Name: "d"}, Options: []*ast.DatabaseOption{{Tp: ast.DatabaseOptionOwner, Value: "app"}, nil}},
+		&ast.CreateDatabaseStmt{Name: lex.Ident{Name: "d"}, Options: []*ast.DatabaseOption{{Tp: ast.DatabaseOptionConnectionLimit, Value: "invalid"}}},
+		&ast.AlterDatabaseStmt{Name: lex.Ident{Name: "d"}, Options: []*ast.DatabaseOption{{}}},
+		&ast.AlterDatabaseStmt{Name: lex.Ident{Name: "d"}, RenameTo: lex.Ident{Name: "other"}, Tablespace: lex.Ident{Name: "ts"}},
 	} {
 		var out strings.Builder
 		if err := stmt.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &out)); err == nil || out.Len() != 0 {

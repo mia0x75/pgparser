@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/lex"
+	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/model"
@@ -147,57 +149,51 @@ func validBinaryDigits(value string, base int) bool {
 }
 
 // columnRefWithIndirection builds a column reference with an indirection list.
-func columnRefWithIndirection(name string, ind *ast.List) ast.ExprNode {
+func columnRefWithIndirection(l yyLexer, name lex.Ident, ind *ast.List, span loc.Span) ast.ExprNode {
 	if ind == nil {
-		return ast.NewColumnNameExpr("", "", name)
+		return ast.NewColumnNameExpr("", "", name.Name)
 	}
-	names := []string{name}
+	parts := make([]lex.Ident, 1, len(ind.Items)+1)
+	parts[0] = name
 	wildcard := false
 	for i, item := range ind.Items {
 		switch v := item.(type) {
 		case *ast.String:
-			names = append(names, v.Str)
+			parts = append(parts, syntaxIdent(l, v.Str, v.Span()))
 		case *ast.A_Indices:
 			// Preserve the ordered suffix after the first subscript instead of flattening fields into the base name.
-			base := columnRefWithIndirection(name, &ast.List{Items: ind.Items[:i]})
+			prefixSpan := name.Span
+			if i > 0 {
+				prefixSpan = loc.Cover(prefixSpan, ind.Items[i-1].Span())
+			}
+			base := columnRefWithIndirection(l, name, &ast.List{Items: ind.Items[:i]}, prefixSpan)
 			return withIndirection(base, &ast.List{Items: ind.Items[i:]})
 		case *ast.A_Star:
 			wildcard = true
 		}
 	}
 	if wildcard {
-		wildcardField := &ast.WildCardField{}
-		switch len(names) {
-		case 1:
-			wildcardField.Table = model.NewCIStr(names[0])
-		case 2:
-			wildcardField.Schema = model.NewCIStr(names[0])
-			wildcardField.Table = model.NewCIStr(names[1])
-		case 3:
-			wildcardField.Catalog = model.NewCIStr(names[0])
-			wildcardField.Schema = model.NewCIStr(names[1])
-			wildcardField.Table = model.NewCIStr(names[2])
-		default:
-			return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name), Indirection: ind}
+		if len(parts) > 3 {
+			return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name.Name), Indirection: ind}
 		}
-		return wildcardField
+		return syntaxWildcard(syntaxName(parts...), span)
 	}
-	schema, table, col := "", "", names[0]
-	switch len(names) {
+	schema, table, col := "", "", parts[0].Name
+	switch len(parts) {
 	case 1:
 	case 2:
-		table = names[0]
-		col = names[1]
+		table = parts[0].Name
+		col = parts[1].Name
 	case 3:
-		schema = names[0]
-		table = names[1]
-		col = names[2]
+		schema = parts[0].Name
+		table = parts[1].Name
+		col = parts[2].Name
 	case 4:
-		expr := ast.NewColumnNameExpr(names[1], names[2], names[3])
-		expr.Name.Catalog = model.NewCIStr(names[0])
+		expr := ast.NewColumnNameExpr(parts[1].Name, parts[2].Name, parts[3].Name)
+		expr.Name.Catalog = model.NewCIStr(parts[0].Name)
 		return expr
 	default:
-		return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name), Indirection: ind}
+		return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name.Name), Indirection: ind}
 	}
 	return ast.NewColumnNameExpr(schema, table, col)
 }
@@ -271,10 +267,10 @@ func orderByFromList(l *ast.List) *ast.OrderByClause {
 	clause := &ast.OrderByClause{}
 	for _, item := range l.Items {
 		switch v := item.(type) {
-		case *ast.ByItem:
+		case *ast.OrderItem:
 			clause.Items = append(clause.Items, v)
 		case *ast.SortBy:
-			bi := &ast.ByItem{Expr: v.Node.(ast.ExprNode)}
+			bi := &ast.OrderItem{Expr: v.Node.(ast.ExprNode)}
 			if v.SortbyDir == ast.SORTBY_USING {
 				bi.UseOp = operatorName(v.UseOp)
 			}
@@ -293,11 +289,20 @@ func orderByFromList(l *ast.List) *ast.OrderByClause {
 	return clause
 }
 
-// byItemsFromExprs returns the group by items of an expression list.
-func byItemsFromExprs(exprs []ast.ExprNode) []*ast.ByItem {
-	var items []*ast.ByItem
+// orderItemsFromExprs returns the sorting items of an expression list.
+func orderItemsFromExprs(exprs []ast.ExprNode) []*ast.OrderItem {
+	var items []*ast.OrderItem
 	for _, e := range exprs {
-		items = append(items, &ast.ByItem{Expr: e})
+		items = append(items, &ast.OrderItem{BaseOrderItem: pkast.BaseOrderItem{Expr: e}})
+	}
+	return items
+}
+
+// byItemsFromExprs returns the group by items of an expression list.
+func byItemsFromExprs(exprs []ast.ExprNode) []*ast.GroupItem {
+	var items []*ast.GroupItem
+	for _, e := range exprs {
+		items = append(items, &ast.GroupItem{BaseGroupItem: pkast.BaseGroupItem{Expr: e}})
 	}
 	return items
 }
@@ -311,7 +316,7 @@ func groupingSetsFromList(l *ast.List) [][]ast.ExprNode {
 	var sets [][]ast.ExprNode
 	for _, item := range l.Items {
 		switch v := item.(type) {
-		case *ast.ByItem:
+		case *ast.GroupItem:
 			if v.GroupingSet != nil {
 				if v.GroupingSet.Type == ast.GroupingSetEmpty {
 					sets = append(sets, nil)

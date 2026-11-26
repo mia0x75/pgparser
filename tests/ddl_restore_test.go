@@ -38,7 +38,7 @@ func TestRoutineDropVisitor(t *testing.T) {
 					return &copy
 				case *ast.DataType:
 					arguments++
-					return &ast.DataType{Type: mustParseOne(t, "SELECT 1::bigint").(*ast.SelectStmt).Fields.Fields[0].Expr.(*ast.FuncCastExpr).Tp}
+					return &ast.DataType{Type: mustParseOne(t, "SELECT 1::bigint").(*ast.SelectStmt).Fields.Items[0].Expr.(*ast.FuncCastExpr).Tp}
 				}
 				return n
 			}})
@@ -57,9 +57,16 @@ func TestRestoreRecursiveViewWildcard(t *testing.T) {
 	for _, prefix := range []string{"CREATE", "CREATE OR REPLACE"} {
 		t.Run(prefix, func(t *testing.T) {
 			stmt := mustParseOne(t, prefix+" RECURSIVE VIEW v(n) AS SELECT 1").(*ast.CreateViewStmt)
-			field := stmt.Select.(*ast.SelectStmt).Fields.Fields[0]
-			if field.WildCard == nil || field.Expr != nil {
+			field := stmt.Select.(*ast.SelectStmt).Fields.Items[0]
+			wc, ok := field.Expr.(*ast.WildcardExpr)
+			if !ok || wc == nil {
 				t.Fatal("recursive view projection is a column name instead of a wildcard")
+			}
+			if len(wc.Qualifier.Parts) != 0 {
+				t.Fatal("recursive view projection is a column name instead of a wildcard")
+			}
+			if field.Alias.Present() || field.Alias.Span.Valid() || field.Span().Valid() || wc.Span().Valid() {
+				t.Fatal("synthetic projection must not claim source positions or an alias")
 			}
 			restoreString(t, stmt)
 		})

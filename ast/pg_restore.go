@@ -11,6 +11,12 @@ import (
 var ErrUnsupportedRestore = errors.New("SQL restoration is unsupported")
 
 func restorePGNode(ctx *format.RestoreCtx, node Node) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if !nodePresent(node) {
+		return fmt.Errorf("restore PostgreSQL node: nil node")
+	}
 	switch n := node.(type) {
 	case *String:
 		ctx.WriteString(n.Str)
@@ -77,7 +83,7 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 	case *RoleSpec:
 		switch RoleSpecType(n.Roletype) {
 		case ROLESPEC_CSTRING:
-			ctx.WriteName(n.Rolename)
+			ctx.WriteIdent(n.Rolename)
 		case ROLESPEC_CURRENT_ROLE:
 			ctx.WriteKeyword("CURRENT_ROLE")
 		case ROLESPEC_CURRENT_USER:
@@ -347,10 +353,101 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		}
 	case *XmlExpr:
 		return restoreXML(ctx, n)
+	case *CTESearchClause:
+		return restoreCTESearch(ctx, n)
+	case *CTECycleClause:
+		return restoreCTECycle(ctx, n)
 	default:
 		return fmt.Errorf("%w for %T", ErrUnsupportedRestore, node)
 	}
 	return ctx.Err()
+}
+
+// restoreCTESearch writes the SEARCH clause of a recursive CTE.
+func restoreCTESearch(ctx *format.RestoreCtx, search *CTESearchClause) error {
+	if search == nil || search.SearchColList == nil {
+		return fmt.Errorf("invalid CTE search clause")
+	}
+	ctx.WriteKeyword("SEARCH ")
+	if search.SearchBreadthFirst {
+		ctx.WriteKeyword("BREADTH ")
+	} else {
+		ctx.WriteKeyword("DEPTH ")
+	}
+	ctx.WriteKeyword("FIRST BY ")
+	for i, item := range search.SearchColList.Items {
+		name, ok := item.(*String)
+		if !ok || name == nil || name.Str == "" {
+			return fmt.Errorf("invalid CTE search column %d", i)
+		}
+		if i > 0 {
+			ctx.WritePlain(", ")
+		}
+		ctx.WriteName(name.Str)
+	}
+	ctx.WriteKeyword(" SET ")
+	if search.SearchSeqColumn == "" {
+		return fmt.Errorf("invalid CTE search sequence column")
+	}
+	ctx.WriteName(search.SearchSeqColumn)
+	return ctx.Err()
+}
+
+// restoreCTECycle writes the CYCLE clause of a recursive CTE.
+func restoreCTECycle(ctx *format.RestoreCtx, cycle *CTECycleClause) error {
+	if cycle == nil || cycle.CycleColList == nil {
+		return fmt.Errorf("invalid CTE cycle clause")
+	}
+	ctx.WriteKeyword("CYCLE ")
+	for i, item := range cycle.CycleColList.Items {
+		name, ok := item.(*String)
+		if !ok || name == nil || name.Str == "" {
+			return fmt.Errorf("invalid CTE cycle column %d", i)
+		}
+		if i > 0 {
+			ctx.WritePlain(", ")
+		}
+		ctx.WriteName(name.Str)
+	}
+	ctx.WriteKeyword(" SET ")
+	if cycle.CycleMarkColumn == "" {
+		return fmt.Errorf("invalid CTE cycle mark column")
+	}
+	ctx.WriteName(cycle.CycleMarkColumn)
+	ctx.WriteKeyword(" TO ")
+	if err := restoreCTEConstant(ctx, cycle.CycleMarkValue); err != nil {
+		return err
+	}
+	ctx.WriteKeyword(" DEFAULT ")
+	if err := restoreCTEConstant(ctx, cycle.CycleMarkDefault); err != nil {
+		return err
+	}
+	ctx.WriteKeyword(" USING ")
+	if cycle.CyclePathColumn == "" {
+		return fmt.Errorf("invalid CTE cycle path column")
+	}
+	ctx.WriteName(cycle.CyclePathColumn)
+	return ctx.Err()
+}
+
+// restoreCTEConstant writes a CYCLE mark value, which PostgreSQL only accepts
+// as a literal or a typed literal.
+func restoreCTEConstant(ctx *format.RestoreCtx, value Node) error {
+	switch v := value.(type) {
+	case *FuncCastExpr:
+		if v.FunctionType != CastFunction || v.Tp == nil {
+			return fmt.Errorf("%w: CTE cycle value", ErrUnsupportedRestore)
+		}
+		v.Tp.RestoreAsCastType(ctx)
+		ctx.WritePlain(" ")
+		return v.Expr.Restore(ctx)
+	case ValueExpr:
+		return value.Restore(ctx)
+	case nil:
+		return fmt.Errorf("invalid CTE cycle value")
+	default:
+		return fmt.Errorf("%w: CTE cycle value %T", ErrUnsupportedRestore, value)
+	}
 }
 
 func restoreLocking(ctx *format.RestoreCtx, locks *List) error {

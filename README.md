@@ -42,7 +42,7 @@ func main() {
 
 	for _, stmt := range stmts {
 		if sel, ok := stmt.(*ast.SelectStmt); ok {
-			fmt.Printf("select fields: %d\n", len(sel.Fields.Fields))
+			fmt.Printf("select fields: %d\n", len(sel.Fields.Items))
 		}
 	}
 }

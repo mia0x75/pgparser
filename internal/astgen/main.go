@@ -13,7 +13,23 @@ import (
 	"strings"
 )
 
+// Shared interfaces that can appear as concrete AST node field types.
+// A nil pointer inside such an interface would type-assert successfully to
+// nil and then panic in the child's Accept, so isNode must treat it as a
+// node and emit a nodePresent guard.
+var sharedNodeInterfaces = []string{
+	"Node", "ExprNode", "StmtNode", "ResultSetNode",
+	"QueryNode", "CTENode", "OrderByClauseNode",
+}
+
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "parser" {
+		if err := generateParserSpans(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if err := generate(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -91,7 +107,7 @@ func generate() error {
 				continue
 			}
 			var b strings.Builder
-			fmt.Fprintf(&b, "{ node, skip := v.Enter(n); if skip { return v.Leave(node) }; n = node.(*%s);", id.Name)
+			fmt.Fprintf(&b, "{ if n == nil { return nil, false }; node, skip := v.Enter(n); if !nodePresent(node) { return n, false }; if skip { return v.Leave(node) }; outer, ok := node.(*%s); if !ok || outer == nil { return node, false }; n = outer;", id.Name)
 			for _, field := range structures[id.Name].Fields.List {
 				if len(field.Names) == 0 {
 					continue
@@ -129,7 +145,7 @@ func isNode(expr ast.Expr, nodes map[string]bool) bool {
 		id, ok := t.X.(*ast.Ident)
 		return ok && nodes[id.Name]
 	case *ast.Ident:
-		return t.Name == "Node" || t.Name == "ExprNode" || t.Name == "StmtNode" || t.Name == "ResultSetNode"
+		return slices.Contains(sharedNodeInterfaces, t.Name)
 	}
 	return false
 }
@@ -151,12 +167,25 @@ func visitField(b *strings.Builder, fset *token.FileSet, expr ast.Expr, access s
 		}
 		typStr := typ.String()
 		if typStr == "Node" {
-			// updated is already the interface type; a redundant assertion
-			// would be flagged by gocritic.
-			fmt.Fprintf(b, "if %s != nil { updated, ok := %s.Accept(v); if !ok { return n, false }; %s = updated };", access, access, access)
+			fmt.Fprintf(b, "if %s != nil { if !nodePresent(%s) { return n, false }; updated, ok := %s.Accept(v); if !ok || !nodePresent(updated) { return n, false }; %s = updated };", access, access, access, access)
 		} else {
-			fmt.Fprintf(b, "if %s != nil { updated, ok := %s.Accept(v); if !ok { return n, false }; %s = updated.(%s) };", access, access, access, typStr)
+			fmt.Fprintf(b, "if %s != nil { if !nodePresent(%s) { return n, false }; updated, ok := %s.Accept(v); if !ok { return n, false }; replacement, ok := updated.(%s); if !ok || !nodePresent(replacement) { return n, false }; %s = replacement };", access, access, access, typStr, access)
 		}
 	}
 	return nil
+}
+
+func fieldTypeName(expr ast.Expr, fset *token.FileSet) string {
+	switch t := expr.(type) {
+	case *ast.StarExpr:
+		id, ok := t.X.(*ast.Ident)
+		if ok {
+			return id.Name
+		}
+	case *ast.Ident:
+		return t.Name
+	}
+	var buf strings.Builder
+	_ = format.Node(&buf, fset, expr)
+	return buf.String()
 }

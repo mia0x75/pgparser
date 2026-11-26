@@ -232,7 +232,7 @@ func startsWithSymbol(expr ExprNode) bool {
 
 func endsWithStar(expr ExprNode) bool {
 	switch n := expr.(type) {
-	case *WildCardField:
+	case *WildcardExpr:
 		return true
 	case *A_Indirection:
 		if n.Indirection != nil && len(n.Indirection.Items) > 0 {
@@ -421,6 +421,9 @@ type SubqueryExpr struct {
 func (n *SubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if n.Array {
 		ctx.WriteKeyword("ARRAY")
+	}
+	if query, ok := n.Query.(*QueryTailStmt); ok && query != nil && query.Parenthesized && query.Tail.OrderBy == nil && query.Tail.Limit == nil && query.With == nil {
+		return query.Restore(ctx)
 	}
 	ctx.WritePlain("(")
 	if err := n.Query.Restore(ctx); err != nil {
