@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mia0x75/parserkit/diagnostic"
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
+	"github.com/mia0x75/pgparser/sqlerr"
 )
 
 // Scanner adapts the PostgreSQL lexer to the goyacc-generated yyLexer
@@ -119,16 +121,19 @@ func (s *Scanner) Error(msg string) {
 	near := s.lexer.contextAt(s.lexer.pos)
 	// Lexer and grammar-action errors arrive here already worded; keep that
 	// wording but add the same position detail as a syntax error.
+	span := loc.Span{Start: loc.ByteOffset(s.lexer.start), End: loc.ByteOffset(s.lexer.pos)}
 	if !strings.HasPrefix(msg, "syntax error") {
 		s.errs = append(s.errs, &ParseError{
 			Message:  fmt.Sprintf("%s at line %d near %q", msg, line, near),
 			Position: s.lexer.pos,
+			Span:     span,
 		})
 		return
 	}
 	s.errs = append(s.errs, &ParseError{
 		Message:  fmt.Sprintf("syntax error at line %d near %q", line, near),
 		Position: s.lexer.pos,
+		Span:     span,
 	})
 }
 
@@ -189,8 +194,21 @@ func (s *Scanner) mapTokenType(tok Token) int {
 type ParseError struct {
 	Message  string
 	Position int
+	Span     loc.Span
 }
 
 func (e *ParseError) Error() string {
 	return fmt.Sprintf("%s at byte %d", e.Message, e.Position)
+}
+
+// Diagnostic returns the parserkit diagnostic with the PG syntax SQLSTATE.
+func (e *ParseError) Diagnostic() *diagnostic.Diagnostic {
+	if e == nil {
+		return nil
+	}
+	span := e.Span
+	if !span.Valid() {
+		span = loc.InvalidSpan()
+	}
+	return sqlerr.SyntaxDiagnostic(e.Message, span, e)
 }

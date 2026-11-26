@@ -4,9 +4,52 @@ import (
 	stderrors "errors"
 	"fmt"
 
+	"github.com/mia0x75/parserkit/diagnostic"
+	"github.com/mia0x75/parserkit/loc"
+
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/errors"
+	"github.com/mia0x75/pgparser/sqlerr"
 )
+
+// ParseErrors merges the errors produced by one parse. Messages and cause
+// identity stay unchanged; only structured metadata is collected.
+type ParseErrors struct {
+	Errs []error
+}
+
+// Error returns the joined messages of all parse errors.
+func (e *ParseErrors) Error() string {
+	if len(e.Errs) == 0 {
+		return ""
+	}
+	return stderrors.Join(e.Errs...).Error()
+}
+
+// Unwrap exposes every parse error to errors.Is and errors.As.
+func (e *ParseErrors) Unwrap() []error { return e.Errs }
+
+// ParseDiagnostics collects the parserkit diagnostics of a parse error.
+func ParseDiagnostics(err error) []*diagnostic.Diagnostic {
+	if err == nil {
+		return nil
+	}
+	switch e := err.(type) {
+	case *ParseErrors:
+		var result []*diagnostic.Diagnostic
+		for _, child := range e.Errs {
+			result = append(result, ParseDiagnostics(child)...)
+		}
+		return result
+	case *ParseError:
+		return []*diagnostic.Diagnostic{e.Diagnostic()}
+	}
+	var found *diagnostic.Diagnostic
+	if stderrors.As(err, &found) {
+		return []*diagnostic.Diagnostic{found}
+	}
+	return nil
+}
 
 // ErrSyntax returns for sql syntax error.
 var ErrSyntax = errors.New("You have an error in your SQL syntax")
@@ -39,10 +82,10 @@ func (parser *Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
 		if len(errs) == 1 {
 			return nil, errors.Trace(errs[0])
 		}
-		return nil, errors.Trace(stderrors.Join(errs...))
+		return nil, errors.Trace(&ParseErrors{Errs: errs})
 	}
 	if ret != 0 {
-		return nil, errors.Trace(ErrSyntax)
+		return nil, errors.Trace(sqlerr.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
 	}
 	if parser.lexer.result != nil {
 		for _, item := range parser.lexer.result.Items {
@@ -68,7 +111,7 @@ func (parser *Parser) ParseOneStmt(sql string) (ast.StmtNode, error) {
 		return nil, errors.Trace(err)
 	}
 	if len(stmts) != 1 {
-		return nil, ErrSyntax
+		return nil, errors.Trace(sqlerr.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
 	}
 	return stmts[0], nil
 }

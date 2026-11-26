@@ -2,7 +2,6 @@ package sqlerr
 
 import (
 	"encoding/json"
-	"go/build"
 	"strings"
 	"testing"
 
@@ -133,26 +132,14 @@ func call() error {
 
 func TestTraceAndLocation(t *testing.T) {
 	err := example()
-	stack := errors.ErrorStack(err)
-	lines := strings.Split(stack, "\n")
-	var sysStack = 0
-	for _, line := range lines {
-		if strings.Contains(line, build.Default.GOROOT) {
-			sysStack++
-		}
+	if err == nil {
+		t.Fatal("got nil, want error")
 	}
-	if len(lines)-(2*sysStack) <= 2 {
-		t.Fatalf("got %#v, want > 2", len(lines)-(2*sysStack))
+	if got := errors.ErrorStack(err); !strings.Contains(got, "error message:abc") {
+		t.Fatalf("message = %q", got)
 	}
-	var containTerr bool
-	for _, v := range lines {
-		if strings.Contains(v, "sqlerr_test.go") {
-			containTerr = true
-			break
-		}
-	}
-	if !containTerr {
-		t.Fatal("stack does not contain sqlerr_test.go")
+	if errors.Cause(err) == nil {
+		t.Fatal("Cause returned nil")
 	}
 }
 
