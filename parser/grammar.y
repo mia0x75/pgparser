@@ -158,7 +158,7 @@ import (
 %type <str>   json_table_path_name_opt path_opt
 %type <node>  select_with_parens select_no_parens
 %type <expr>  a_expr b_expr c_expr columnref AexprConst func_expr func_application func_expr_common_subexpr
-%type <node>  target_el
+%type <node>  Field
 %type <expr>  WhereClauseOptional where_or_current_clause
 %type <list>  func_name
 %type <froms>  from_clause
@@ -170,7 +170,7 @@ import (
 %type <jtype>  JoinType
 %type <list>  stmtmulti
 %type <fields>  opt_target_list
-%type <fields>  target_list
+%type <fields>  FieldList
 %type <froms>  from_list
 %type <grpclause> group_clause
 %type <list>  group_by_list
@@ -1282,7 +1282,7 @@ opt_on_conflict:
 	;
 
 ReturningOpt:
-	RETURNING target_list
+	RETURNING FieldList
 		{
 			$$ = $2
 		}
@@ -7371,7 +7371,7 @@ simple_select:
 			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
-	| SELECT distinct_clause target_list into_clause from_clause WhereClauseOptional group_clause HavingClause window_clause
+	| SELECT distinct_clause FieldList into_clause from_clause WhereClauseOptional group_clause HavingClause window_clause
 		{
 			n := &ast.SelectStmt{
 				Distinct:      true,
@@ -7564,7 +7564,7 @@ opt_cycle_clause:
 	;
 
 opt_target_list:
-	target_list { $$ = $1 }
+	FieldList { $$ = $1 }
 	| /* EMPTY */ { $$ = nil }
 	;
 
@@ -7591,19 +7591,19 @@ OptTempTableName:
 	| qualified_name        { $$ = makeRangeVar($1) }
 	;
 
-target_list:
-	target_el
+FieldList:
+	Field
 		{
 			$$ = make([]*ast.SelectItem, 1, 4)
 			$$[0] = $1.(*ast.SelectItem)
 		}
-	| target_list ',' target_el
+	| FieldList ',' Field
 		{
 			$$ = append($1, $3.(*ast.SelectItem))
 		}
 	;
 
-target_el:
+Field:
 	a_expr AS ColLabel
 		{
 			$$ = syntaxSelectItem($1, syntaxIdent(yylex, $3, yyS[yypt].span), yyVAL.span)
