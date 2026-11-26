@@ -10,7 +10,6 @@ import (
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/format"
 	"github.com/mia0x75/pgparser/model"
-	"github.com/mia0x75/pgparser/types"
 )
 
 // defElemNames returns the names of the definition elements of a list.
@@ -393,11 +392,6 @@ func defElemsToDatabaseOptions(l *ast.List) []*ast.DatabaseOption {
 	return result
 }
 
-// typeNameNode returns the node of a field type.
-func typeNameNode(tp *types.FieldType) ast.Node {
-	return &ast.DataType{Type: tp}
-}
-
 // columnOptions returns the column options of a list.
 func columnOptions(l *ast.List) []*ast.ColumnOption {
 	if l == nil {
@@ -428,22 +422,6 @@ func nodeList(v any) *ast.List {
 // jsonValueType returns the JSON value type of a JSON type code.
 func jsonValueType(code int64) ast.JsonValueType {
 	return ast.JsonValueType(code)
-}
-
-// typeNameFromList returns the field type of a name list.
-func typeNameFromList(l *ast.List) *types.FieldType {
-	if l == nil {
-		return newDataType("text", -1, -1)
-	}
-	var parts []string
-	for _, item := range l.Items {
-		if s, ok := item.(*ast.String); ok {
-			parts = append(parts, s.Str)
-		}
-	}
-	tp := newDataType(strings.Join(parts, "."), -1, -1)
-	tp.PGName = parts
-	return tp
 }
 
 // constraintOptions returns the options of a constraint attribute list.
@@ -984,24 +962,4 @@ func resultSetNodeOf(n ast.Node) ast.ResultSetNode {
 		return v
 	}
 	return nil
-}
-
-// collationName returns the name of a collation clause.
-func collationName(n ast.Node) string {
-	if n == nil {
-		return ""
-	}
-	list, ok := n.(*ast.List)
-	if !ok {
-		return ""
-	}
-	var parts []string
-	for _, item := range list.Items {
-		s, ok := item.(*ast.String)
-		if !ok {
-			continue
-		}
-		parts = append(parts, s.Str)
-	}
-	return strings.Join(parts, ".")
 }
