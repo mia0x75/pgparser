@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
-	"go/format"
 	"go/parser"
 	"go/token"
 	"os"
@@ -19,14 +18,23 @@ func generateParserSpans() error {
 	if err != nil {
 		return err
 	}
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, source, 0)
+	formatted, err := injectParserSpans(source)
 	if err != nil {
 		return err
 	}
+	return os.WriteFile(path, formatted, 0o644)
+}
+
+func injectParserSpans(source []byte) ([]byte, error) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "parser.go", source, 0)
+	if err != nil {
+		return nil, err
+	}
 	type edit struct {
-		start, end int
-		fields     []string
+		offset int
+		indent string
+		fields []string
 	}
 	var edits []edit
 	ast.Inspect(file, func(node ast.Node) bool {
@@ -43,15 +51,16 @@ func generateParserSpans() error {
 			if !ok {
 				continue
 			}
-			present := make(map[string]bool)
+			assigned := make(map[string]bool)
+			existingFields := make(map[string]bool)
 			var existing []ast.Stmt
 			for _, statement := range clause.Body {
 				ast.Inspect(statement, func(node ast.Node) bool {
 					if _, field, ok := spanCallFromNode(node); ok {
-						present[field] = true
+						existingFields[field] = true
 					}
 					if field, ok := assignedField(node); ok && slices.Contains(spanTargets, field) {
-						present[field] = true
+						assigned[field] = true
 					}
 					return true
 				})
@@ -61,7 +70,7 @@ func generateParserSpans() error {
 			}
 			var wanted []string
 			for _, field := range spanTargets {
-				if present[field] {
+				if assigned[field] && !existingFields[field] {
 					wanted = append(wanted, field)
 				}
 			}
@@ -70,34 +79,37 @@ func generateParserSpans() error {
 			}
 			edit := edit{fields: wanted}
 			if len(existing) > 0 {
-				edit.start = fset.Position(existing[0].Pos()).Offset
-				edit.end = fset.Position(existing[len(existing)-1].End()).Offset
+				edit.offset = fset.Position(existing[len(existing)-1].End()).Offset
 			} else {
-				offset := fset.Position(clause.End()).Offset
-				edit.start = offset
-				edit.end = offset
+				edit.offset = fset.Position(clause.End()).Offset
 			}
+			lineEnd := bytes.IndexByte(source[edit.offset:], '\n')
+			if lineEnd < 0 {
+				lineEnd = len(source) - edit.offset
+			}
+			edit.offset += lineEnd
+			if edit.offset < len(source) {
+				edit.offset++
+			}
+			caseStart := fset.Position(clause.Case).Offset
+			caseLineStart := bytes.LastIndexByte(source[:caseStart], '\n') + 1
+			indent := source[caseLineStart:caseStart]
+			edit.indent = string(indent) + "\t"
 			edits = append(edits, edit)
 		}
 		return false
 	})
+	if len(edits) == 0 {
+		return source, nil
+	}
 	for _, edit := range slices.Backward(edits) {
 		var calls bytes.Buffer
-		calls.WriteByte('\n')
 		for _, field := range edit.fields {
-			fmt.Fprintf(&calls, "setSyntaxSpan(yyVAL.%s, yyVAL.span)\n", field)
+			fmt.Fprintf(&calls, "%ssetSyntaxSpan(yyVAL.%s, yyVAL.span)\n", edit.indent, field)
 		}
-		source = append(source[:edit.start], append(calls.Bytes(), source[edit.end:]...)...)
+		source = append(source[:edit.offset], append(calls.Bytes(), source[edit.offset:]...)...)
 	}
-	newFile, err := parser.ParseFile(token.NewFileSet(), path, source, parser.ParseComments)
-	if err != nil {
-		return err
-	}
-	var formatted bytes.Buffer
-	if err := format.Node(&formatted, token.NewFileSet(), newFile); err != nil {
-		return err
-	}
-	return os.WriteFile(path, formatted.Bytes(), 0o644)
+	return source, nil
 }
 
 func spanCall(statement ast.Stmt) (*ast.CallExpr, string, bool) {
@@ -118,10 +130,10 @@ func spanCallFromNode(node ast.Node) (*ast.CallExpr, string, bool) {
 		return nil, "", false
 	}
 	fun, ok := call.Fun.(*ast.Ident)
-	if !ok || fun.Name != "setSyntaxSpan" || len(call.Args) < 2 {
+	if !ok || fun.Name != "setSyntaxSpan" || len(call.Args) != 2 {
 		return nil, "", false
 	}
-	field, ok := call.Args[1].(*ast.SelectorExpr)
+	field, ok := call.Args[0].(*ast.SelectorExpr)
 	if !ok {
 		return nil, "", false
 	}
