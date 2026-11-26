@@ -20,35 +20,45 @@ type ParseErrors struct {
 
 // Error returns the joined messages of all parse errors.
 func (e *ParseErrors) Error() string {
-	if len(e.Errs) == 0 {
-		return ""
+	if e != nil {
+		if joined := stderrors.Join(e.Errs...); joined != nil {
+			return joined.Error()
+		}
 	}
-	return stderrors.Join(e.Errs...).Error()
+	return ""
 }
 
 // Unwrap exposes every parse error to errors.Is and errors.As.
-func (e *ParseErrors) Unwrap() []error { return e.Errs }
+func (e *ParseErrors) Unwrap() []error {
+	if e == nil {
+		return nil
+	}
+	return e.Errs
+}
 
 // ParseDiagnostics collects the parserkit diagnostics of a parse error.
 func ParseDiagnostics(err error) []*diagnostic.Diagnostic {
-	if err == nil {
-		return nil
-	}
+	return appendParseDiagnostics(nil, err)
+}
+
+func appendParseDiagnostics(result []*diagnostic.Diagnostic, err error) []*diagnostic.Diagnostic {
 	switch e := err.(type) {
-	case *ParseErrors:
-		var result []*diagnostic.Diagnostic
-		for _, child := range e.Errs {
-			result = append(result, ParseDiagnostics(child)...)
+	case *diagnostic.Diagnostic:
+		if e != nil {
+			return append(result, e)
 		}
-		return result
 	case *ParseError:
-		return []*diagnostic.Diagnostic{e.Diagnostic()}
+		if e != nil {
+			return append(result, e.Diagnostic())
+		}
+	case interface{ Unwrap() []error }:
+		for _, child := range e.Unwrap() {
+			result = appendParseDiagnostics(result, child)
+		}
+	case interface{ Unwrap() error }:
+		return appendParseDiagnostics(result, e.Unwrap())
 	}
-	var found *diagnostic.Diagnostic
-	if stderrors.As(err, &found) {
-		return []*diagnostic.Diagnostic{found}
-	}
-	return nil
+	return result
 }
 
 // ErrSyntax returns for sql syntax error.

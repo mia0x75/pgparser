@@ -32,9 +32,6 @@ type yySymType struct {
 	// Helper functions called from grammar actions
 	// setSyntaxSpan stamps a default production span without replacing a more
 	// precise span set by a grammar action.
-	// shortcut: nodes created in an inner production keep its narrower span when
-	// an outer pass-through rule reuses them, so statement spans may not cover the
-	// full text; widen explicitly in a grammar action when exact statement bounds matter.
 	// setParseResult stores the parse result in the lexer adapter.
 	// makeAExprFromList creates an A_Expr with an operator name list (from qual_Op).
 	// makeNameListAsAnyNameList wraps each name string into a single-element
@@ -1368,6 +1365,7 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			if yyDollar[3].node != nil {
+				yyDollar[3].node.SetSpan(yyS[yypt].span)
 				yyVAL.list = appendList(yyDollar[1].list, yyDollar[3].node)
 			} else {
 				yyVAL.list = yyDollar[1].list
@@ -1378,6 +1376,7 @@ yydefault:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
 			if yyDollar[1].node != nil {
+				yyDollar[1].node.SetSpan(yyS[yypt].span)
 				yyVAL.list = makeList(yyDollar[1].node)
 			} else {
 				yyVAL.list = nil
@@ -2180,6 +2179,7 @@ yydefault:
 			if yyDollar[1].node != nil {
 				n.With = yyDollar[1].node.(*ast.WithClause)
 			}
+			n.SetSpan(yyVAL.span)
 			yyVAL.node = n
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)

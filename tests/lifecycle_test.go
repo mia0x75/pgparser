@@ -1,8 +1,12 @@
 package parser_test
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/mia0x75/parserkit/loc"
+
+	parser "github.com/mia0x75/pgparser"
 	"github.com/mia0x75/pgparser/ast"
 )
 
@@ -20,13 +24,35 @@ func TestStatementSpansArePopulated(t *testing.T) {
 	} {
 		t.Run(sql, func(t *testing.T) {
 			n := mustParseOne(t, sql)
-			if !n.Span().Valid() {
-				t.Fatalf("%q: statement span missing", sql)
-			}
-			if n.Span().End <= n.Span().Start {
-				t.Fatalf("%q: statement span = %v", sql, n.Span())
+			if want := (loc.Span{Start: 0, End: loc.ByteOffset(len(sql))}); n.Span() != want {
+				t.Fatalf("statement span = %v, want %v", n.Span(), want)
 			}
 		})
+	}
+}
+
+func TestStatementSpansInBatch(t *testing.T) {
+	const first = "INSERT INTO t (a) VALUES (1)"
+	const nested = "INSERT INTO t (a) VALUES (2)"
+	const second = "PREPARE p AS " + nested
+	const sql = "; /* lead */ " + first + ";; -- gap\n " + second + " /* trailing */ ;"
+	stmts, err := parser.New().Parse(sql)
+	if err != nil || len(stmts) != 2 {
+		t.Fatalf("Parse returned %d statements, error %v", len(stmts), err)
+	}
+	for _, tc := range []struct {
+		node ast.Node
+		text string
+	}{
+		{stmts[0], first},
+		{stmts[1], second},
+		{stmts[1].(*ast.PrepareStmt).Stmt, nested},
+	} {
+		start := strings.Index(sql, tc.text)
+		want := loc.Span{Start: loc.ByteOffset(start), End: loc.ByteOffset(start + len(tc.text))}
+		if got := tc.node.Span(); got != want {
+			t.Errorf("%s span = %v, want %v", tc.text, got, want)
+		}
 	}
 }
 

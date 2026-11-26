@@ -585,6 +585,7 @@ stmtmulti:
 	stmtmulti ';' stmt
 		{
 			if $3 != nil {
+				$3.SetSpan(yyS[yypt].span)
 				$$ = appendList($1, $3)
 			} else {
 				$$ = $1
@@ -593,6 +594,7 @@ stmtmulti:
 	| stmt
 		{
 			if $1 != nil {
+				$1.SetSpan(yyS[yypt].span)
 				$$ = makeList($1)
 			} else {
 				$$ = nil
@@ -1147,6 +1149,7 @@ InsertStmt:
 			if $1 != nil {
 				n.With = $1.(*ast.WithClause)
 			}
+			n.SetSpan(yyVAL.span)
 			$$ = n
 		}
 	;
@@ -16230,9 +16233,6 @@ const (
 
 // setSyntaxSpan stamps a default production span without replacing a more
 // precise span set by a grammar action.
-// shortcut: nodes created in an inner production keep its narrower span when
-// an outer pass-through rule reuses them, so statement spans may not cover the
-// full text; widen explicitly in a grammar action when exact statement bounds matter.
 func setSyntaxSpan(node ast.Node, span loc.Span) {
 	if !ast.NodePresent(node) || !span.Valid() {
 		return

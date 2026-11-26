@@ -2,7 +2,10 @@ package parser_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
+
+	"github.com/mia0x75/parserkit/diagnostic"
 
 	pgparser "github.com/mia0x75/pgparser"
 )
@@ -36,15 +39,26 @@ func TestParseErrorDiagnostic(t *testing.T) {
 }
 
 func TestParseErrorsMerge(t *testing.T) {
+	first := &pgparser.ParseError{Message: "first", Position: 1}
+	second := &diagnostic.Diagnostic{Code: "42000", Message: "second"}
 	merged := &pgparser.ParseErrors{Errs: []error{
-		&pgparser.ParseError{Message: "first", Position: 1},
-		&pgparser.ParseError{Message: "second", Position: 2},
+		first,
+		errors.Join(errors.New("not a diagnostic"), second),
 	}}
-	diags := pgparser.ParseDiagnostics(merged)
-	if len(diags) != 2 || diags[0].Message != "first" || diags[1].Message != "second" {
+	wrapped := fmt.Errorf("parse batch: %w", merged)
+	diags := pgparser.ParseDiagnostics(wrapped)
+	if len(diags) != 2 || diags[0].Message != "first" || diags[1] != second {
 		t.Fatalf("diagnostics = %+v", diags)
 	}
-	if !errors.Is(merged, merged.Errs[0]) || !errors.Is(merged, merged.Errs[1]) {
+	if !errors.Is(wrapped, first) || !errors.Is(wrapped, second) {
 		t.Fatal("merged error lost a cause")
+	}
+}
+
+func TestEmptyParseErrors(t *testing.T) {
+	for _, err := range []*pgparser.ParseErrors{nil, {}, {Errs: []error{nil}}} {
+		if err.Error() != "" || len(pgparser.ParseDiagnostics(err)) != 0 {
+			t.Fatalf("empty ParseErrors returned a message or diagnostic: %#v", err)
+		}
 	}
 }
