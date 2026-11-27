@@ -103,3 +103,8 @@
 - 双仓 `TestParseSharedInsertCore` 覆盖共享 INSERT 目标、两列、两行 values，以及单列查询来源；Values 与 Query 两个来源槽位保持互斥。
 - PG `InsertRest` 经 `SelectStmt` 承接 VALUES，再由 `InsertStmt` 动作转存到共享 `Values`；MySQL `InsertValues` 直接填充共享 `Values`。两者对外共享相同核心形状。
 - PG 目标别名独立存入 `TargetAlias`，MySQL 目标表保持直接表名并支持目标分区；`ON CONFLICT`、`ON DUPLICATE KEY UPDATE`、`REPLACE`、`INSERT ... SET`、行别名及 `OVERRIDING` 仍是方言扩展，本子批不调整语法或动作。
+
+## D2a 结构核对记录
+
+- 双仓 `TestParseSharedAssignmentCore` 断言两条 UPDATE 赋值均为共享 `pkast.Assignment`，且共享 Target／Expr 槽位非空。
+- PG `Assignment` 允许行目标、列下标和普通列目标；MySQL `Assignment` 目标由 `ColumnName` 构造，支持方言限定列名和 `DEFAULT` 值。保留 AST 目标表达式的具体差异，共享节点只统一 Target 与 Expr 字段。

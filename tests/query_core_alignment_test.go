@@ -244,6 +244,22 @@ func TestParseSharedInsertCore(t *testing.T) {
 	}
 }
 
+func TestParseSharedAssignmentCore(t *testing.T) {
+	stmt, ok := mustParseOne(t, "UPDATE t SET a = 1, b = a + 1").(*dialectast.UpdateStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.UpdateStmt")
+	}
+	if len(stmt.Assignments) != 2 {
+		t.Fatalf("statement = %T, assignments = %d, want UPDATE with two assignments", stmt, len(stmt.Assignments))
+	}
+	for i, assignment := range stmt.Assignments {
+		shared := assignment
+		if shared == nil || shared.Target == nil || shared.Expr == nil {
+			t.Fatalf("shared assignment %d = %#v", i, shared)
+		}
+	}
+}
+
 func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
 	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
 	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {
