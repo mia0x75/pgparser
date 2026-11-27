@@ -260,10 +260,42 @@ func TestParseSharedAssignmentCore(t *testing.T) {
 	}
 }
 
+func TestParseSharedReturningCore(t *testing.T) {
+	insert, ok := mustParseOne(t, "INSERT INTO t (a, b) VALUES (1, 2) RETURNING a, b").(*dialectast.InsertStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.InsertStmt")
+	}
+	assertSharedReturningCore(t, insert.Returning)
+
+	update, ok := mustParseOne(t, "UPDATE t SET a = 1 WHERE b = 2 RETURNING a, b").(*dialectast.UpdateStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.UpdateStmt")
+	}
+	assertSharedReturningCore(t, update.Returning)
+
+	deleteStmt, ok := mustParseOne(t, "DELETE FROM t WHERE a = 1 RETURNING a, b").(*dialectast.DeleteStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.DeleteStmt")
+	}
+	assertSharedReturningCore(t, deleteStmt.Returning)
+}
+
 func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
 	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
 	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {
 		t.Fatalf("restored LIMIT = %q, want %q", got, want)
+	}
+}
+
+func assertSharedReturningCore(t *testing.T, fields *pkast.FieldList) {
+	t.Helper()
+	if fields == nil || len(fields.Items) != 2 {
+		t.Fatalf("shared RETURNING fields = %#v, want two items", fields)
+	}
+	for i, item := range fields.Items {
+		if item == nil || item.Expr == nil {
+			t.Fatalf("shared RETURNING item %d = %#v", i, item)
+		}
 	}
 }
 
