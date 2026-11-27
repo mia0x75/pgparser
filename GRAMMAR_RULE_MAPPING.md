@@ -225,3 +225,8 @@
 - 双仓 `coalesce(a, b)` 均构造 `FuncCallExpr` 并嵌入 `BaseCallExpr`；测试核对普通函数名、参数个数及调用与参数的完整跨度。
 - PG 的 `FILTER`、`WITHIN GROUP`、星号、DISTINCT、调用内排序与 MySQL 的 INTERVAL/CHARSET/UNIT 等语法修饰符继续保留在方言节点。
 - 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2n 括号与标量子查询
+
+- 双仓 `(a + b)` 均以 `ParenthesesExpr` 保留括号节点，内部仍是共享 `BinaryOperationExpr`；`(SELECT 1)` 均以 `SubqueryExpr` 表示标量查询。
+- 测试锁定子节点及两个完整源码跨度；仅增加测试与记录，不改语法或生成文件。双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。

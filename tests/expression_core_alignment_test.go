@@ -568,3 +568,32 @@ func TestParseSharedFunctionCallCore(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSharedParenthesesAndScalarSubqueryCore(t *testing.T) {
+	const parenSQL = "(a + b)"
+	const subquerySQL = "(SELECT 1)"
+	const sql = "SELECT " + parenSQL + ", " + subquerySQL
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+
+	paren, ok := stmt.Fields.Items[0].Expr.(*dialectast.ParenthesesExpr)
+	if !ok || paren.Expr == nil {
+		t.Fatalf("parentheses expression = %#v", stmt.Fields.Items[0].Expr)
+	}
+	span := paren.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != parenSQL {
+		t.Fatalf("parentheses span = %v", span)
+	}
+	childSpan := paren.Expr.Span()
+	if !childSpan.Within(len(sql)) || sql[childSpan.Start:childSpan.End] != "a + b" {
+		t.Fatalf("parentheses child span = %v", childSpan)
+	}
+
+	subquery, ok := stmt.Fields.Items[1].Expr.(*dialectast.SubqueryExpr)
+	if !ok || subquery.Query == nil {
+		t.Fatalf("scalar subquery = %#v", stmt.Fields.Items[1].Expr)
+	}
+	span = subquery.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != subquerySQL {
+		t.Fatalf("scalar subquery span = %v", span)
+	}
+}
