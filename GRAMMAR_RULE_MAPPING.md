@@ -184,3 +184,8 @@
 - 双仓正向 `EXISTS (SELECT ...)` 均产生 `ExistsSubqueryExpr`，其 Sel 为 `SubqueryExpr`；共享测试检查节点和完整表达式跨度。
 - 否定形式保留既有 AST 差异：PG `NOT EXISTS` 使用 `UnaryOperationExpr{Op: Not}` 包裹 `ExistsSubqueryExpr`；MySQL 将 `Not` 写入该节点。测试分别固定两种形状及覆盖完整 SQL 的跨度，不做不必要的 grammar 动作改写。
 - 双仓 build、vet、race、lint、tidy、生成检查通过；PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2g ANY / ALL 比较子查询
+
+- 双仓以 `= ANY (SELECT ...)` 与 `<> ALL (SELECT ...)` 核对共享 `CompareSubqueryExpr` 的比较 opcode、`All` 标志、右侧 `SubqueryExpr` 和完整 SQL span。PG `OpName` 方言扩展不变。
+- 仅增加测试与批次记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。

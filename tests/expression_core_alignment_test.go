@@ -339,3 +339,27 @@ func TestParseSharedExistsSubqueryCore(t *testing.T) {
 		t.Fatalf("NOT EXISTS span = %v", span)
 	}
 }
+
+func TestParseSharedCompareSubqueryCore(t *testing.T) {
+	const anySQL = "1 = ANY (SELECT 1)"
+	const allSQL = "2 <> ALL (SELECT 2)"
+	const sql = "SELECT " + anySQL + ", " + allSQL
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, tc := range []struct {
+		raw string
+		op  opcode.Op
+		all bool
+	}{{raw: anySQL, op: opcode.EQ}, {raw: allSQL, op: opcode.NE, all: true}} {
+		expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.CompareSubqueryExpr)
+		if !ok || expr.Op != tc.op || expr.All != tc.all {
+			t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i].Expr)
+		}
+		if _, ok := expr.R.(*dialectast.SubqueryExpr); !ok {
+			t.Fatalf("%s right operand = %T", tc.raw, expr.R)
+		}
+		span := expr.Span()
+		if !span.Within(len(sql)) || sql[span.Start:span.End] != tc.raw {
+			t.Fatalf("%s has span %v", tc.raw, span)
+		}
+	}
+}
