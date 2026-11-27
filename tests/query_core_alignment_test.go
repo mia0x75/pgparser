@@ -280,6 +280,30 @@ func TestParseSharedReturningCore(t *testing.T) {
 	assertSharedReturningCore(t, deleteStmt.Returning)
 }
 
+func TestParseSharedUpdateCore(t *testing.T) {
+	stmt, ok := mustParseOne(t, "WITH q AS (SELECT 1 AS id) UPDATE t SET a = (SELECT id FROM q) WHERE b = 2").(*dialectast.UpdateStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.UpdateStmt")
+	}
+	if stmt.Table == nil || stmt.Where == nil || len(stmt.Assignments) != 1 {
+		t.Fatalf("shared UPDATE core = %#v", stmt.BaseUpdateStmt)
+	}
+	table, ok := stmt.Table.(pkast.TableSourceNode)
+	if !ok || table.TableSourceCore() == nil || table.TableSourceCore().Source == nil {
+		t.Fatalf("shared UPDATE target = %T, want populated TableSourceNode", stmt.Table)
+	}
+	if assignment := stmt.Assignments[0]; assignment == nil || assignment.Target == nil || assignment.Expr == nil {
+		t.Fatalf("shared UPDATE assignment = %#v", stmt.Assignments[0])
+	}
+	if stmt.With == nil {
+		t.Fatal("shared UPDATE WITH clause is nil")
+	}
+	with := stmt.With.WithClauseCore()
+	if with == nil || len(with.CTEs) != 1 || with.CTEs[0].CTECore() == nil || with.CTEs[0].CTECore().Query == nil {
+		t.Fatalf("shared UPDATE WITH core = %#v", with)
+	}
+}
+
 func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
 	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
 	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {

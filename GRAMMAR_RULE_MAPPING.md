@@ -113,3 +113,8 @@
 
 - 双仓 `TestParseSharedReturningCore` 断言 INSERT、UPDATE、DELETE 的 `Returning` 均为共享 `FieldList`，且按序包含两个非空表达式项。
 - 两仓 `ReturningOpt` 都复用投影字段列表；PG 通过 `returningFieldList` 填充共享 AST，MySQL 在其 INSERT／单表 UPDATE／单表 DELETE 动作中附着字段列表。MySQL/MariaDB 的产生式位置与方言支持边界保持原样，不改 grammar 或动作。
+
+## D3a 结构核对记录
+
+- 双仓 `TestParseSharedUpdateCore` 检查共享 `BaseUpdateStmt` 的目标、赋值和过滤条件，并确认共同 CTE 挂在 UPDATE 外层节点。
+- PG `UPDATE ... FROM` 仍由 `UpdateStmt.From` 承载；MySQL JOIN 仍在共享 `BaseUpdateStmt.Table` 关系树内，单表 `ORDER BY`／`LIMIT` 与多表限制保留。现有方言用例继续覆盖这些差异；本子批不改产生式和动作。
