@@ -169,7 +169,7 @@ import (
 %type <expr>  OptRepeatableClause
 %type <jtype>  JoinType
 %type <list>  StatementList
-%type <fields>  OptTargetList
+%type <fields>  FieldListOpt
 %type <fields>  FieldList
 %type <froms>  TableRefs
 %type <grpclause> GroupByClause
@@ -7359,7 +7359,7 @@ SelectClause:
 	;
 
 SimpleSelect:
-	SELECT OptAllClause OptTargetList IntoClause TableRefsClause WhereClauseOpt GroupByClause HavingClause WindowClauseOpt
+	SELECT OptAllClause FieldListOpt IntoClause TableRefsClause WhereClauseOpt GroupByClause HavingClause WindowClauseOpt
 		{
 			n := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
@@ -7563,7 +7563,7 @@ OptCycleClause:
 	| /* EMPTY */ { $$ = nil }
 	;
 
-OptTargetList:
+FieldListOpt:
 	FieldList { $$ = $1 }
 	| /* EMPTY */ { $$ = nil }
 	;
