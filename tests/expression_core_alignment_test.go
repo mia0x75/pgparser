@@ -500,3 +500,33 @@ func TestParseSharedCollateExpressionCore(t *testing.T) {
 		t.Fatalf("COLLATE child span = %v", childSpan)
 	}
 }
+
+func TestParseSharedUnaryExpressionCore(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		op   opcode.Op
+		arg  string
+	}{
+		{name: "not", raw: "NOT a", op: opcode.Not, arg: "a"},
+		{name: "negative", raw: "-b", op: opcode.Minus, arg: "b"},
+	}
+	sql := "SELECT " + tests[0].raw + ", " + tests[1].raw
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.UnaryOperationExpr)
+			if !ok || opcode.Op(expr.Op) != tc.op || expr.Expr == nil {
+				t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i].Expr)
+			}
+			span := expr.Span()
+			if !span.Within(len(sql)) || sql[span.Start:span.End] != tc.raw {
+				t.Fatalf("%s has span %v", tc.raw, span)
+			}
+			childSpan := expr.Expr.Span()
+			if !childSpan.Within(len(sql)) || sql[childSpan.Start:childSpan.End] != tc.arg {
+				t.Fatalf("%s child span = %v", tc.raw, childSpan)
+			}
+		})
+	}
+}
