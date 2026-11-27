@@ -281,3 +281,24 @@
 | 外部对象、扩展与管理 | FDW/server/foreign table/user mapping、extension、publication/subscription、policy、event trigger、访问方法、全文检索、operator family/class、cast/transform/conversion、stats、对象 owner/schema/dependency | server、plugin/component、clone、backup、resource/logfile group、复制 `ChangeMasterStmt/ReplicaControlStmt/ResetStmt/BinlogStmt/PurgeStmt`、shutdown/kill、cache/load index | 归档为方言族，保留本地动作与 AST。PG 外部对象测试及全量 testdata、MySQL `TestImportInstallClone`、`TestReplicationControlClauses`、`TestManagementShowReplicaRoundTrip` 与 MTR 覆盖现状；不承诺每个扩展均有共享 AST。 |
 
 - S1 的影响面仅为双仓 `tests/utility_core_alignment_test.go` 与 PG 批次文档；未修改产生式、生产动作、导出 API、依赖或语料豁免。接受范围及解析表不变，无热路径变更，不需要性能比较。
+
+## P1 ADD GENERATED IDENTITY 冲突治理
+
+- 基线版本：PG `581a6c0`、MySQL `d193ec6`。按 `go tool goyacc -v` 报告，两个冲突项分别为 `ALTER COLUMN ColId ADD_P GENERATED ALWAYS . AS ...` 对 `GeneratedWhen: ALWAYS .`，以及 `BY DEFAULT . AS ...` 对 `GeneratedWhen: BY DEFAULT .`；展望符均为 `AS`，原决策均为移进。
+- 删除 `ALTER COLUMN ColId ADD_P GENERATED GeneratedWhen AS IDENTITY_P OptParenthesizedSequenceOptList`，保留四个显式 COLUMN 分支及省略 COLUMN 的通用分支。被删分支原本被遮蔽；不改 `GeneratedWhen` 的其他调用点或任何保留动作。
+- 修改前已运行新增护栏：ALWAYS/BY DEFAULT × COLUMN 有无 × 选项缺省/空括号/非空括号，共 12 个组合；其中省略 COLUMN 的两个空括号组合维持拒绝。带 COLUMN 的 `AlterTableSpec.Def` 仍为 nil，省略 COLUMN 的 `Constraint.GeneratedWhen` 仍为 a/d；另有 12 个缺少关键字/缺少选项值/多余尾部的反例。MySQL 对 12 个 PG identity 组合全部拒绝。
+- 对冲突项按「冲突类型、展望符、所在状态的产生式项集合」归一化，去除状态号和产生式编号后比较多重集合：455 → 453 项，恰好删除上述两个 `AS` SR，无新增项，其余项一致。RR 归约选择保持原规则顺序；未移动其他规则。
+- 生成代码动作块去除 case 编号后比较多重集合：仅少一个被删产生式的动作，零新增或改写动作；生成复跑的 SHA-256 清单一致。双仓 build、vet、race、lint、tidy 通过；PG testdata 40,644 条、141 既知失败、0 新增失败；MySQL MTR 87,549 条与 D3b 基线逐用例一致。
+
+| 生成指标 | PG 修改前 → 修改后 | MySQL 修改前 → 修改后 |
+| --- | --- | --- |
+| 生成文件字节数 | 1,238,488 → 1,237,809 | 892,068 → 892,068 |
+| 产生式数 / 状态数 | 3,012 / 6,204 → 3,011 / 6,200 | 2,891 / 4,906 → 不变 |
+| yyAct | 126,217 → 126,167 | 77,825 → 不变 |
+| yyPact | 6,204 → 6,200 | 4,906 → 不变 |
+| yyPgo | 699 → 699 | 739 → 不变 |
+| yyR1 / yyR2 | 3,012 / 3,012 → 3,011 / 3,011 | 2,891 / 2,891 → 不变 |
+| SR / RR | 418 / 37 → 416 / 37 | 0 / 0 → 不变 |
+
+- `Makefile.GRAMMAR_CONFLICTS` 只在本次专门冲突批次同步为 416/37。后续外键约束属性和 JSON_TABLE NESTED PATH 等冲突继续归 P2+，不宣称全 grammar 零冲突。
+- 性能验证：Go 1.27.4、linux/amd64、AMD Ryzen 7 5700U；修改前后使用同一份新增 identity 基准分别编译测试二进制，`taskset -c 2`、`-test.cpu 1`、400ms，AB/BA 交错各 12 次。既有 Parse small/medium/wide 及 identity COLUMN/省略 COLUMN 共五项耗时均无统计显著差异（p ≥ 0.143），B/op 与 allocs/op 每次采样完全一致；未测得回退，不主张性能提升。原始报告位于 `/tmp/opencode/alignment-s1-p1/{before.bench,after.bench,benchstat.txt}`。

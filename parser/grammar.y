@@ -3308,7 +3308,7 @@ AlterTableCmd:
 				MissingOk: true,
 			}
 		}
-	/* ADD GENERATED IDENTITY */
+	/* Keep the explicit COLUMN actions and empty-option syntax selected by the former AS conflicts. */
 	| ALTER COLUMN ColId ADD_P GENERATED ALWAYS AS IDENTITY_P
 		{
 			$$ = &ast.AlterTableSpec{
@@ -3357,20 +3357,6 @@ AlterTableCmd:
 				Tp: ast.AlterTableGeneric,
 				OldColumnName: &ast.ColumnName{Name: $3},
 				MissingOk: true,
-			}
-		}
-	/* ADD GENERATED identity */
-	| ALTER COLUMN ColId ADD_P GENERATED GeneratedWhen AS IDENTITY_P OptParenthesizedSequenceOptList
-		{
-			c := &ast.Constraint{
-				Tp:             ast.ConstraintNoConstraint,
-				GeneratedWhen: byte($6),
-			}
-			$$ = &ast.AlterTableSpec{
-
-				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: $3},
-				Def: c,
 			}
 		}
 	| ALTER ColId ADD_P GENERATED GeneratedWhen AS IDENTITY_P OptParenthesizedSequenceOptList

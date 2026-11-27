@@ -1,5 +1,5 @@
 GOYACC ?= go tool goyacc
-GRAMMAR_CONFLICTS := conflicts: 418 shift/reduce, 37 reduce/reduce
+GRAMMAR_CONFLICTS := conflicts: 416 shift/reduce, 37 reduce/reduce
 
 .PHONY: all build generate generate-check test testdata vet race lint fmt help
 
