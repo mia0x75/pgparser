@@ -68,3 +68,35 @@ func TestParseSharedCreateIndexCore(t *testing.T) {
 		t.Fatalf("CREATE INDEX core = %#v", stmt)
 	}
 }
+
+func TestParseSharedCreateDatabaseCore(t *testing.T) {
+	stmt := mustParseOne(t, "CREATE DATABASE IF NOT EXISTS alignment_db").(*ast.CreateDatabaseStmt)
+	if !stmt.IfNotExists || stmt.Name.Name != "alignment_db" {
+		t.Fatalf("CREATE DATABASE core = %#v", stmt)
+	}
+}
+
+func TestParseSharedCreateViewCore(t *testing.T) {
+	stmt := mustParseOne(t, "CREATE VIEW alignment_view AS SELECT 1 AS id").(*ast.CreateViewStmt)
+	_, isSelect := stmt.Select.(*ast.SelectStmt)
+	if stmt.ViewName == nil || stmt.Select == nil || len(stmt.ViewName.TableRefCore().Name.Parts) != 1 ||
+		stmt.ViewName.TableRefCore().Name.Parts[0].Name != "alignment_view" || !isSelect {
+		t.Fatalf("CREATE VIEW core = %#v", stmt)
+	}
+}
+
+func TestParseSharedCreateSequenceCore(t *testing.T) {
+	stmt := mustParseOne(t, "CREATE SEQUENCE alignment_seq START WITH 1 INCREMENT BY 2").(*ast.CreateSequenceStmt)
+	if stmt.Name == nil || len(stmt.Name.TableRefCore().Name.Parts) != 1 ||
+		stmt.Name.TableRefCore().Name.Parts[0].Name != "alignment_seq" || stmt.Options == nil || len(stmt.Options.Items) != 2 {
+		t.Fatalf("CREATE SEQUENCE core = %#v", stmt)
+	}
+}
+
+func TestParseSharedCreateFunctionCore(t *testing.T) {
+	stmt := mustParseOne(t, "CREATE FUNCTION alignment_fn() RETURNS INT RETURN 1").(*ast.CreateFunctionStmt)
+	if stmt.Name == nil || len(stmt.Name.TableRefCore().Name.Parts) != 1 ||
+		stmt.Name.TableRefCore().Name.Parts[0].Name != "alignment_fn" || stmt.Returns == nil || stmt.Body == nil {
+		t.Fatalf("CREATE FUNCTION core = %#v", stmt)
+	}
+}

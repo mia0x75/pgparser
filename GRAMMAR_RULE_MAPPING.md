@@ -260,3 +260,10 @@
 - 双仓同名护栏覆盖表级 PRIMARY KEY、UNIQUE、FOREIGN KEY、CHECK，并核对键项、检查表达式及 `ON DELETE CASCADE`。外键动作的共享含义保持一致；PG `KeyActions` 与 MySQL `ReferDef` 的产生式结构仍分开。
 - 双仓测试普通 UNIQUE INDEX 的名称、目标表、唯一标记和键列。PG 的 `IndexStmt` 规则生成本地 `CreateIndexStmt`／`IndexColName`；MySQL `CreateIndexStmt` 使用 `BaseIndexKeyPart`。不把这两种字段布局强制合并。
 - PG 可延迟约束、部分/排斥索引，以及 MySQL 前缀长度和表/列索引选项保留为方言差异；仅新增测试，不改 grammar 或接受范围。双仓 build、vet、race、lint、tidy、生成检查通过；PG testdata 40,644 条无新增失败，冲突 418/37；MySQL MTR 87,549 条与基线逐用例一致，冲突 0/0。
+
+## T3 其他对象 DDL
+
+- 双仓同名测试固定 `CREATE DATABASE IF NOT EXISTS` 的名称/选项标记、`CREATE VIEW` 的名称与 SELECT 主体、`CREATE SEQUENCE` 的名称与两个选项，以及 `CREATE FUNCTION` 的名称、返回类型与函数体存在性。
+- 类型与函数体仍由方言 AST 承载：PG 序列选项为 `DefElem` 列表、函数返回类型为 `FieldType`；MySQL 序列选项为 `SequenceOption` 列表、函数返回类型为 `TypeName`，并保留例程特征和 definer。PG 的 CREATE SCHEMA 与 MySQL 的 schema/database 同义关系不合并。
+- 表空间和触发器没有可直接共享的语法/执行模型：PG 表空间位置、MySQL 表空间数据文件/引擎分别由 `TestRestoreTablespaceLocation` 与 `TestTablespaceAST` 覆盖；PG 触发器函数调用与 MySQL 触发器语句体分别由 `TestRestoreTrigger` 与 `TestCreateTrigger` 覆盖。保持方言入口与已有测试，不制造共同 AST。
+- 仅新增匹配测试和映射记录；双仓 build、vet、race、lint、tidy、生成检查通过；PG testdata 40,644 条无新增失败，冲突 418/37；MySQL MTR 87,549 条逐用例与基线一致，冲突 0/0。
