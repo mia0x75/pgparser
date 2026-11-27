@@ -146,3 +146,10 @@
 
 - MySQL `SimpleIdent` 的所有分支都构造 `*ast.ColumnRef`，因此规则头、`%type` 与调用方同步改名为 `ColumnRef`。保留 PG 的目录限定和下标，以及 MySQL 的前导点和关键字分支；没有合并名称值规则 `ColumnName`。
 - PG `e9f810a` 和 MySQL `4293f33` 的生成文件逐字节不变（分别为 1,238,597 和 894,175 字节）；MySQL 87,549 条 MTR 逐用例结果一致，PG 语料无新增异常。
+
+## E2a 二元运算构造
+
+- PG `AExpr`／`BExpr` 与 MySQL `Expression`／`BoolPri`／`BitExpr` 的普通二元运算统一调用 `binaryExpr(op, left, right, yyVAL.span)`。PG 保留 AST 上的方言 `Op`，MySQL 仍写入 `BaseBinaryExpr.Op`。PG 自定义运算符、MySQL `MOD()` 原有跨度行为和 SQL mode 不动。
+- `TestParseSharedBinaryExpressionCore` 核对算术、比较、`AND`／`OR` 的优先级、左结合、括号 AST、各节点的源码跨度，以及缺少右操作数时的拒绝行为。
+- PG `364af20` → E2a 生成文件从 1,238,597 变为 1,238,493 字节；MySQL `b59f8e6` → E2a 从 894,175 变为 892,356 字节。双仓生成表逐字节不变；SR／RR 仍为 418／37 和 0／0。变化仅来自构造动作，不是解析表缩小。
+- 双仓现有查询基准前后各交错运行 12 次；耗时和每次分配字节均无显著变化，分配次数不变。

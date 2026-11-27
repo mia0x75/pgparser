@@ -11,6 +11,12 @@ import (
 	"github.com/mia0x75/pgparser/opcode"
 )
 
+func binaryExpr(op opcode.Op, left, right ast.ExprNode, span loc.Span) *ast.BinaryOperationExpr {
+	expr := ast.NewBinaryOperationExpr(op, left, right)
+	expr.SetSpan(span)
+	return expr
+}
+
 func operatorName(l *ast.List) string {
 	if l == nil {
 		return ""

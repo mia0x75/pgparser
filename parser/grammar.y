@@ -8225,51 +8225,51 @@ AExpr:
 	CExpr { $$ = $1 }
 	| AExpr '+' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Plus, $1, $3)
+			$$ = binaryExpr(opcode.Plus, $1, $3, yyVAL.span)
 		}
 	| AExpr '-' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Minus, $1, $3)
+			$$ = binaryExpr(opcode.Minus, $1, $3, yyVAL.span)
 		}
 	| AExpr '*' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Mul, $1, $3)
+			$$ = binaryExpr(opcode.Mul, $1, $3, yyVAL.span)
 		}
 	| AExpr '/' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Div, $1, $3)
+			$$ = binaryExpr(opcode.Div, $1, $3, yyVAL.span)
 		}
 	| AExpr '%' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Mod, $1, $3)
+			$$ = binaryExpr(opcode.Mod, $1, $3, yyVAL.span)
 		}
 	| AExpr '^' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Xor, $1, $3)
+			$$ = binaryExpr(opcode.Xor, $1, $3, yyVAL.span)
 		}
 	| AExpr '<' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.LT, $1, $3)
+			$$ = binaryExpr(opcode.LT, $1, $3, yyVAL.span)
 		}
 	| AExpr '>' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.GT, $1, $3)
+			$$ = binaryExpr(opcode.GT, $1, $3, yyVAL.span)
 		}
 	| AExpr '=' AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.EQ, $1, $3)
+			$$ = binaryExpr(opcode.EQ, $1, $3, yyVAL.span)
 		}
 	| AExpr LESS_EQUALS AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.LE, $1, $3)
+			$$ = binaryExpr(opcode.LE, $1, $3, yyVAL.span)
 		}
 	| AExpr GREATER_EQUALS AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.GE, $1, $3)
+			$$ = binaryExpr(opcode.GE, $1, $3, yyVAL.span)
 		}
 	| AExpr NOT_EQUALS AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.NE, $1, $3)
+			$$ = binaryExpr(opcode.NE, $1, $3, yyVAL.span)
 		}
 	| AExpr QualOp AExpr				%prec Op
 		{
@@ -8281,11 +8281,11 @@ AExpr:
 		}
 	| AExpr AND AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.LogicAnd, $1, $3)
+			$$ = binaryExpr(opcode.LogicAnd, $1, $3, yyVAL.span)
 		}
 	| AExpr OR AExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.LogicOr, $1, $3)
+			$$ = binaryExpr(opcode.LogicOr, $1, $3, yyVAL.span)
 		}
 	| NOT AExpr
 		{
@@ -8699,51 +8699,51 @@ BExpr:
 	CExpr { $$ = $1 }
 	| BExpr '+' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Plus, $1, $3)
+			$$ = binaryExpr(opcode.Plus, $1, $3, yyVAL.span)
 		}
 	| BExpr '-' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Minus, $1, $3)
+			$$ = binaryExpr(opcode.Minus, $1, $3, yyVAL.span)
 		}
 	| BExpr '*' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Mul, $1, $3)
+			$$ = binaryExpr(opcode.Mul, $1, $3, yyVAL.span)
 		}
 	| BExpr '/' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Div, $1, $3)
+			$$ = binaryExpr(opcode.Div, $1, $3, yyVAL.span)
 		}
 	| BExpr '%' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Mod, $1, $3)
+			$$ = binaryExpr(opcode.Mod, $1, $3, yyVAL.span)
 		}
 	| BExpr '^' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.Xor, $1, $3)
+			$$ = binaryExpr(opcode.Xor, $1, $3, yyVAL.span)
 		}
 	| BExpr '<' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.LT, $1, $3)
+			$$ = binaryExpr(opcode.LT, $1, $3, yyVAL.span)
 		}
 	| BExpr '>' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.GT, $1, $3)
+			$$ = binaryExpr(opcode.GT, $1, $3, yyVAL.span)
 		}
 	| BExpr '=' BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.EQ, $1, $3)
+			$$ = binaryExpr(opcode.EQ, $1, $3, yyVAL.span)
 		}
 	| BExpr LESS_EQUALS BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.LE, $1, $3)
+			$$ = binaryExpr(opcode.LE, $1, $3, yyVAL.span)
 		}
 	| BExpr GREATER_EQUALS BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.GE, $1, $3)
+			$$ = binaryExpr(opcode.GE, $1, $3, yyVAL.span)
 		}
 	| BExpr NOT_EQUALS BExpr
 		{
-			$$ = ast.NewBinaryOperationExpr(opcode.NE, $1, $3)
+			$$ = binaryExpr(opcode.NE, $1, $3, yyVAL.span)
 		}
 	| BExpr QualOp BExpr				%prec Op
 		{

@@ -6,6 +6,7 @@ import (
 	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/parserkit/loc"
 	dialectast "github.com/mia0x75/pgparser/ast"
+	"github.com/mia0x75/pgparser/opcode"
 	"github.com/mia0x75/pgparser/parser"
 )
 
@@ -73,5 +74,44 @@ func TestParsePostgresParameterIndirection(t *testing.T) {
 	}
 	if _, err := parser.New().ParseOneStmt("SELECT $0"); err == nil {
 		t.Fatal("accepted a zero parameter number")
+	}
+}
+
+func TestParseSharedBinaryExpressionCore(t *testing.T) {
+	const mixed = "a + b * c = d AND e <> f OR g < h"
+	const grouped = "(a + b) * c"
+	const sql = "SELECT " + mixed + ", " + grouped + ", a - b - c"
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	requireBinary := func(expr pkast.ExprNode, op opcode.Op, raw string) *dialectast.BinaryOperationExpr {
+		t.Helper()
+		node, ok := expr.(*dialectast.BinaryOperationExpr)
+		if !ok {
+			t.Fatalf("%s: expression = %T, want binary operation", raw, expr)
+		}
+		span := node.Span()
+		if node.Op != op || !span.Within(len(sql)) || sql[span.Start:span.End] != raw {
+			t.Fatalf("%s: operator = %v, span = %v; want %v and exact source", raw, node.Op, span, op)
+		}
+		return node
+	}
+	or := requireBinary(stmt.Fields.Items[0].Expr, opcode.LogicOr, mixed)
+	and := requireBinary(or.Left, opcode.LogicAnd, "a + b * c = d AND e <> f")
+	eq := requireBinary(and.Left, opcode.EQ, "a + b * c = d")
+	plus := requireBinary(eq.Left, opcode.Plus, "a + b * c")
+	requireBinary(plus.Right, opcode.Mul, "b * c")
+	requireBinary(and.Right, opcode.NE, "e <> f")
+	requireBinary(or.Right, opcode.LT, "g < h")
+
+	mul := requireBinary(stmt.Fields.Items[1].Expr, opcode.Mul, grouped)
+	paren, ok := mul.Left.(*dialectast.ParenthesesExpr)
+	if !ok {
+		t.Fatalf("left operand of %s = %T, want parentheses", grouped, mul.Left)
+	}
+	requireBinary(paren.Expr, opcode.Plus, "a + b")
+	minus := requireBinary(stmt.Fields.Items[2].Expr, opcode.Minus, "a - b - c")
+	requireBinary(minus.Left, opcode.Minus, "a - b")
+
+	if _, err := parser.New().ParseOneStmt("SELECT a +"); err == nil {
+		t.Fatal("accepted a missing right operand")
 	}
 }

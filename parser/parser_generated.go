@@ -27679,73 +27679,73 @@ yydefault:
 	case 1272:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Plus, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Plus, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1273:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Minus, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Minus, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1274:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Mul, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Mul, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1275:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Div, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Div, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1276:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Mod, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Mod, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1277:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Xor, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Xor, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1278:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.LT, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.LT, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1279:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.GT, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.GT, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1280:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.EQ, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.EQ, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1281:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.LE, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.LE, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1282:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.GE, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.GE, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1283:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.NE, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.NE, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1284:
@@ -27763,13 +27763,13 @@ yydefault:
 	case 1286:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.LogicAnd, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.LogicAnd, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1287:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.LogicOr, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.LogicOr, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1288:
@@ -28321,73 +28321,73 @@ yydefault:
 	case 1373:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Plus, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Plus, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1374:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Minus, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Minus, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1375:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Mul, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Mul, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1376:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Div, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Div, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1377:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Mod, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Mod, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1378:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.Xor, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.Xor, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1379:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.LT, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.LT, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1380:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.GT, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.GT, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1381:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.EQ, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.EQ, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1382:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.LE, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.LE, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1383:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.GE, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.GE, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1384:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = ast.NewBinaryOperationExpr(opcode.NE, yyDollar[1].expr, yyDollar[3].expr)
+			yyVAL.expr = binaryExpr(opcode.NE, yyDollar[1].expr, yyDollar[3].expr, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1385:
