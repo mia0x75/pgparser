@@ -219,3 +219,9 @@
 - 双仓 `CAST(1 AS CHAR)` 均构造 `FuncCastExpr`，测试锁定 `CastFunction`、输入表达式和完整表达式跨度。
 - PG 使用 `Tp *types.FieldType`，MySQL 使用 `Type *TypeName`；两者都是现有方言类型系统的合法表示，本批不做字段重命名或强制转换。
 - 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2m 函数调用核心
+
+- 双仓 `coalesce(a, b)` 均构造 `FuncCallExpr` 并嵌入 `BaseCallExpr`；测试核对普通函数名、参数个数及调用与参数的完整跨度。
+- PG 的 `FILTER`、`WITHIN GROUP`、星号、DISTINCT、调用内排序与 MySQL 的 INTERVAL/CHARSET/UNIT 等语法修饰符继续保留在方言节点。
+- 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。

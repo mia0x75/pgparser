@@ -548,3 +548,23 @@ func TestParseSharedCastExpressionCore(t *testing.T) {
 		t.Fatalf("CAST child span = %v", childSpan)
 	}
 }
+
+func TestParseSharedFunctionCallCore(t *testing.T) {
+	const raw = "coalesce(a, b)"
+	const sql = "SELECT " + raw
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	expr, ok := stmt.Fields.Items[0].Expr.(*dialectast.FuncCallExpr)
+	if !ok || len(expr.Name.Parts) != 1 || expr.Name.Parts[0].Name != "coalesce" || len(expr.Args) != 2 {
+		t.Fatalf("function call = %#v", stmt.Fields.Items[0].Expr)
+	}
+	span := expr.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != raw {
+		t.Fatalf("function call span = %v", span)
+	}
+	for i, want := range []string{"a", "b"} {
+		argSpan := expr.Args[i].Span()
+		if !argSpan.Within(len(sql)) || sql[argSpan.Start:argSpan.End] != want {
+			t.Fatalf("argument %d span = %v", i, argSpan)
+		}
+	}
+}
