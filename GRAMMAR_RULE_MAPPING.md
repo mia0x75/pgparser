@@ -195,3 +195,9 @@
 - 双仓 `ROW(1, 2)` 与隐式 `(3, 4)` 均构造 `RowExpr`，共享 `BaseRowExpr.Items` 和完整表达式跨度；PG 的 `ExplicitRow`／`ImplicitRow` 与 MySQL 的 `SimpleExpr` 规则保留各自语法组织。
 - `VALUES (1, 2), (3, 4)` 的行数据和恢复文本作为共同形式固定；PG 继续拒绝 `VALUES ROW(...)`，MySQL 继续支持 `VALUES ROW(...)` 并通过 `OmitRowKeyword` 区分两种行拼写，同时拒绝混用 `ROW` 与括号行。
 - 仅增加双仓测试与本记录，不改 AST、grammar 或生成文件；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2i CASE 表达式
+
+- 双仓 searched/simple `CASE` 均构造相同字段的 `CaseExpr` 与 `WhenClause`：`Value`、条件、结果和 `ElseClause`；测试锁定外层完整源码跨度及子表达式语义片段。
+- PG `CaseArg`／`WhenClauseList` 与 MySQL `ExpressionOpt`／`WhenClauseList` 的规则组织保持方言本地实现；PG 子节点跨度允许既有生成器保留的边界空白，不改变接受范围。
+- 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。

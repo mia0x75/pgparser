@@ -413,3 +413,72 @@ func TestParsePostgresValuesRowCompatibility(t *testing.T) {
 		t.Fatal("accepted MySQL-only ROW syntax in VALUES")
 	}
 }
+
+func TestParseSharedCaseExpressionCore(t *testing.T) {
+	tests := []struct {
+		name      string
+		raw       string
+		value     string
+		condition string
+		result    string
+		elseExpr  string
+	}{
+		{
+			name:      "searched",
+			raw:       "CASE WHEN a > 0 THEN 1 ELSE 2 END",
+			condition: "a > 0",
+			result:    "1",
+			elseExpr:  "2",
+		},
+		{
+			name:      "simple",
+			raw:       "CASE a WHEN 1 THEN 'x' ELSE 'y' END",
+			value:     "a",
+			condition: "1",
+			result:    "'x'",
+			elseExpr:  "'y'",
+		},
+	}
+	parts := make([]string, len(tests))
+	for i, tc := range tests {
+		parts[i] = tc.raw
+	}
+	sql := "SELECT " + strings.Join(parts, ", ")
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.CaseExpr)
+			if !ok || len(expr.WhenClauses) != 1 {
+				t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i].Expr)
+			}
+			span := expr.Span()
+			if !span.Within(len(sql)) || sql[span.Start:span.End] != tc.raw {
+				t.Fatalf("%s has span %v", tc.raw, span)
+			}
+			if tc.value == "" {
+				if expr.Value != nil {
+					t.Fatalf("%s value = %#v, want nil", tc.raw, expr.Value)
+				}
+			} else if expr.Value == nil || sql[expr.Value.Span().Start:expr.Value.Span().End] != tc.value {
+				t.Fatalf("%s value = %#v", tc.raw, expr.Value)
+			}
+			clause := expr.WhenClauses[0]
+			if clause == nil || clause.Expr == nil || clause.Result == nil || expr.ElseClause == nil {
+				t.Fatalf("%s clause = %#v", tc.raw, clause)
+			}
+			for label, item := range map[string]struct {
+				node pkast.Node
+				want string
+			}{
+				"when":   {node: clause.Expr, want: tc.condition},
+				"result": {node: clause.Result, want: tc.result},
+				"else":   {node: expr.ElseClause, want: tc.elseExpr},
+			} {
+				childSpan := item.node.Span()
+				if !childSpan.Within(len(sql)) || strings.TrimSpace(sql[childSpan.Start:childSpan.End]) != item.want {
+					t.Fatalf("%s %s span = %v", tc.raw, label, childSpan)
+				}
+			}
+		})
+	}
+}
