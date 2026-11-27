@@ -12,32 +12,50 @@ import (
 )
 
 func TestJoinSharedCore(t *testing.T) {
-	stmt := mustParseSelect(t, `SELECT * FROM "S"."T" AS a RIGHT JOIN u ON a.id = u.id;`)
-	join, ok := fromClause(t, stmt.From).Table.(*ast.Join)
-	if !ok {
-		t.Fatalf("FROM = %T, want *ast.Join", fromClause(t, stmt.From).Table)
-	}
-	var shared pkast.JoinExprNode = join
-	if shared.JoinExprCore() != &join.BaseJoinExpr {
-		t.Fatal("shared core does not refer to the dialect node's data")
-	}
-	if join.Type != pkast.JoinTypeRight || join.Natural {
-		t.Fatalf("join type/natural = %v/%v", join.Type, join.Natural)
-	}
-	if join.On == nil {
-		t.Fatal("expected ON condition")
-	}
-	left, ok := join.Left.(*ast.TableSource)
-	if !ok {
-		t.Fatalf("left = %T, want *ast.TableSource", join.Left)
-	}
-	if left.Alias.Name != "a" || left.Alias.Quote != lex.QuoteUnquoted {
-		t.Fatalf("left alias = %#v", left.Alias)
-	}
-	natural := mustParseSelect(t, `SELECT * FROM t NATURAL JOIN u;`)
-	naturalJoin, ok := fromClause(t, natural.From).Table.(*ast.Join)
-	if !ok || !naturalJoin.Natural || naturalJoin.Type != pkast.JoinTypeInner {
-		t.Fatalf("natural join = %#v", fromClause(t, natural.From).Table)
+	for _, tc := range []struct {
+		name       string
+		sql        string
+		joinType   pkast.JoinType
+		on         bool
+		using      int
+		natural    bool
+		leftAlias  string
+		rightAlias string
+	}{
+		{name: "right on", sql: `SELECT * FROM t AS l RIGHT JOIN u AS r ON l.id = r.id`, joinType: pkast.JoinTypeRight, on: true, leftAlias: "l", rightAlias: "r"},
+		{name: "left using", sql: `SELECT * FROM t AS l LEFT JOIN u AS r USING (id)`, joinType: pkast.JoinTypeLeft, using: 1, leftAlias: "l", rightAlias: "r"},
+		{name: "natural", sql: `SELECT * FROM t NATURAL JOIN u`, joinType: pkast.JoinTypeInner, natural: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stmt := mustParseSelect(t, tc.sql)
+			if stmt.From == nil {
+				t.Fatal("shared FROM clause is nil")
+			}
+			from := stmt.From.FromClauseCore()
+			if from == nil {
+				t.Fatal("shared FROM core is nil")
+			}
+			join, ok := from.Table.(pkast.JoinExprNode)
+			if !ok || join.JoinExprCore() == nil {
+				t.Fatalf("FROM = %T, want shared JoinExprNode", from.Table)
+			}
+			core := join.JoinExprCore()
+			if core.Type != tc.joinType || core.Natural != tc.natural || (core.On != nil) != tc.on || len(core.Using) != tc.using {
+				t.Fatalf("shared JOIN core = %#v", core)
+			}
+			for _, side := range []struct {
+				name, alias string
+				node        pkast.ResultSetNode
+			}{{"left", tc.leftAlias, core.Left}, {"right", tc.rightAlias, core.Right}} {
+				source, ok := side.node.(pkast.TableSourceNode)
+				if !ok || source.TableSourceCore() == nil {
+					t.Fatalf("%s source = %T, want shared TableSourceNode", side.name, side.node)
+				}
+				if got := source.TableSourceCore().Alias.Name; got != side.alias {
+					t.Fatalf("%s alias = %q, want %q", side.name, got, side.alias)
+				}
+			}
+		})
 	}
 	if reflect.TypeFor[ast.JoinExprNode]() != reflect.TypeFor[pkast.JoinExprNode]() || reflect.TypeFor[ast.JoinType]() != reflect.TypeFor[pkast.JoinType]() {
 		t.Fatal("join interfaces are not shared aliases")

@@ -35,7 +35,7 @@
 | --- | --- | --- | --- | --- |
 | 投影 | `Field`、`FieldList`、`OptTargetList` | `Field`、`FieldList`、`SelectStmtFieldList` | `SelectItem`、别名、通配符、字段顺序、Span | `OptTargetList` 与 `SelectStmtFieldList` 都是入口适配器，不合并；Q1a 只改 PG 名称。 |
 | SELECT 主体 | `SimpleSelect`、`SelectClause` | `SelectStmtBasic`、`SelectStmtFromDualTable`、`SelectStmtFromTable` | `BaseSelectStmt` 的 Fields/From/Where/GroupBy/Having | 部分重叠；Q2 只核对字段挂载，不改方言子句。 |
-| FROM / JOIN | `TableRefsClause`、`TableRefs`、`TableRef`、`JoinTable`、`JoinQual` | `TableRefsClause`、`TableRefs`、`TableRef`、`TableFactor`、`JoinTable` | `BaseTableSource`、`BaseJoinExpr` 的 Left/Right/Type/On/Using/Natural | 部分重叠；Q3 先保留两仓消歧结构。 |
+| FROM / JOIN | `TableRefsClause`、`TableRefs`、`TableRef`、`JoinTable`、`JoinQual` | `TableRefsClause`、`TableRefs`、`TableRef`、`TableFactor`、`JoinTable` | `BaseTableSource`、`BaseJoinExpr` 的 Left/Right/Type/On/Using/Natural | 部分重叠；Q3 先保留两仓消歧结构。另有顶层表列表的 AST 形状差异，见 Q3 进度，需另立 AST/行为决策。 |
 | 查询尾部 | `OrderBy`、`OrderByOpt`、`SelectLimit`、`ForLockingClause` | `OrderBy`、`OrderByOpt`、`SelectStmtLimit`、`SelectLockClause` | OrderBy、Limit、锁等待属性 | 部分重叠；PG `FETCH` 与 MySQL `LOCK IN SHARE MODE` 不互换。 |
 | CTE | `WithClause`、`WithList`、`WithClauseItem`、`OptSearchClause`、`OptCycleClause` | `WithClause`、`WithList`、`WithClauseItem`、`CTEBody`、`WithCycleOpt` | `BaseWithClause`、`BaseCommonTableExpression` | 核心字段重叠；主体类型和递归扩展分离。 |
 | 窗口 | `WindowClauseOpt`、`WindowDefinition`、`WindowSpec`、`WindowFrameExtent`、`WindowFrameBound` | 同名规则及 `WindowSpecDetails`、`WindowFrameUnits` 等 | `BaseWindowSpec`、frame 边界、命名窗口 | 部分重叠；Q7 逐子项验证。 |
@@ -68,3 +68,8 @@
 - 生成基线：PG 3,012 产生式、6,204 状态、126,217 `yyAct`、418 shift/reduce、37 reduce/reduce；MySQL 2,891 产生式、4,906 状态、77,825 `yyAct`、0/0 冲突。
 - 共享 AST：两仓使用 `parserkit v1.0.0`；已核对的 `select.go`、`cte.go`、`join.go`、`table_source.go`、`insert.go`、`update.go`、`delete.go`、`window.go` 与发布版一致。
 - 迁移范围：B0 只增加映射文档；未改 `grammar.y`、生成 parser、AST、测试和依赖。
+
+## Q3 结构核对记录
+
+- 双仓共享护栏覆盖 `RIGHT JOIN ... ON`、`LEFT JOIN ... USING`、`NATURAL JOIN`；断言 `BaseJoinExpr` 字段与左右 `BaseTableSource` 别名。
+- 尚存 AST 形状差异：PG `TableRefs` 在单一来源时直接保留表源，逗号列表用 `JoinTypeCross` 连接；MySQL `TableRefs` 先构造左单边 `JoinExpr`，逗号列表再用 `JoinTypeInner` 拼接，并以括号组记录保护显式连接分组。共享 `BaseFromClause.Table` 类型允许这两种树形，但消费者观察到的节点不同；本批只锁定真实 JOIN 的共同核心，不折叠或改写该行为。若要统一树形，先审计 Restore、Visitor 和查询规划消费者，列为独立 AST/行为决策。
