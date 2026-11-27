@@ -363,3 +363,53 @@ func TestParseSharedCompareSubqueryCore(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSharedRowConstructorCore(t *testing.T) {
+	tests := []struct {
+		name  string
+		raw   string
+		items []string
+	}{
+		{name: "explicit", raw: "ROW(1, 2)", items: []string{"1", "2"}},
+		{name: "implicit", raw: "(3, 4)", items: []string{"3", "4"}},
+	}
+	sql := "SELECT " + tests[0].raw + ", " + tests[1].raw
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.RowExpr)
+			if !ok || len(expr.Items) != 2 {
+				t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i].Expr)
+			}
+			span := expr.Span()
+			if !span.Within(len(sql)) || sql[span.Start:span.End] != tc.raw {
+				t.Fatalf("%s has span %v", tc.raw, span)
+			}
+			for j, want := range tc.items {
+				childSpan := expr.Items[j].Span()
+				if !childSpan.Within(len(sql)) || sql[childSpan.Start:childSpan.End] != want {
+					t.Fatalf("%s item %d has span %v", tc.raw, j, childSpan)
+				}
+			}
+		})
+	}
+}
+
+func TestParsePostgresValuesRowCompatibility(t *testing.T) {
+	const sql = "VALUES (1, 2), (3, 4)"
+	stmt := mustParseOne(t, sql).(*dialectast.ValuesStmt)
+	if len(stmt.Rows) != 2 {
+		t.Fatalf("VALUES rows = %d, want 2", len(stmt.Rows))
+	}
+	for i, row := range stmt.Rows {
+		if row == nil || len(row.Items) != 2 {
+			t.Fatalf("VALUES row %d = %#v", i, row)
+		}
+	}
+	if got := compactSQL(restoreNode(t, stmt)); got != sql {
+		t.Fatalf("VALUES restore = %q, want %q", got, sql)
+	}
+	if _, err := parser.New().ParseOneStmt("VALUES ROW(1, 2)"); err == nil {
+		t.Fatal("accepted MySQL-only ROW syntax in VALUES")
+	}
+}
