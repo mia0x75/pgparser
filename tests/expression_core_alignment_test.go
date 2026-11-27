@@ -530,3 +530,21 @@ func TestParseSharedUnaryExpressionCore(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSharedCastExpressionCore(t *testing.T) {
+	const raw = "CAST(1 AS CHAR)"
+	const sql = "SELECT " + raw
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	expr, ok := stmt.Fields.Items[0].Expr.(*dialectast.FuncCastExpr)
+	if !ok || expr.FunctionType != dialectast.CastFunction || expr.Expr == nil || expr.Tp == nil {
+		t.Fatalf("CAST expression = %#v", stmt.Fields.Items[0].Expr)
+	}
+	span := expr.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != raw {
+		t.Fatalf("CAST span = %v", span)
+	}
+	childSpan := expr.Expr.Span()
+	if !childSpan.Within(len(sql)) || sql[childSpan.Start:childSpan.End] != "1" {
+		t.Fatalf("CAST child span = %v", childSpan)
+	}
+}

@@ -213,3 +213,9 @@
 - 双仓 `NOT a` 与 `-b` 均构造 `UnaryOperationExpr`，测试锁定 `opcode`、子表达式和完整表达式跨度。
 - PG 的 `OpName` 文本覆盖和 MySQL 的专属一元运算符保持方言扩展，不强行统一恢复行为。
 - 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2l CAST 表达式
+
+- 双仓 `CAST(1 AS CHAR)` 均构造 `FuncCastExpr`，测试锁定 `CastFunction`、输入表达式和完整表达式跨度。
+- PG 使用 `Tp *types.FieldType`，MySQL 使用 `Type *TypeName`；两者都是现有方言类型系统的合法表示，本批不做字段重命名或强制转换。
+- 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
