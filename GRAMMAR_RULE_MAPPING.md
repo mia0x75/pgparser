@@ -267,3 +267,17 @@
 - 类型与函数体仍由方言 AST 承载：PG 序列选项为 `DefElem` 列表、函数返回类型为 `FieldType`；MySQL 序列选项为 `SequenceOption` 列表、函数返回类型为 `TypeName`，并保留例程特征和 definer。PG 的 CREATE SCHEMA 与 MySQL 的 schema/database 同义关系不合并。
 - 表空间和触发器没有可直接共享的语法/执行模型：PG 表空间位置、MySQL 表空间数据文件/引擎分别由 `TestRestoreTablespaceLocation` 与 `TestTablespaceAST` 覆盖；PG 触发器函数调用与 MySQL 触发器语句体分别由 `TestRestoreTrigger` 与 `TestCreateTrigger` 覆盖。保持方言入口与已有测试，不制造共同 AST。
 - 仅新增匹配测试和映射记录；双仓 build、vet、race、lint、tidy、生成检查通过；PG testdata 40,644 条无新增失败，冲突 418/37；MySQL MTR 87,549 条逐用例与基线一致，冲突 0/0。
+
+## S1 其余语句与扩展
+
+| 族 | PG 入口与 AST | MySQL 入口与 AST | 对齐与验证边界 |
+| --- | --- | --- | --- |
+| 事务、保存点 | `TransactionStmt` → `BeginStmt/CommitStmt/RollbackStmt/SavepointStmt/ReleaseSavepointStmt` | `BeginTransactionStmt/CommitStmt/RollbackStmt/SavepointStmt/ReleaseSavepointStmt` | 匹配测试固定 BEGIN、COMMIT WORK、ROLLBACK 和保存点目标。PG 事务模式、两阶段事务与 MySQL consistent snapshot、chain/release、`XAStmt` 保留；保存点 string/Ident 不强转。 |
+| 预处理 | `PreparedStmt/ExecuteStmt/DeallocateStmt` → 同名 AST | 同名规则 → 同名 AST | PG `PREPARE ... AS` 保存类型/AST，EXECUTE 使用 Args；MySQL `PREPARE ... FROM` 保存文本/变量，EXECUTE 使用 UsingVars，另有 IMMEDIATE。测试名称、来源、参数数及 DEALLOCATE PREPARE；互斥语法有反例，不制造共同来源节点。 |
+| 权限、身份 | `GrantStmt/RevokeStmt/GrantRoleStmt/RevokeRoleStmt`、角色/用户/组、`AlterDefaultPrivilegesStmt/DropOwnedStmt/ReassignOwnedStmt` | `GrantStmt/RevokeStmt/GrantRoleStmt/RevokeRoleStmt`、用户/角色、`SetRoleStmt/SetDefaultRoleStmt/RenameUserStmt` | 匹配 GRANT 测试锁定 SELECT、对象、受权人数与授权选项。PG 对象列表/角色与 MySQL GrantObject/账号语义保留；复用 PG `TestParseSQLReferenceUtilityStatementFamilies`、MySQL `TestPrivilege`。 |
+| 维护、解释、锁 | `ExplainStmt/VacuumStmt/AnalyzeStmt/ClusterStmt/ReindexStmt/CheckPointStmt/DiscardStmt/LockStmt/TruncateTableStmt` | `ExplainStmt/AnalyzeTableStmt/CheckTableStmt/RepairTableStmt/OptimizeTableStmt/ChecksumTableStmt/FlushStmt/LockTablesStmt/UnlockTablesStmt/TruncateTableStmt` | 测试 EXPLAIN 的查询主体和 ANALYZE 的目标。PG 统计选项/关系列表与 MySQL TABLE/分区/索引选项分开；复用 PG `TestParseSQLMaintenanceAndSessionStatementsAST`、MySQL管理测试，不统一锁强度或维护行为。 |
+| 导入导出 | `CopyStmt/ImportForeignSchemaStmt` | `LoadDataStmt/LoadXMLStmt/ImportTableStmt` | 各自正例断言 COPY STDIN、LOAD DATA LOCAL 的来源标记与目标；交叉反例禁止互补语法。复用 `TestRestoreCopy`、`TestRestoreCopyBooleanOptions`、`TestRestoreImportForeignSchema`、`TestLoadXMLModifiers`。 |
+| 会话、通知、游标、例程 | `VariableSetStmt/VariableShowStmt/VariableResetStmt/ConstraintsSetStmt/ListenStmt/UnlistenStmt/NotifyStmt/LoadStmt/DeclareCursorStmt/FetchStmt/ClosePortalStmt/CallStmt/DoStmt` | `SetStmt/SetStatementStmt/ShowStmt/UseStmt/CallStmt/DoStmt/ReturnStmt/TopLevelForStmt/GetDiagnosticsStmt/HandlerStmt` | 同名 SHOW/LOAD/DO 不代表同义；PG 通知/游标与 MySQL SHOW/诊断/handler 分别维护。复用 PG utility/session 测试、MySQL `TestManagementSessionAndPreparedRoundTrip`、`TestGetDiagnostics`；新增 SHOW REPLICA/LISTEN 交叉反例。 |
+| 外部对象、扩展与管理 | FDW/server/foreign table/user mapping、extension、publication/subscription、policy、event trigger、访问方法、全文检索、operator family/class、cast/transform/conversion、stats、对象 owner/schema/dependency | server、plugin/component、clone、backup、resource/logfile group、复制 `ChangeMasterStmt/ReplicaControlStmt/ResetStmt/BinlogStmt/PurgeStmt`、shutdown/kill、cache/load index | 归档为方言族，保留本地动作与 AST。PG 外部对象测试及全量 testdata、MySQL `TestImportInstallClone`、`TestReplicationControlClauses`、`TestManagementShowReplicaRoundTrip` 与 MTR 覆盖现状；不承诺每个扩展均有共享 AST。 |
+
+- S1 的影响面仅为双仓 `tests/utility_core_alignment_test.go` 与 PG 批次文档；未修改产生式、生产动作、导出 API、依赖或语料豁免。接受范围及解析表不变，无热路径变更，不需要性能比较。
