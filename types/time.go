@@ -11,17 +11,16 @@ import (
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/postgres"
-	"github.com/mia0x75/pgparser/sqlerr"
 )
 
 // Portable analogs of some common call errors.
 var (
-	ErrInvalidTimeFormat      = sqlerr.ClassTypes.New(postgres.ErrTruncatedWrongValue, "invalid time format: '%v'")
+	ErrInvalidTimeFormat      = postgres.ClassTypes.New(postgres.ErrTruncatedWrongValue, "invalid time format: '%v'")
 	ErrInvalidYearFormat      = errors.New("invalid year format")
 	ErrInvalidYear            = errors.New("invalid year")
 	ErrZeroDate               = errors.New("datetime zero in date")
-	ErrIncorrectDatetimeValue = sqlerr.ClassTypes.New(postgres.ErrTruncatedWrongValue, "Incorrect datetime value: '%s'")
-	ErrTruncatedWrongValue    = sqlerr.ClassTypes.New(postgres.ErrTruncatedWrongValue, postgres.PgErrName[postgres.ErrTruncatedWrongValue])
+	ErrIncorrectDatetimeValue = postgres.ClassTypes.New(postgres.ErrTruncatedWrongValue, "Incorrect datetime value: '%s'")
+	ErrTruncatedWrongValue    = postgres.ClassTypes.New(postgres.ErrTruncatedWrongValue, postgres.PgErrName[postgres.ErrTruncatedWrongValue])
 )
 
 // Time format without fractional seconds precision.

@@ -1,4 +1,4 @@
-package sqlerr
+package postgres
 
 import (
 	"encoding/json"
@@ -8,8 +8,6 @@ import (
 	"strconv"
 
 	"github.com/mia0x75/pgparser/errors"
-
-	"github.com/mia0x75/pgparser/postgres"
 )
 
 // Global error instances.
@@ -246,10 +244,10 @@ func (e *Error) NotEqual(err error) bool {
 	return !e.Equal(err)
 }
 
-// ToSQLError convert Error to postgres.SQLError.
-func (e *Error) ToSQLError() *postgres.SQLError {
+// ToSQLError converts Error to a PostgreSQL SQL error.
+func (e *Error) ToSQLError() *SQLError {
 	code := e.getPgErrCode()
-	return postgres.NewErrf(code, "%s", e.getMsg())
+	return NewErrf(code, "%s", e.getMsg())
 }
 
 var defaultPgErrCode uint16
@@ -274,7 +272,7 @@ var (
 
 func init() {
 	ErrClassToPgCodes = make(map[ErrClass]map[ErrCode]uint16)
-	defaultPgErrCode = postgres.ErrUnknown
+	defaultPgErrCode = ErrUnknown
 }
 
 // ErrorEqual returns a boolean indicating whether err1 is equal to err2.

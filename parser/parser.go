@@ -9,7 +9,7 @@ import (
 
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/errors"
-	"github.com/mia0x75/pgparser/sqlerr"
+	"github.com/mia0x75/pgparser/postgres"
 )
 
 // ParseErrors merges the errors produced by one parse. Messages and cause
@@ -81,14 +81,14 @@ func (*Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
 
 	errs := state.lexer.Errors()
 	if len(errs) != 0 {
-		// Keep a single error unwrappable so sqlerr class checks still match.
+		// Keep a single error unwrappable so PostgreSQL error class checks still match.
 		if len(errs) == 1 {
 			return nil, errors.Trace(errs[0])
 		}
 		return nil, errors.Trace(&ParseErrors{Errs: errs})
 	}
 	if ret != 0 {
-		return nil, errors.Trace(sqlerr.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
+		return nil, errors.Trace(postgres.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
 	}
 	if state.lexer.result != nil {
 		for _, item := range state.lexer.result.Items {
@@ -114,7 +114,7 @@ func (parser *Parser) ParseOneStmt(sql string) (ast.StmtNode, error) {
 		return nil, errors.Trace(err)
 	}
 	if len(stmts) != 1 {
-		return nil, errors.Trace(sqlerr.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
+		return nil, errors.Trace(postgres.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
 	}
 	return stmts[0], nil
 }

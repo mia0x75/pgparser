@@ -98,6 +98,8 @@ stmt, err := pgparser.New().ParseOneStmt("SELECT 1;")
 
 `CompareSubqueryExpr.OpName` 保留自定义及显式 `OPERATOR(...)`，非空时优先于旧 `Op` 字段；`BetweenExpr.Symmetric`、`ByItem.UseOp` 保留对应表达式与排序语义。`DROP FUNCTION/PROCEDURE` 有无签名均返回对应专用节点：`Arguments` 与 `Names` 对齐，nil 项表示省略签名，空列表表示 `()`；`Behavior` 保留 CASCADE，旧 `Name` 字段仍对应首个目标。
 
+SQL 错误类型、错误类和 SQLSTATE 诊断统一由 `github.com/mia0x75/pgparser/postgres` 提供；原 `sqlerr` 包已移除。解析入口和返回的 SQLSTATE 不变。
+
 `types/json` 使用内部随机访问格式，并非 PostgreSQL 的 jsonb 存储。数字比较不再使用浮点容差或将整数转为 float64；`Unquote` 返回已解码字符串，路径中的 `"*"` 是字面键，裸 `.*` 才是通配符。`MarshalJSON`、`PeekBytesAsJSON` 及返回错误的修改入口拒绝损坏布局、重叠载荷与过深嵌套；无错误返回的随机访问接口仍要求有效的内部值，不应直接传入未经校验的外部字节。
 
 ## 项目结构

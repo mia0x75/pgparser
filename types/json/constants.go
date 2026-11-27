@@ -5,7 +5,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/mia0x75/pgparser/postgres"
-	"github.com/mia0x75/pgparser/sqlerr"
 )
 
 // TypeCode indicates JSON type.
@@ -192,25 +191,25 @@ const (
 
 var (
 	// ErrInvalidJSONText means invalid JSON text.
-	ErrInvalidJSONText = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONText, postgres.PgErrName[postgres.ErrInvalidJSONText])
+	ErrInvalidJSONText = postgres.ClassJSON.New(postgres.ErrInvalidJSONText, postgres.PgErrName[postgres.ErrInvalidJSONText])
 	// ErrInvalidJSONPath means invalid JSON path.
-	ErrInvalidJSONPath = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONPath, postgres.PgErrName[postgres.ErrInvalidJSONPath])
+	ErrInvalidJSONPath = postgres.ClassJSON.New(postgres.ErrInvalidJSONPath, postgres.PgErrName[postgres.ErrInvalidJSONPath])
 	// ErrInvalidJSONData means invalid JSON data.
-	ErrInvalidJSONData = sqlerr.ClassJSON.New(postgres.ErrInvalidJSONData, postgres.PgErrName[postgres.ErrInvalidJSONData])
+	ErrInvalidJSONData = postgres.ClassJSON.New(postgres.ErrInvalidJSONData, postgres.PgErrName[postgres.ErrInvalidJSONData])
 	// ErrInvalidJSONPathWildcard means invalid JSON path that contain wildcard characters.
-	ErrInvalidJSONPathWildcard = sqlerr.ClassJSON.New(
+	ErrInvalidJSONPathWildcard = postgres.ClassJSON.New(
 		postgres.ErrInvalidJSONPathWildcard,
 		postgres.PgErrName[postgres.ErrInvalidJSONPathWildcard],
 	)
 	// ErrInvalidJSONContainsPathType means invalid JSON contains path type.
-	ErrInvalidJSONContainsPathType = sqlerr.ClassJSON.New(
+	ErrInvalidJSONContainsPathType = postgres.ClassJSON.New(
 		postgres.ErrInvalidJSONContainsPathType,
 		postgres.PgErrName[postgres.ErrInvalidJSONContainsPathType],
 	)
 )
 
 func init() {
-	sqlerr.ErrClassToPgCodes[sqlerr.ClassJSON] = map[sqlerr.ErrCode]uint16{
+	postgres.ErrClassToPgCodes[postgres.ClassJSON] = map[postgres.ErrCode]uint16{
 		postgres.ErrInvalidJSONText:             postgres.ErrInvalidJSONText,
 		postgres.ErrInvalidJSONPath:             postgres.ErrInvalidJSONPath,
 		postgres.ErrInvalidJSONData:             postgres.ErrInvalidJSONData,

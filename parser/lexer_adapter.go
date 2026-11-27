@@ -8,7 +8,7 @@ import (
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/sqlerr"
+	"github.com/mia0x75/pgparser/postgres"
 )
 
 // Scanner adapts the PostgreSQL lexer to the goyacc-generated yyLexer
@@ -210,5 +210,5 @@ func (e *ParseError) Diagnostic() *diagnostic.Diagnostic {
 	if !span.Valid() {
 		span = loc.InvalidSpan()
 	}
-	return sqlerr.SyntaxDiagnostic(e.Message, span, e)
+	return postgres.SyntaxDiagnostic(e.Message, span, e)
 }

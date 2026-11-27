@@ -6,8 +6,15 @@ import (
 	"testing"
 
 	"github.com/mia0x75/pgparser/postgres"
-	"github.com/mia0x75/pgparser/sqlerr"
 )
+
+func TestTypeErrorSQLState(t *testing.T) {
+	got := ErrDataTooLong.ToSQLError()
+	if got.Code != postgres.ErrDataTooLong || got.State != postgres.PgState[postgres.ErrDataTooLong] ||
+		got.Message != "Data Too Long" {
+		t.Fatalf("converted type error = %#v", got)
+	}
+}
 
 func testIsTypeBlob(t *testing.T, tp byte, expect bool) {
 	v := IsTypeBlob(tp)
@@ -205,7 +212,7 @@ func TestTruncate(t *testing.T) {
 		if f != tt.Expect {
 			t.Fatalf("got %#v, want %#v", f, tt.Expect)
 		}
-		if !sqlerr.ErrorEqual(err, tt.Err) {
+		if !postgres.ErrorEqual(err, tt.Err) {
 			t.Fatalf("err %v", err)
 		}
 	}

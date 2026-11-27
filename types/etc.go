@@ -8,7 +8,6 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/opcode"
 	"github.com/mia0x75/pgparser/postgres"
-	"github.com/mia0x75/pgparser/sqlerr"
 )
 
 // IsTypeBlob returns a boolean indicating whether the tp is a blob type.
@@ -83,7 +82,7 @@ func TypeToStr(tp byte, cs string) (r string) {
 }
 
 // ErrInvalidDefault is returned when meet a invalid default value.
-var ErrInvalidDefault = sqlerr.ClassTypes.New(codeInvalidDefault, "Invalid default value for '%s'")
+var ErrInvalidDefault = postgres.ClassTypes.New(codeInvalidDefault, "Invalid default value for '%s'")
 
 // IsTypeVarchar returns a boolean indicating
 // whether the tp is the varchar type like a varstring type or a varchar type.
@@ -184,7 +183,7 @@ func KindStr(kind byte) (r string) {
 // EOFAsNil filtrates errors,
 // If err is equal to io.EOF returns nil.
 func EOFAsNil(err error) error {
-	if sqlerr.ErrorEqual(err, io.EOF) {
+	if postgres.ErrorEqual(err, io.EOF) {
 		return nil
 	}
 	return errors.Trace(err)
