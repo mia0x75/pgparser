@@ -73,3 +73,9 @@
 
 - 双仓共享护栏覆盖 `RIGHT JOIN ... ON`、`LEFT JOIN ... USING`、`NATURAL JOIN`；断言 `BaseJoinExpr` 字段与左右 `BaseTableSource` 别名。
 - 尚存 AST 形状差异：PG `TableRefs` 在单一来源时直接保留表源，逗号列表用 `JoinTypeCross` 连接；MySQL `TableRefs` 先构造左单边 `JoinExpr`，逗号列表再用 `JoinTypeInner` 拼接，并以括号组记录保护显式连接分组。共享 `BaseFromClause.Table` 类型允许这两种树形，但消费者观察到的节点不同；本批只锁定真实 JOIN 的共同核心，不折叠或改写该行为。若要统一树形，先审计 Restore、Visitor 和查询规划消费者，列为独立 AST/行为决策。
+
+## Q4 结构核对记录
+
+- PG 在 `SelectClause` 中接入 SELECT、集合运算、`VALUES` 和 `TABLE`；MySQL 将 `SelectStmt`、`SetOprStmt`、`ValuesSetOprStmt` 与 `TableStmt` 作为不同入口。保持入口分离，避免 `VALUES` 表达式歧义和入口消歧变化。
+- 双仓 `TestParseSharedSetOperationCore` 断言共享 `BaseSetOperation`、`INTERSECT` 优先级、显式括号组和 `VALUES ... UNION VALUES ...` 的共同核心。单 SELECT 分支、VALUES 构造和 TABLE 查询仍由各自现有方言测试覆盖。
+- 两仓用共享 `QueryTailStmt` 的 `Parenthesized` 标记包装显式括号内的集合操作；PG 还以 `SelectStmt.IsInBraces` 标记简单 SELECT 分支。继续保留此 AST 层次，不为规则同名而折叠。

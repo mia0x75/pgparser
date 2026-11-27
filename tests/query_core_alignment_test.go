@@ -47,3 +47,59 @@ func TestParseSharedQueryCore(t *testing.T) {
 		t.Fatalf("shared CTE core = %#v", cte)
 	}
 }
+
+func TestParseSharedSetOperationCore(t *testing.T) {
+	for _, tc := range []struct {
+		name               string
+		sql                string
+		operator           pkast.SetOperationType
+		rightOperator      pkast.SetOperationType
+		rightParenthesized bool
+	}{
+		{
+			name:          "intersect precedence",
+			sql:           "SELECT 1 UNION SELECT 2 INTERSECT SELECT 3",
+			operator:      pkast.SetOperationUnion,
+			rightOperator: pkast.SetOperationIntersect,
+		},
+		{
+			name:               "parenthesized right operand",
+			sql:                "SELECT 1 UNION (SELECT 2 INTERSECT SELECT 3)",
+			operator:           pkast.SetOperationUnion,
+			rightOperator:      pkast.SetOperationIntersect,
+			rightParenthesized: true,
+		},
+		{
+			name:     "values operands",
+			sql:      "VALUES (1) UNION VALUES (2)",
+			operator: pkast.SetOperationUnion,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			node := mustParseOne(t, tc.sql)
+			setOperation, ok := node.(pkast.SetOperationNode)
+			if !ok || setOperation.SetOperationCore() == nil {
+				t.Fatalf("query = %T, want shared SetOperationNode", node)
+			}
+			core := setOperation.SetOperationCore()
+			if core.Operator != tc.operator || core.Left == nil || core.Right == nil {
+				t.Fatalf("shared set-operation core = %#v", core)
+			}
+			if tc.rightOperator == pkast.SetOperationUnknown {
+				return
+			}
+			right := core.Right
+			if tc.rightParenthesized {
+				wrapper, ok := right.(pkast.QueryTailNode)
+				if !ok || wrapper.QueryTailStmtCore() == nil || !wrapper.QueryTailStmtCore().Parenthesized {
+					t.Fatalf("right operand = %T, want shared parenthesized query wrapper", right)
+				}
+				right = wrapper.QueryTailStmtCore().Query
+			}
+			nested, ok := right.(pkast.SetOperationNode)
+			if !ok || nested.SetOperationCore() == nil || nested.SetOperationCore().Operator != tc.rightOperator {
+				t.Fatalf("right operand = %T, want nested %s", right, tc.rightOperator)
+			}
+		})
+	}
+}
