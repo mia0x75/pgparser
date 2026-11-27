@@ -23,6 +23,12 @@ func isNullExpr(expr ast.ExprNode, not bool, span loc.Span) *ast.IsNullExpr {
 	return node
 }
 
+func isTruthExpr(expr ast.ExprNode, not bool, truth int64, span loc.Span) *ast.IsTruthExpr {
+	node := &ast.IsTruthExpr{Expr: expr, Not: not, True: truth}
+	node.SetSpan(span)
+	return node
+}
+
 func patternInExpr(expr ast.ExprNode, list []ast.ExprNode, subquery ast.ExprNode, not bool, span loc.Span) *ast.PatternInExpr {
 	node := &ast.PatternInExpr{Expr: expr, List: list, Sel: subquery, Not: not}
 	node.SetSpan(span)

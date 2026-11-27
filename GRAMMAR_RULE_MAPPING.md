@@ -161,3 +161,9 @@
 - 双仓 `TestParseSharedPredicateExpressionCore` 核验谓词节点、否定标记、列表／子查询槽位、谓词与子表达式源码跨度，并拒绝空 `IN`、不完整 `BETWEEN`／`IS`。
 - PG `deac12c` → E2b 生成文件由 1,238,493 变为 1,238,485 字节；MySQL `75ee3e9` → E2b 由 892,356 变为 892,126 字节。双仓解析表逐字节不变，PG 冲突 418／37、MySQL 0／0；改变量来自动作代码。
 - PG 40,644 条 testdata 与 MySQL 87,549 条 MTR 结果和基线一致。最终源码交错基准各 12 次，耗时无显著变化，分配字节及分配次数不变。
+
+## E2c IS TRUE / FALSE 谓词
+
+- PG `AExpr` 的 TRUE／FALSE 四种形式与 MySQL `Expression` 中对应的 `IsOrNotOp` 分支统一调用 `isTruthExpr(expr, not, truth, span)`；四种形式都检查 AST 标志与完整源码跨度。
+- `UNKNOWN` 仍按旧动作映射：PG 使用 `IsTruthExpr`，MySQL 使用 `IsNullExpr`。方言用例分别固定其字段和值，未改写成对方仓库的表达。
+- PG `d0de4e8` → E2c 生成文件由 1,238,485 变为 1,238,488 字节；MySQL `bd89b62` → E2c 由 892,126 变为 892,024 字节。解析表逐字节不变，PG 冲突 418／37、MySQL 0／0；双仓语料结果与 E2b 基线一致。交错基准各 12 次，耗时无显著变化，分配字节及分配次数不变。

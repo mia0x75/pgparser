@@ -8305,27 +8305,27 @@ AExpr:
 		}
 	| AExpr IS TRUE_P
 		{
-			$$ = &ast.IsTruthExpr{Expr: $1, True: 1}
+			$$ = isTruthExpr($1, false, 1, yyVAL.span)
 		}
 	| AExpr IS FALSE_P
 		{
-			$$ = &ast.IsTruthExpr{Expr: $1}
+			$$ = isTruthExpr($1, false, 0, yyVAL.span)
 		}
 	| AExpr IS NOT TRUE_P              %prec IS
 		{
-			$$ = &ast.IsTruthExpr{Expr: $1, Not: true, True: 1}
+			$$ = isTruthExpr($1, true, 1, yyVAL.span)
 		}
 	| AExpr IS NOT FALSE_P             %prec IS
 		{
-			$$ = &ast.IsTruthExpr{Expr: $1, Not: true}
+			$$ = isTruthExpr($1, true, 0, yyVAL.span)
 		}
 	| AExpr IS UNKNOWN                 %prec IS
 		{
-			$$ = &ast.IsTruthExpr{Expr: $1, Not: true}
+			$$ = isTruthExpr($1, true, 0, yyVAL.span)
 		}
 	| AExpr IS NOT UNKNOWN             %prec IS
 		{
-			$$ = &ast.IsTruthExpr{Expr: $1, True: 1}
+			$$ = isTruthExpr($1, false, 1, yyVAL.span)
 		}
 	| AExpr ISNULL
 		{

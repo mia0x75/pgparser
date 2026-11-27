@@ -27799,37 +27799,37 @@ yydefault:
 	case 1292:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsTruthExpr{Expr: yyDollar[1].expr, True: 1}
+			yyVAL.expr = isTruthExpr(yyDollar[1].expr, false, 1, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1293:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsTruthExpr{Expr: yyDollar[1].expr}
+			yyVAL.expr = isTruthExpr(yyDollar[1].expr, false, 0, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1294:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsTruthExpr{Expr: yyDollar[1].expr, Not: true, True: 1}
+			yyVAL.expr = isTruthExpr(yyDollar[1].expr, true, 1, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1295:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsTruthExpr{Expr: yyDollar[1].expr, Not: true}
+			yyVAL.expr = isTruthExpr(yyDollar[1].expr, true, 0, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1296:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsTruthExpr{Expr: yyDollar[1].expr, Not: true}
+			yyVAL.expr = isTruthExpr(yyDollar[1].expr, true, 0, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1297:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsTruthExpr{Expr: yyDollar[1].expr, True: 1}
+			yyVAL.expr = isTruthExpr(yyDollar[1].expr, false, 1, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1298:

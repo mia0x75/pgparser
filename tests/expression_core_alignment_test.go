@@ -1,6 +1,7 @@
 package parser_test
 
 import (
+	"strings"
 	"testing"
 
 	pkast "github.com/mia0x75/parserkit/ast"
@@ -183,6 +184,56 @@ func TestParseSharedPredicateExpressionCore(t *testing.T) {
 	for _, malformed := range []string{"SELECT a IN ()", "SELECT a BETWEEN 1", "SELECT a IS"} {
 		if _, err := parser.New().ParseOneStmt(malformed); err == nil {
 			t.Errorf("accepted malformed predicate %q", malformed)
+		}
+	}
+}
+
+func TestParseSharedTruthPredicateCore(t *testing.T) {
+	tests := []struct {
+		name  string
+		raw   string
+		not   bool
+		truth int64
+	}{
+		{name: "is true", raw: "a IS TRUE", truth: 1},
+		{name: "is false", raw: "a IS FALSE"},
+		{name: "is not true", raw: "a IS NOT TRUE", not: true, truth: 1},
+		{name: "is not false", raw: "a IS NOT FALSE", not: true},
+	}
+	parts := make([]string, len(tests))
+	for i, tc := range tests {
+		parts[i] = tc.raw
+	}
+	sql := "SELECT " + strings.Join(parts, ", ")
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.IsTruthExpr)
+			if !ok || expr.Not != tc.not || expr.True != tc.truth {
+				t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i].Expr)
+			}
+			span := expr.Span()
+			if !span.Within(len(sql)) || sql[span.Start:span.End] != tc.raw {
+				t.Fatalf("%s has span %v", tc.raw, span)
+			}
+			childSpan := expr.Expr.Span()
+			if !childSpan.Within(len(sql)) || sql[childSpan.Start:childSpan.End] != "a" {
+				t.Fatalf("%s child has span %v", tc.raw, childSpan)
+			}
+		})
+	}
+}
+
+func TestParsePostgresUnknownTruthCompatibility(t *testing.T) {
+	const sql = "SELECT a IS UNKNOWN, a IS NOT UNKNOWN"
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, want := range []struct {
+		not   bool
+		truth int64
+	}{{not: true}, {truth: 1}} {
+		expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.IsTruthExpr)
+		if !ok || expr.Not != want.not || expr.True != want.truth {
+			t.Fatalf("unknown predicate %d = %#v", i, stmt.Fields.Items[i].Expr)
 		}
 	}
 }
