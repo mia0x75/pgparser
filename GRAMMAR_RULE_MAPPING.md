@@ -91,3 +91,9 @@
 - 双仓 `TestParseSharedRecursiveCTECore` 断言 `BaseWithClause.IsRecursive`、`BaseCommonTableExpression.Name`／`Columns`／`Query`，并验证递归主体是共享集合操作；`TestParseSharedCTEOnSetOperation` 确认 WITH 附着于集合整体而非首个 SELECT 分支。
 - PG `WithClauseItem` 的主体为 `PreparableStmt`，允许写入型 CTE；MySQL `CTEBody` 只接查询分支。保留这一语法接受范围差异。
 - PG 的 `MATERIALIZED`、`SEARCH` 和标准 `CYCLE`，以及 MariaDB `CYCLE ... RESTRICT` 均继续由各自扩展承载；已有方言用例覆盖，不改语义动作。
+
+## Q7 结构核对记录
+
+- PG `WindowSpec` 的方言字段原先遮蔽 `BaseWindowSpec` 中的分区、排序和 frame 字段；窗口解析动作只填入方言视图。Q7 补齐解析时的共享字段，并为 PG 分区项提供 `WindowPartitionClauseNode`／`WindowPartitionItemNode` 适配，同时保留现有 `PartitionByClause.Items` 供 PG AST 使用。
+- 双仓 `TestParseSharedWindowCore` 固定命名窗口的共享名称、分区表达式、排序方向以及 ROWS frame 的边界和 offset 表达式；PG 另验证 visitor 替换分区节点后共享视图仍同步。
+- PG `OptPartitionClause` 接受 `ExpressionList`；MySQL `OptPartitionClause` 使用 `ByList`，其分区项另存方向。MySQL frame 起始项还保留数字、字符串、参数和 `INTERVAL` 形式的语义动作；不折叠这些解析差异。产生式分支与 SQL 接受范围不变。

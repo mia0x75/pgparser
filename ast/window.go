@@ -10,10 +10,12 @@ import (
 )
 
 var (
-	_ Node = &WindowSpec{}
-	_ Node = &PartitionByClause{}
-	_ Node = &FrameClause{}
-	_ Node = &FrameBound{}
+	_ Node                            = &WindowSpec{}
+	_ Node                            = &PartitionByClause{}
+	_ pkast.WindowPartitionClauseNode = (*PartitionByClause)(nil)
+	_ pkast.WindowPartitionItemNode   = (*PartitionItem)(nil)
+	_ Node                            = &FrameClause{}
+	_ Node                            = &FrameBound{}
 )
 
 // WindowSpecNode preserves the concrete dialect window identity.
@@ -34,6 +36,15 @@ func (n *WindowSpec) WindowSpecCore() *pkast.BaseWindowSpec {
 		return nil
 	}
 	return &n.BaseWindowSpec
+}
+
+func (n *WindowSpec) syncSharedCore() {
+	if n == nil {
+		return
+	}
+	n.BaseWindowSpec.PartitionBy = n.PartitionBy
+	n.BaseWindowSpec.OrderBy = n.OrderBy
+	n.BaseWindowSpec.Frame = n.Frame
 }
 
 // Restore implements Node interface.
@@ -114,15 +125,22 @@ func (n *WindowSpec) Format(w io.Writer) {
 func (n *WindowSpec) Accept(v Visitor) (Node, bool) {
 	newNode, skipChildren := v.Enter(n)
 	if skipChildren {
-		return v.Leave(newNode)
+		spec, ok := newNode.(*WindowSpec)
+		if !ok || spec == nil {
+			return newNode, false
+		}
+		spec.syncSharedCore()
+		return v.Leave(spec)
 	}
 	n = newNode.(*WindowSpec)
+	n.syncSharedCore()
 	if n.PartitionBy != nil {
 		node, ok := n.PartitionBy.Accept(v)
 		if !ok {
 			return n, false
 		}
 		n.PartitionBy = node.(*PartitionByClause)
+		n.PartitionBy.syncSharedCore()
 	}
 	if n.OrderBy != nil {
 		node, ok := n.OrderBy.Accept(v)
@@ -138,14 +156,45 @@ func (n *WindowSpec) Accept(v Visitor) (Node, bool) {
 		}
 		n.Frame = node.(*FrameClause)
 	}
+	n.syncSharedCore()
 	return v.Leave(n)
 }
 
 // PartitionByClause represents partition by clause.
 type PartitionByClause struct {
-	node
+	pkast.BaseWindowPartitionClause
 
+	// Items preserves the PostgreSQL-specific AST view.
 	Items []*OrderItem
+}
+
+// WindowPartitionClauseCore returns the shared partition data.
+func (n *PartitionByClause) WindowPartitionClauseCore() *pkast.BaseWindowPartitionClause {
+	if n == nil {
+		return nil
+	}
+	return &n.BaseWindowPartitionClause
+}
+
+func (n *PartitionByClause) syncSharedCore() {
+	if n == nil {
+		return
+	}
+	if len(n.BaseWindowPartitionClause.Items) != len(n.Items) {
+		n.BaseWindowPartitionClause.Items = make([]pkast.WindowPartitionItemNode, len(n.Items))
+	}
+	for i, item := range n.Items {
+		if item == nil {
+			n.BaseWindowPartitionClause.Items[i] = nil
+			continue
+		}
+		shared, ok := n.BaseWindowPartitionClause.Items[i].(*PartitionItem)
+		if !ok || shared == nil {
+			shared = &PartitionItem{}
+			n.BaseWindowPartitionClause.Items[i] = shared
+		}
+		shared.Expr = item.Expr
+	}
 }
 
 // Restore implements Node interface.
@@ -175,19 +224,88 @@ func (n *PartitionByClause) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *PartitionByClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
 	newNode, skipChildren := v.Enter(n)
 	if skipChildren {
-		return v.Leave(newNode)
+		clause, ok := newNode.(*PartitionByClause)
+		if !ok || clause == nil {
+			return newNode, false
+		}
+		clause.syncSharedCore()
+		return v.Leave(clause)
 	}
 	n = newNode.(*PartitionByClause)
+	n.syncSharedCore()
 	for i, val := range n.Items {
 		node, ok := val.Accept(v)
 		if !ok {
 			return n, false
 		}
 		n.Items[i] = node.(*OrderItem)
+		shared := n.BaseWindowPartitionClause.Items[i]
+		if shared == nil || shared.WindowPartitionItemCore() == nil {
+			return n, false
+		}
+		shared.WindowPartitionItemCore().Expr = n.Items[i].Expr
 	}
 	return v.Leave(n)
+}
+
+// PartitionItem is a shared-core partition expression.
+type PartitionItem struct {
+	pkast.BaseWindowPartitionItem
+}
+
+func (n *PartitionItem) WindowPartitionItemCore() *pkast.BaseWindowPartitionItem {
+	if n == nil {
+		return nil
+	}
+	return &n.BaseWindowPartitionItem
+}
+
+func (n *PartitionItem) Restore(ctx *format.RestoreCtx) error {
+	if n == nil || n.Expr == nil {
+		return errors.New("restore partition item: missing expression")
+	}
+	if err := n.Expr.Restore(ctx); err != nil {
+		return errors.Annotate(err, "An error occurred while restore partition item expression")
+	}
+	return ctx.Err()
+}
+
+func (n *PartitionItem) Format(w io.Writer) {
+	if n != nil && n.Expr != nil {
+		FormatExpr(n.Expr, w)
+	}
+}
+
+func (n *PartitionItem) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+	newNode, skipChildren := v.Enter(n)
+	item, ok := newNode.(*PartitionItem)
+	if !ok || item == nil {
+		return newNode, false
+	}
+	if skipChildren {
+		return v.Leave(item)
+	}
+	if item.Expr == nil {
+		return item, false
+	}
+	updated, ok := item.Expr.Accept(v)
+	if !ok {
+		return item, false
+	}
+	expr, ok := updated.(ExprNode)
+	if !ok || expr == nil {
+		return item, false
+	}
+	item.Expr = expr
+	return v.Leave(item)
 }
 
 // FrameType is the type of window function frame.

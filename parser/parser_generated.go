@@ -28663,13 +28663,16 @@ yydefault:
 		{
 			spec := &ast.WindowSpec{Ref: syntaxIdent(yylex, yyDollar[2].str, yyS[yypt-4].span)}
 			if yyDollar[3].exprs != nil {
-				spec.PartitionBy = &ast.PartitionByClause{Items: orderItemsFromExprs(yyDollar[3].exprs)}
+				spec.PartitionBy = windowPartitionClauseFromExprs(yyDollar[3].exprs)
+				spec.BaseWindowSpec.PartitionBy = spec.PartitionBy
 			}
 			if yyDollar[4].node != nil {
 				spec.OrderBy = yyDollar[4].node.(*ast.OrderByClause)
+				spec.BaseWindowSpec.OrderBy = spec.OrderBy
 			}
 			if yyDollar[5].node != nil {
 				spec.Frame = yyDollar[5].node.(*ast.FrameClause)
+				spec.BaseWindowSpec.Frame = spec.Frame
 			}
 			yyVAL.node = spec
 		}

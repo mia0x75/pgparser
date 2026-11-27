@@ -8917,13 +8917,16 @@ WindowSpec:
 		{
 			spec := &ast.WindowSpec{Ref: syntaxIdent(yylex, $2, yyS[yypt-4].span)}
 			if $3 != nil {
-				spec.PartitionBy = &ast.PartitionByClause{Items: orderItemsFromExprs($3)}
+				spec.PartitionBy = windowPartitionClauseFromExprs($3)
+				spec.BaseWindowSpec.PartitionBy = spec.PartitionBy
 			}
 			if $4 != nil {
 				spec.OrderBy = $4.(*ast.OrderByClause)
+				spec.BaseWindowSpec.OrderBy = spec.OrderBy
 			}
 			if $5 != nil {
 				spec.Frame = $5.(*ast.FrameClause)
+				spec.BaseWindowSpec.Frame = spec.Frame
 			}
 			$$ = spec
 		}

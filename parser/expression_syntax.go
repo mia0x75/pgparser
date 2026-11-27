@@ -298,6 +298,18 @@ func orderItemsFromExprs(exprs []ast.ExprNode) []*ast.OrderItem {
 	return items
 }
 
+func windowPartitionClauseFromExprs(exprs []ast.ExprNode) *ast.PartitionByClause {
+	items := orderItemsFromExprs(exprs)
+	coreItems := make([]pkast.WindowPartitionItemNode, len(items))
+	for i, item := range items {
+		coreItems[i] = &ast.PartitionItem{BaseWindowPartitionItem: pkast.BaseWindowPartitionItem{Expr: item.Expr}}
+	}
+	return &ast.PartitionByClause{
+		BaseWindowPartitionClause: pkast.BaseWindowPartitionClause{Items: coreItems},
+		Items:                     items,
+	}
+}
+
 // byItemsFromExprs returns the group by items of an expression list.
 func byItemsFromExprs(exprs []ast.ExprNode) []*ast.GroupItem {
 	var items []*ast.GroupItem

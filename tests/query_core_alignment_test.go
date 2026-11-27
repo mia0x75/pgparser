@@ -156,6 +156,66 @@ func TestParseSharedCTEOnSetOperation(t *testing.T) {
 	}
 }
 
+func TestParseSharedWindowCore(t *testing.T) {
+	stmt, ok := mustParseOne(t, "SELECT 1 FROM t WINDOW w AS (PARTITION BY b ORDER BY c DESC ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)").(*dialectast.SelectStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.SelectStmt")
+	}
+	if len(stmt.WindowSpecs) != 1 || stmt.WindowSpecs[0].WindowSpecCore() == nil {
+		t.Fatalf("window specs = %#v, want one shared window spec", stmt.WindowSpecs)
+	}
+	spec, ok := stmt.WindowSpecs[0].(*dialectast.WindowSpec)
+	if !ok {
+		t.Fatalf("window spec = %T, want *dialectast.WindowSpec", stmt.WindowSpecs[0])
+	}
+	core := spec.WindowSpecCore()
+	if core.Name.Name != "w" || core.PartitionBy == nil || core.OrderBy == nil || core.Frame == nil {
+		t.Fatalf("shared window spec core = %#v", core)
+	}
+	partition := core.PartitionBy.WindowPartitionClauseCore()
+	if partition == nil || len(partition.Items) != 1 || partition.Items[0] == nil {
+		t.Fatalf("shared window partition core = %#v", partition)
+	}
+	partitionItem := partition.Items[0].WindowPartitionItemCore()
+	if partitionItem == nil || partitionItem.Expr == nil || len(spec.PartitionBy.Items) != 1 || partitionItem.Expr != spec.PartitionBy.Items[0].Expr {
+		t.Fatalf("shared window partition item = %#v", partitionItem)
+	}
+	order := core.OrderBy.OrderByClauseCore()
+	if order == nil || len(order.Items) != 1 || order.Items[0] == nil {
+		t.Fatalf("shared window order core = %#v", order)
+	}
+	orderItem := order.Items[0].OrderItemCore()
+	if orderItem == nil || !orderItem.Desc {
+		t.Fatalf("shared window order item = %#v", orderItem)
+	}
+	frame := core.Frame.WindowFrameClauseCore()
+	if frame == nil || frame.Type != pkast.WindowFrameRows || frame.Extent.Start == nil || frame.Extent.End == nil {
+		t.Fatalf("shared window frame core = %#v", frame)
+	}
+	start, end := frame.Extent.Start.WindowFrameBoundCore(), frame.Extent.End.WindowFrameBoundCore()
+	if start == nil || end == nil || start.Type != pkast.WindowFramePreceding || start.Expr == nil || end.Type != pkast.WindowFrameCurrentRow {
+		t.Fatalf("shared window frame core = %#v", frame)
+	}
+	replacementExpr := spec.PartitionBy.Items[0].Expr
+	replacement := &dialectast.PartitionByClause{Items: []*dialectast.OrderItem{{BaseOrderItem: pkast.BaseOrderItem{Expr: replacementExpr}}}}
+	updated, ok := spec.Accept(&projectionVisitor{
+		enter: func(node dialectast.Node) (dialectast.Node, bool) {
+			if _, ok := node.(*dialectast.PartitionByClause); ok {
+				return replacement, true
+			}
+			return node, false
+		},
+		leave: func(node dialectast.Node) (dialectast.Node, bool) { return node, true },
+	})
+	if !ok {
+		t.Fatal("visitor rejected shared window spec")
+	}
+	updatedCore := updated.(*dialectast.WindowSpec).WindowSpecCore().PartitionBy.WindowPartitionClauseCore()
+	if len(updatedCore.Items) != 1 || updatedCore.Items[0].WindowPartitionItemCore().Expr != replacementExpr {
+		t.Fatalf("visitor replacement was not reflected in shared window core: %#v", updatedCore)
+	}
+}
+
 func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
 	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
 	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {
