@@ -118,6 +118,44 @@ func TestParseSharedQueryTailCore(t *testing.T) {
 	assertSharedQueryTailCore(t, setOperation.Tail.OrderBy, setOperation.Tail.Limit)
 }
 
+func TestParseSharedRecursiveCTECore(t *testing.T) {
+	node := mustParseOne(t, "WITH RECURSIVE c(n) AS (SELECT 1 UNION ALL SELECT n FROM c) SELECT n FROM c")
+	stmt, ok := node.(*dialectast.SelectStmt)
+	if !ok || stmt.With == nil {
+		t.Fatalf("statement = %T, want SELECT with WITH clause", node)
+	}
+	with := stmt.With.WithClauseCore()
+	if with == nil || !with.IsRecursive || len(with.CTEs) != 1 {
+		t.Fatalf("shared WITH core = %#v", with)
+	}
+	cte := with.CTEs[0].CTECore()
+	if cte == nil || cte.Name.Name != "c" || len(cte.Columns) != 1 || cte.Columns[0].Name != "n" {
+		t.Fatalf("shared CTE core = %#v", cte)
+	}
+	if _, ok := cte.Query.(pkast.SetOperationNode); !ok {
+		t.Fatalf("recursive CTE query = %T, want shared set operation", cte.Query)
+	}
+}
+
+func TestParseSharedCTEOnSetOperation(t *testing.T) {
+	node := mustParseOne(t, "WITH c AS (SELECT 1) SELECT 1 UNION SELECT 2")
+	stmt, ok := node.(*dialectast.SetOprStmt)
+	if !ok || stmt.With == nil {
+		t.Fatalf("statement = %T, want set operation with WITH clause", node)
+	}
+	with := stmt.With.WithClauseCore()
+	if with == nil || len(with.CTEs) != 1 || with.CTEs[0].CTECore() == nil {
+		t.Fatalf("shared WITH core = %#v", with)
+	}
+	branch, ok := stmt.Left.(*dialectast.SelectStmt)
+	if !ok {
+		t.Fatalf("first set-operation branch = %T, want SELECT", stmt.Left)
+	}
+	if branch.With != nil {
+		t.Fatal("WITH should belong to the set operation, not its first branch")
+	}
+}
+
 func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
 	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
 	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {

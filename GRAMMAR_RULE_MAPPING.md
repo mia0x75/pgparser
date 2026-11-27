@@ -85,3 +85,9 @@
 - `TestParseSharedQueryTailCore` 断言普通 SELECT 和集合整体上的共享 `OrderByClauseCore`、排序方向及 `LimitCore` 的 Count/Offset；两仓均把集合整体的尾部保存在 `SetOprStmt.Tail`。
 - `TestLimitCommaKeepsOffsetAndCountOrder` 固定 `LIMIT 2, 3` 的现有映射：共享 Count 为 3、Offset 为 2。PG 恢复为 `LIMIT 3 OFFSET 2`，MySQL 保留 `LIMIT 2,3`；仅输出拼写不同。
 - 括号分支的尾部作用域已有方言测试：PG `TestSetOpParenthesizedScopeAndTail` 将尾部留在 `SelectStmt`；MySQL `TestSetOperationPaginationSpans` 检查括号分支和集合整体尾部的各自归属。PG `FETCH ... WITH TIES` 与 MySQL 锁尾语法继续分离。
+
+## Q6 结构核对记录
+
+- 双仓 `TestParseSharedRecursiveCTECore` 断言 `BaseWithClause.IsRecursive`、`BaseCommonTableExpression.Name`／`Columns`／`Query`，并验证递归主体是共享集合操作；`TestParseSharedCTEOnSetOperation` 确认 WITH 附着于集合整体而非首个 SELECT 分支。
+- PG `WithClauseItem` 的主体为 `PreparableStmt`，允许写入型 CTE；MySQL `CTEBody` 只接查询分支。保留这一语法接受范围差异。
+- PG 的 `MATERIALIZED`、`SEARCH` 和标准 `CYCLE`，以及 MariaDB `CYCLE ... RESTRICT` 均继续由各自扩展承载；已有方言用例覆盖，不改语义动作。
