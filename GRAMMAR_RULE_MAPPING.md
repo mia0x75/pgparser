@@ -248,3 +248,9 @@
 - E2m/E2l 已锁定普通函数调用及共享 CAST 入口；本批对 `CAST(1 AS DECIMAL(10, 2))` 追加类型参数断言，固定精度与小数位数。
 - PG 的 `FuncCastExpr.Tp` 保留 `types.FieldType` 运行时类型信息；MySQL 的 `FuncCastExpr.Type` 使用语法层 `TypeName`／`BaseTypeName`。两者当前都是各自类型系统的适当表示，不强行转换，也不合并 `::`、数组、`CONVERT`、`UNSIGNED` 等方言语法。
 - 仅新增匹配测试；双仓 build、vet、race、lint、tidy、生成检查通过。PG testdata 40,644 条（141 既知失败、0 未知失败），冲突 418/37；MySQL MTR 87,549 条与 D3b 基线逐用例一致，冲突 0/0。
+
+## T1 表与列定义
+
+- 双仓同名测试覆盖普通 `CREATE TABLE` 的目标、列名与列类型；并覆盖 `CREATE TABLE ... AS SELECT` 的目标/查询及 `ALTER TABLE ... ADD COLUMN` 的新增列名/类型。
+- PG 的 `CreateTableStmt.Cols`／`ColumnDef.Tp`／`CreateTableStmt.Select` 与 MySQL `BaseCreateTableStmt.Columns`／`BaseColumnDef.Type`／`CreateTableStmt.Query` 是各自 grammar 的现有 AST 入口。两边的列类型表示尚不相同；不改公开 AST 或 grammar 强求字段同名。`INHERITS`、PG 分区以及 MySQL 表选项仍属方言扩展。
+- 仅新增测试；双仓 build、vet、race、lint、tidy、生成检查通过。PG testdata 40,644 条（141 既知失败、0 未知失败），冲突 418/37；MySQL MTR 87,549 条与基线逐用例一致，冲突 0/0。
