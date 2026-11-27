@@ -549,6 +549,16 @@ func TestParseSharedCastExpressionCore(t *testing.T) {
 	}
 }
 
+func TestParseSharedCastTypeNameCore(t *testing.T) {
+	const raw = "CAST(1 AS DECIMAL(10, 2))"
+	const sql = "SELECT " + raw
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	expr, ok := stmt.Fields.Items[0].Expr.(*dialectast.FuncCastExpr)
+	if !ok || expr.Tp == nil || expr.Tp.Flen != 10 || expr.Tp.Decimal != 2 {
+		t.Fatalf("DECIMAL cast type = %#v", expr)
+	}
+}
+
 func TestParseSharedFunctionCallCore(t *testing.T) {
 	const raw = "coalesce(a, b)"
 	const sql = "SELECT " + raw

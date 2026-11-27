@@ -242,3 +242,9 @@
 - E2a–E2o 已为共同表达式语法及 AST 核心建立双仓护栏；E2o 唯一生产动作变化只为 MySQL `DefaultExpr` 记录精确跨度，接受范围、恢复文本和生成解析表均未改变。
 - 未纳入强行统一的剩余节点均有清楚边界：`PositionExpr` 是排序序号的方言表示；`ValuesExpr`／`VariableExpr` 保留 MySQL 特有形式；`MaxValueExpr` 是分区边界哨兵；聚合/窗口节点字段含方言语义修饰，普通调用共有部分由 `BaseCallExpr` 测试覆盖。
 - 双仓 build、vet、race、lint、tidy、生成复跑通过；PG 冲突保持 418 shift/reduce、37 reduce/reduce，MySQL 0/0。E2 完成。
+
+## E3 调用、转换与类型
+
+- E2m/E2l 已锁定普通函数调用及共享 CAST 入口；本批对 `CAST(1 AS DECIMAL(10, 2))` 追加类型参数断言，固定精度与小数位数。
+- PG 的 `FuncCastExpr.Tp` 保留 `types.FieldType` 运行时类型信息；MySQL 的 `FuncCastExpr.Type` 使用语法层 `TypeName`／`BaseTypeName`。两者当前都是各自类型系统的适当表示，不强行转换，也不合并 `::`、数组、`CONVERT`、`UNSIGNED` 等方言语法。
+- 仅新增匹配测试；双仓 build、vet、race、lint、tidy、生成检查通过。PG testdata 40,644 条（141 既知失败、0 未知失败），冲突 418/37；MySQL MTR 87,549 条与 D3b 基线逐用例一致，冲突 0/0。
