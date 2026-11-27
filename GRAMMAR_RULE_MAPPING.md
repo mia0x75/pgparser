@@ -254,3 +254,9 @@
 - 双仓同名测试覆盖普通 `CREATE TABLE` 的目标、列名与列类型；并覆盖 `CREATE TABLE ... AS SELECT` 的目标/查询及 `ALTER TABLE ... ADD COLUMN` 的新增列名/类型。
 - PG 的 `CreateTableStmt.Cols`／`ColumnDef.Tp`／`CreateTableStmt.Select` 与 MySQL `BaseCreateTableStmt.Columns`／`BaseColumnDef.Type`／`CreateTableStmt.Query` 是各自 grammar 的现有 AST 入口。两边的列类型表示尚不相同；不改公开 AST 或 grammar 强求字段同名。`INHERITS`、PG 分区以及 MySQL 表选项仍属方言扩展。
 - 仅新增测试；双仓 build、vet、race、lint、tidy、生成检查通过。PG testdata 40,644 条（141 既知失败、0 未知失败），冲突 418/37；MySQL MTR 87,549 条与基线逐用例一致，冲突 0/0。
+
+## T2 约束与索引
+
+- 双仓同名护栏覆盖表级 PRIMARY KEY、UNIQUE、FOREIGN KEY、CHECK，并核对键项、检查表达式及 `ON DELETE CASCADE`。外键动作的共享含义保持一致；PG `KeyActions` 与 MySQL `ReferDef` 的产生式结构仍分开。
+- 双仓测试普通 UNIQUE INDEX 的名称、目标表、唯一标记和键列。PG 的 `IndexStmt` 规则生成本地 `CreateIndexStmt`／`IndexColName`；MySQL `CreateIndexStmt` 使用 `BaseIndexKeyPart`。不把这两种字段布局强制合并。
+- PG 可延迟约束、部分/排斥索引，以及 MySQL 前缀长度和表/列索引选项保留为方言差异；仅新增测试，不改 grammar 或接受范围。双仓 build、vet、race、lint、tidy、生成检查通过；PG testdata 40,644 条无新增失败，冲突 418/37；MySQL MTR 87,549 条与基线逐用例一致，冲突 0/0。

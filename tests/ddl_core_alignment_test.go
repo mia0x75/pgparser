@@ -36,3 +36,35 @@ func TestParseSharedAlterTableAddColumnCore(t *testing.T) {
 		t.Fatalf("added column = %#v", column)
 	}
 }
+
+func TestParseSharedTableConstraintCore(t *testing.T) {
+	const sql = "CREATE TABLE align_child (id INT, parent_id INT, CONSTRAINT pk PRIMARY KEY (id), CONSTRAINT uq UNIQUE (parent_id), CONSTRAINT fk FOREIGN KEY (parent_id) REFERENCES align_parent (id) ON DELETE CASCADE, CONSTRAINT ck CHECK (id > 0))"
+	stmt := mustParseOne(t, sql).(*ast.CreateTableStmt)
+	if len(stmt.Constraints) != 4 {
+		t.Fatalf("table constraints = %#v", stmt.Constraints)
+	}
+	wantTypes := []ast.ConstraintType{ast.ConstraintPrimaryKey, ast.ConstraintUniq, ast.ConstraintForeignKey, ast.ConstraintCheck}
+	for i, want := range wantTypes {
+		if stmt.Constraints[i].Tp != want {
+			t.Fatalf("constraint %d type = %v, want %v", i, stmt.Constraints[i].Tp, want)
+		}
+	}
+	if len(stmt.Constraints[0].Keys) != 1 || len(stmt.Constraints[1].Keys) != 1 {
+		t.Fatalf("key constraints = %#v", stmt.Constraints[:2])
+	}
+	fk := stmt.Constraints[2]
+	if fk.Refer == nil || fk.Refer.OnDelete == nil || fk.Refer.OnDelete.ReferOpt != ast.ReferOptionCascade {
+		t.Fatalf("foreign key reference = %#v", fk.Refer)
+	}
+	if stmt.Constraints[3].Expr == nil {
+		t.Fatalf("check constraint = %#v", stmt.Constraints[3])
+	}
+}
+
+func TestParseSharedCreateIndexCore(t *testing.T) {
+	stmt := mustParseOne(t, "CREATE UNIQUE INDEX align_idx ON align_child (parent_id)").(*ast.CreateIndexStmt)
+	if !stmt.Unique || len(stmt.IndexName.Parts) != 1 || stmt.IndexName.Parts[0].Name != "align_idx" ||
+		stmt.Table == nil || len(stmt.IndexColNames) != 1 || stmt.IndexColNames[0].Column == nil || stmt.IndexColNames[0].Column.Name != "parent_id" {
+		t.Fatalf("CREATE INDEX core = %#v", stmt)
+	}
+}
