@@ -43,7 +43,7 @@
 | UPDATE / DELETE | `UpdateStmt`、`DeleteStmt`、`AssignmentList`、`ReturningOpt` | `UpdateStmt`、`DeleteStmt`、`AssignmentList`、`ReturningOpt` | `BaseUpdateStmt`、`BaseDeleteStmt`、Assignment、Where、Returning | 核心重叠；PG `FROM`/`USING` 与 MySQL 多表规则分离。 |
 | 约束 | `ConstraintElem`、`KeyActions`、`ConstraintAttributeSpec` | `ConstraintElem`、`ReferDef`、`Constraint` | Constraint 类型、外键动作、命名与选项 | 仅比对外键动作；PG 可延迟/排斥约束保留。 |
 | 表与索引 | `CreateTableStmt`、`ColumnDef`、`TableConstraint`、`IndexStmt` | `CreateTableStmt`、`ColumnDef`、`CreateTableDefinition`、`CreateIndexStmt` | ColumnDef、Constraint、Index 共享字段 | 部分重叠；存储、分区、索引前缀各自保留。 |
-| 表达式 / 类型 | `AExpr`、`BExpr`、`CExpr`、`ColumnRef`、`AExprConst`、`FuncApplication`、`Typename` | `Expression`、`PredicateExpr`、`BitExpr`、`SimpleExpr`、`SimpleIdent`、`Literal`、`FunctionCallGeneric`、`Type` | Expr、Literal、TypeName、FunctionCall | 语义映射而非规则合并；E1–E3 分开推进。 |
+| 表达式 / 类型 | `AExpr`、`BExpr`、`CExpr`、`ColumnRef`、`AExprConst`、`FuncApplication`、`Typename` | `Expression`、`PredicateExpr`、`BitExpr`、`SimpleExpr`、`ColumnRef`、`Literal`、`FunctionCallGeneric`、`Type` | Expr、Literal、TypeName、FunctionCall | 语义映射而非规则合并；E1–E3 分开推进。 |
 
 ## 明确的方言锚点
 
@@ -141,3 +141,8 @@
 - PG `AExprConst` 的普通常量与 MySQL `Literal` 共享 `BaseLiteralExpr`；布尔常量以及浮点令牌的构造动作同形。`Raw` 保留原文，`Kind`／`Value` 维持旧行为。PG 的类型前缀常量仍走类型转换；MySQL 保留字符集引导符与引号样式。`NULL` 的值字段及小数字面量的分类也维持各自现状。
 - 两仓均使用 `BaseParameterExpr` 和 `NewParamMarkerExprAt`。PG 下标表达式中的参数只记录参数令牌跨度，索引由 `$n` 指定；MySQL `?` 按出现顺序编号。共享测试检查字面量原文、值与跨度，并覆盖参数以及两仓的拒绝边界。
 - PG 生成文件更新至 1,238,597 字节，解析表不变。交错运行 `BenchmarkParse` 各 12 次，耗时无显著变化，分配量和分配次数不变；MySQL 生成文件不变。
+
+## E1c 列引用规则命名
+
+- MySQL `SimpleIdent` 的所有分支都构造 `*ast.ColumnRef`，因此规则头、`%type` 与调用方同步改名为 `ColumnRef`。保留 PG 的目录限定和下标，以及 MySQL 的前导点和关键字分支；没有合并名称值规则 `ColumnName`。
+- PG `e9f810a` 和 MySQL `4293f33` 的生成文件逐字节不变（分别为 1,238,597 和 894,175 字节）；MySQL 87,549 条 MTR 逐用例结果一致，PG 语料无新增异常。
