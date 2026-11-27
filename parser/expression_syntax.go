@@ -17,6 +17,24 @@ func binaryExpr(op opcode.Op, left, right ast.ExprNode, span loc.Span) *ast.Bina
 	return expr
 }
 
+func isNullExpr(expr ast.ExprNode, not bool, span loc.Span) *ast.IsNullExpr {
+	node := &ast.IsNullExpr{Expr: expr, Not: not}
+	node.SetSpan(span)
+	return node
+}
+
+func patternInExpr(expr ast.ExprNode, list []ast.ExprNode, subquery ast.ExprNode, not bool, span loc.Span) *ast.PatternInExpr {
+	node := &ast.PatternInExpr{Expr: expr, List: list, Sel: subquery, Not: not}
+	node.SetSpan(span)
+	return node
+}
+
+func betweenExpr(expr, left, right ast.ExprNode, not bool, span loc.Span) *ast.BetweenExpr {
+	node := &ast.BetweenExpr{Expr: expr, Left: left, Right: right, Not: not}
+	node.SetSpan(span)
+	return node
+}
+
 func operatorName(l *ast.List) string {
 	if l == nil {
 		return ""

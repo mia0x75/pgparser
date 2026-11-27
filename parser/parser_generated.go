@@ -27787,13 +27787,13 @@ yydefault:
 	case 1290:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsNullExpr{Expr: yyDollar[1].expr}
+			yyVAL.expr = isNullExpr(yyDollar[1].expr, false, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1291:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsNullExpr{Expr: yyDollar[1].expr, Not: true}
+			yyVAL.expr = isNullExpr(yyDollar[1].expr, true, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1292:
@@ -27835,13 +27835,13 @@ yydefault:
 	case 1298:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsNullExpr{Expr: yyDollar[1].expr}
+			yyVAL.expr = isNullExpr(yyDollar[1].expr, false, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1299:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.expr = &ast.IsNullExpr{Expr: yyDollar[1].expr, Not: true}
+			yyVAL.expr = isNullExpr(yyDollar[1].expr, true, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1300:
@@ -28006,13 +28006,13 @@ yydefault:
 	case 1323:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.expr = &ast.BetweenExpr{Expr: yyDollar[1].expr, Left: yyDollar[4].expr, Right: yyDollar[6].expr}
+			yyVAL.expr = betweenExpr(yyDollar[1].expr, yyDollar[4].expr, yyDollar[6].expr, false, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1324:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		{
-			yyVAL.expr = &ast.BetweenExpr{Expr: yyDollar[1].expr, Left: yyDollar[5].expr, Right: yyDollar[7].expr, Not: true}
+			yyVAL.expr = betweenExpr(yyDollar[1].expr, yyDollar[5].expr, yyDollar[7].expr, true, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1325:
@@ -28030,25 +28030,25 @@ yydefault:
 	case 1327:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			yyVAL.expr = &ast.PatternInExpr{Expr: yyDollar[1].expr, List: yyDollar[4].exprs}
+			yyVAL.expr = patternInExpr(yyDollar[1].expr, yyDollar[4].exprs, nil, false, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1328:
 		yyDollar = yyS[yypt-6 : yypt+1]
 		{
-			yyVAL.expr = &ast.PatternInExpr{Expr: yyDollar[1].expr, List: yyDollar[5].exprs, Not: true}
+			yyVAL.expr = patternInExpr(yyDollar[1].expr, yyDollar[5].exprs, nil, true, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1329:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
-			yyVAL.expr = &ast.PatternInExpr{Expr: yyDollar[1].expr, Sel: &ast.SubqueryExpr{Query: yyDollar[3].node.(ast.ResultSetNode)}}
+			yyVAL.expr = patternInExpr(yyDollar[1].expr, nil, &ast.SubqueryExpr{Query: yyDollar[3].node.(ast.ResultSetNode)}, false, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1330:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = &ast.PatternInExpr{Expr: yyDollar[1].expr, Sel: &ast.SubqueryExpr{Query: yyDollar[4].node.(ast.ResultSetNode)}, Not: true}
+			yyVAL.expr = patternInExpr(yyDollar[1].expr, nil, &ast.SubqueryExpr{Query: yyDollar[4].node.(ast.ResultSetNode)}, true, yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1331:

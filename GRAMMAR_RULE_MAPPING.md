@@ -153,3 +153,11 @@
 - `TestParseSharedBinaryExpressionCore` 核对算术、比较、`AND`／`OR` 的优先级、左结合、括号 AST、各节点的源码跨度，以及缺少右操作数时的拒绝行为。
 - PG `364af20` → E2a 生成文件从 1,238,597 变为 1,238,493 字节；MySQL `b59f8e6` → E2a 从 894,175 变为 892,356 字节。双仓生成表逐字节不变；SR／RR 仍为 418／37 和 0／0。变化仅来自构造动作，不是解析表缩小。
 - 双仓现有查询基准前后各交错运行 12 次；耗时和每次分配字节均无显著变化，分配次数不变。
+
+## E2b IN / BETWEEN / NULL 谓词
+
+- 两仓普通 `IN` 列表及子查询都经 `patternInExpr` 构造；PG `AExpr` 的普通与否定 `BETWEEN`、MySQL `PredicateExpr` 的 `BetweenOrNotOp` 经 `betweenExpr` 构造；普通 `IS [NOT] NULL` 都经 `isNullExpr` 构造。helper 同时赋上产生式完整跨度。
+- PG `BETWEEN SYMMETRIC` 仍是带独立 `Symmetric` 字段的方言分支；PG `IS UNKNOWN` 与 MySQL `IS UNKNOWN` 既有 AST 映射不同，均不移动。无文法产生式、优先级或接受范围变化。
+- 双仓 `TestParseSharedPredicateExpressionCore` 核验谓词节点、否定标记、列表／子查询槽位、谓词与子表达式源码跨度，并拒绝空 `IN`、不完整 `BETWEEN`／`IS`。
+- PG `deac12c` → E2b 生成文件由 1,238,493 变为 1,238,485 字节；MySQL `75ee3e9` → E2b 由 892,356 变为 892,126 字节。双仓解析表逐字节不变，PG 冲突 418／37、MySQL 0／0；改变量来自动作代码。
+- PG 40,644 条 testdata 与 MySQL 87,549 条 MTR 结果和基线一致。最终源码交错基准各 12 次，耗时无显著变化，分配字节及分配次数不变。

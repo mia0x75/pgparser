@@ -8297,11 +8297,11 @@ AExpr:
 		}
 	| AExpr IS NULL_P
 		{
-			$$ = &ast.IsNullExpr{Expr: $1}
+			$$ = isNullExpr($1, false, yyVAL.span)
 		}
 	| AExpr IS NOT NULL_P
 		{
-			$$ = &ast.IsNullExpr{Expr: $1, Not: true}
+			$$ = isNullExpr($1, true, yyVAL.span)
 		}
 	| AExpr IS TRUE_P
 		{
@@ -8329,11 +8329,11 @@ AExpr:
 		}
 	| AExpr ISNULL
 		{
-			$$ = &ast.IsNullExpr{Expr: $1}
+			$$ = isNullExpr($1, false, yyVAL.span)
 		}
 	| AExpr NOTNULL
 		{
-			$$ = &ast.IsNullExpr{Expr: $1, Not: true}
+			$$ = isNullExpr($1, true, yyVAL.span)
 		}
 	| AExpr IS DISTINCT FROM AExpr    %prec IS
 		{
@@ -8450,11 +8450,11 @@ AExpr:
 		}
 	| AExpr BETWEEN OptAsymmetric BExpr AND AExpr %prec BETWEEN
 		{
-			$$ = &ast.BetweenExpr{Expr: $1, Left: $4, Right: $6}
+			$$ = betweenExpr($1, $4, $6, false, yyVAL.span)
 		}
 	| AExpr NOT_LA BETWEEN OptAsymmetric BExpr AND AExpr %prec NOT_LA
 		{
-			$$ = &ast.BetweenExpr{Expr: $1, Left: $5, Right: $7, Not: true}
+			$$ = betweenExpr($1, $5, $7, true, yyVAL.span)
 		}
 	| AExpr BETWEEN SYMMETRIC BExpr AND AExpr %prec BETWEEN
 		{
@@ -8466,19 +8466,19 @@ AExpr:
 		}
 	| AExpr IN_P '(' ExpressionList ')'
 		{
-			$$ = &ast.PatternInExpr{Expr: $1, List: $4}
+			$$ = patternInExpr($1, $4, nil, false, yyVAL.span)
 		}
 	| AExpr NOT_LA IN_P '(' ExpressionList ')' %prec NOT_LA
 		{
-			$$ = &ast.PatternInExpr{Expr: $1, List: $5, Not: true}
+			$$ = patternInExpr($1, $5, nil, true, yyVAL.span)
 		}
 	| AExpr IN_P SelectWithParens
 		{
-			$$ = &ast.PatternInExpr{Expr: $1, Sel: &ast.SubqueryExpr{Query: $3.(ast.ResultSetNode)}}
+			$$ = patternInExpr($1, nil, &ast.SubqueryExpr{Query: $3.(ast.ResultSetNode)}, false, yyVAL.span)
 		}
 	| AExpr NOT_LA IN_P SelectWithParens %prec NOT_LA
 		{
-			$$ = &ast.PatternInExpr{Expr: $1, Sel: &ast.SubqueryExpr{Query: $4.(ast.ResultSetNode)}, Not: true}
+			$$ = patternInExpr($1, nil, &ast.SubqueryExpr{Query: $4.(ast.ResultSetNode)}, true, yyVAL.span)
 		}
 	| AExpr SubqueryOp SubType SelectWithParens %prec Op
 		{

@@ -115,3 +115,74 @@ func TestParseSharedBinaryExpressionCore(t *testing.T) {
 		t.Fatal("accepted a missing right operand")
 	}
 }
+
+func TestParseSharedPredicateExpressionCore(t *testing.T) {
+	const inList = "a IN (1, 2)"
+	const notInSubquery = "a NOT IN (SELECT b FROM t)"
+	const between = "a BETWEEN 1 AND 3"
+	const notBetween = "a NOT BETWEEN 1 AND 3"
+	const isNull = "a IS NULL"
+	const isNotNull = "a IS NOT NULL"
+	const sql = "SELECT " + inList + ", " + notInSubquery + ", " + between + ", " + notBetween + ", " + isNull + ", " + isNotNull
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	requireSpan := func(expr pkast.ExprNode, raw string) {
+		t.Helper()
+		span := expr.Span()
+		if !span.Within(len(sql)) {
+			t.Fatalf("%s: invalid span %v", raw, span)
+		}
+		if got := sql[span.Start:span.End]; got != raw {
+			t.Fatalf("%s: span %v covers %q", raw, span, got)
+		}
+	}
+	list, ok := stmt.Fields.Items[0].Expr.(*dialectast.PatternInExpr)
+	if !ok || list.Not || list.Sel != nil || len(list.List) != 2 {
+		t.Fatalf("IN list = %#v", stmt.Fields.Items[0].Expr)
+	}
+	requireSpan(list, inList)
+	requireSpan(list.Expr, "a")
+	requireSpan(list.List[0], "1")
+	requireSpan(list.List[1], "2")
+
+	subquery, ok := stmt.Fields.Items[1].Expr.(*dialectast.PatternInExpr)
+	if !ok || !subquery.Not || subquery.Sel == nil || len(subquery.List) != 0 {
+		t.Fatalf("NOT IN subquery = %#v", stmt.Fields.Items[1].Expr)
+	}
+	requireSpan(subquery, notInSubquery)
+	requireSpan(subquery.Expr, "a")
+	if query, ok := subquery.Sel.(*dialectast.SubqueryExpr); !ok || query.Query == nil {
+		t.Fatalf("IN subquery = %#v", subquery.Sel)
+	}
+
+	for i, tc := range []struct {
+		raw string
+		not bool
+	}{{between, false}, {notBetween, true}} {
+		expr, ok := stmt.Fields.Items[i+2].Expr.(*dialectast.BetweenExpr)
+		if !ok || expr.Not != tc.not {
+			t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i+2].Expr)
+		}
+		requireSpan(expr, tc.raw)
+		requireSpan(expr.Expr, "a")
+		requireSpan(expr.Left, "1")
+		requireSpan(expr.Right, "3")
+	}
+
+	for i, tc := range []struct {
+		raw string
+		not bool
+	}{{isNull, false}, {isNotNull, true}} {
+		expr, ok := stmt.Fields.Items[i+4].Expr.(*dialectast.IsNullExpr)
+		if !ok || expr.Not != tc.not {
+			t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i+4].Expr)
+		}
+		requireSpan(expr, tc.raw)
+		requireSpan(expr.Expr, "a")
+	}
+
+	for _, malformed := range []string{"SELECT a IN ()", "SELECT a BETWEEN 1", "SELECT a IS"} {
+		if _, err := parser.New().ParseOneStmt(malformed); err == nil {
+			t.Errorf("accepted malformed predicate %q", malformed)
+		}
+	}
+}
