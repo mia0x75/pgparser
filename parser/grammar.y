@@ -159,7 +159,7 @@ import (
 %type <node>  SelectWithParens SelectNoParens
 %type <expr>  AExpr BExpr CExpr ColumnRef AExprConst FuncExpr FuncApplication FuncExprCommonSubexpr
 %type <node>  Field
-%type <expr>  WhereClauseOptional WhereClause
+%type <expr>  WhereClauseOpt WhereClause
 %type <list>  FunctionName
 %type <froms>  TableRefsClause
 %type <node>  TableRef TableName JoinTable
@@ -177,7 +177,7 @@ import (
 %type <node>  GroupByItem
 %type <expr>  HavingClause
 %type <node>  EmptyGroupingSet CubeClause RollupClause GroupingSetsClause
-%type <node>  OrderBy OrderByOptional
+%type <node>  OrderBy OrderByOpt
 %type <list>  ByList
 %type <exprs>  ExpressionList
 %type <list>  OptIndirection Indirection FuncArgList FuncArgListOpt
@@ -199,7 +199,7 @@ import (
 %type <node>  WithClause OptWithClause WithClauseItem
 %type <ival>  OptMaterialized
 %type <ctes>  WithList
-%type <list>  WindowClauseOptional WindowDefinitionList
+%type <list>  WindowClauseOpt WindowDefinitionList
 %type <node>  WindowDefinition WindowSpec OverClause OptWindowFrameClause
 %type <frame>  WindowFrameExtent
 %type <bound>  WindowFrameBound
@@ -234,7 +234,7 @@ import (
 %type <exprs>      ArrayExprList
 %type <expr>      Row ExplicitRow
 %type <exprs>      ImplicitRow
-%type <node>  InsertIntoStmt InsertRest
+%type <node>  InsertStmt InsertRest
 %type <node>  InsertTarget
 %type <exprs>   InsertColumnList
 %type <fields>  ReturningOpt
@@ -251,7 +251,7 @@ import (
 %type <joinqual> JoinQual
 %type <node>
 %type <node>  UpdateStmt
-%type <node>  DeleteFromStmt
+%type <node>  DeleteStmt
 %type <froms>  UsingClause
 %type <node>  RelationExprOptAlias
 %type <node>  CreateTableStmt
@@ -267,7 +267,7 @@ import (
 %type <partspec>  OptPartitionSpec PartitionSpecRule
 %type <list>  OptWith
 %type <ival>  OnCommitOption
-%type <ident> OptTableSpace
+%type <ident> OptTablespace
 %type <str>   OptAccessMethod
 %type <list>  PartParams OptInherit OptCollate
 %type <node>  PartElem
@@ -326,7 +326,7 @@ import (
 %type <str>   FileName CursorName
 %type <list>  QualifiedNameList
 %type <node>  VariableSetStmt VariableShowStmt VariableResetStmt
-%type <node>  PrepareStmt ExecuteStmt DeallocateStmt
+%type <node>  PreparedStmt ExecuteStmt DeallocateStmt
 %type <node>  SetRest SetRestMore GenericSet
 %type <str>   VarName
 %type <list>  VarList
@@ -341,7 +341,7 @@ import (
 %type <ival>  SignedIconst
 %type <node>  PreparableStmt
 %type <node>  TruncateTableStmt LockStmt VacuumStmt AnalyzeStmt ClusterStmt ReindexStmt CommentStmt SecLabelStmt
-%type <boolean> OptRestartSeqs OptNowait OptVerbose OptAnalyze OptFull OptFreeze
+%type <boolean> OptRestartSequences OptNowait OptVerbose OptAnalyze OptFull OptFreeze
 %type <list>  RelationExprList OptVacuumRelationList VacuumRelationList
 %type <node>  VacuumRelation
 %type <ival>  OptLock LockType ReindexTargetType ReindexTargetMultitable OptNoLog
@@ -373,19 +373,19 @@ import (
 %type <node>  GrantRoleOpt
 %type <node>  GrantRoleOptValue
 %type <ival>  AddDrop
-%type <node>  CreatedbStmt AlterDatabaseStmt AlterDatabaseSetStmt DropdbStmt AlterSystemStmt
-%type <list>  CreatedbOptList CreatedbOptItems
-%type <node>  CreatedbOptItem
-%type <str>   CreatedbOptName
+%type <node>  CreateDatabaseStmt AlterDatabaseStmt AlterDatabaseSetStmt DropDatabaseStmt AlterSystemStmt
+%type <list>  CreateDatabaseOptList CreateDatabaseOptItems
+%type <node>  CreateDatabaseOptItem
+%type <str>   CreateDatabaseOptName
 %type <list>  DropOptionList
 %type <node>  DropOption
-%type <node>  CreateSchemaStmt CreateSeqStmt AlterSeqStmt
+%type <node>  CreateSchemaStmt CreateSequenceStmt AlterSequenceStmt
 %type <node>  CreateDomainStmt AlterDomainStmt AlterEnumStmt AlterCollationStmt AlterCompositeTypeStmt
-%type <list>  OptSchemaEltList OptParenthesizedSeqOptList OptSeqOptList SeqOptList
+%type <list>  OptSchemaEltList OptParenthesizedSequenceOptList OptSequenceOptList SequenceOptList
 %type <list>  AlterIdentityColumnOptionList
 %type <node>  AlterIdentityColumnOption
 %type <ival>  GeneratedWhen
-%type <node>  SeqOptElem
+%type <node>  SequenceOptElem
 %type <node>  SchemaStmt
 %type <list>  AlterTypeCmds
 %type <node>  AlterTypeCmd
@@ -403,7 +403,7 @@ import (
 %type <list>  AnyOperator QualAllOp QualOp
 %type <str>   AllOp MathOp
 %type <node>  AlterFunctionStmt RemoveFuncStmt RemoveAggrStmt RemoveOperStmt
-%type <node>  CreateTrigStmt CreateEventTrigStmt AlterEventTrigStmt
+%type <node>  CreateTriggerStmt CreateEventTrigStmt AlterEventTrigStmt
 %type <node>  RuleStmt CreatePLangStmt
 %type <list>  AlterFuncOptList
 %type <list>  FunctionWithArgTypesList FuncArgs FuncArgsList RowsFromList
@@ -438,7 +438,7 @@ import (
 %type <keyactions> KeyActions
 %type <list>  OptCInclude ExclusionConstraintList
 %type <list>  ExclusionConstraintElem
-%type <ident> OptConsTableSpace ExistingIndex
+%type <ident> OptConsTablespace ExistingIndex
 %type <list>  HashPartbound
 %type <node>  HashPartboundElem
 %type <node>  OptConstrFromTable
@@ -487,16 +487,16 @@ import (
 %type <node>  CreateExtensionStmt AlterExtensionStmt AlterExtensionContentsStmt
 %type <list>  CreateExtensionOptList AlterExtensionOptList
 %type <node>  CreateExtensionOptItem AlterExtensionOptItem
-%type <node>  CreateTableSpaceStmt DropTableSpaceStmt
-%type <node>  OptTableSpaceOwner
-%type <node>  AlterTblSpcStmt
+%type <node>  CreateTablespaceStmt DropTablespaceStmt
+%type <node>  OptTablespaceOwner
+%type <node>  AlterTablespaceStmt
 %type <node>  CreateAmStmt
 %type <ival>  AMType
 %type <node>  CreatePolicyStmt AlterPolicyStmt
 %type <boolean>  RowSecurityDefaultPermissive
 %type <str>   RowSecurityDefaultForCmd RowSecurityCmd
-%type <list>  RowSecurityDefaultToRole RowSecurityOptionalToRole
-%type <node>  RowSecurityOptionalExpr RowSecurityOptionalWithCheck
+%type <list>  RowSecurityDefaultToRole RowSecurityOptToRole
+%type <node>  RowSecurityOptExpr RowSecurityOptWithCheck
 %type <node>  CreatePublicationStmt AlterPublicationStmt
 %type <list>  OptDefinition
 %type <node>  PublicationObjSpec
@@ -607,7 +607,7 @@ Statement:
 		{
 			$$ = $1
 		}
-	| InsertIntoStmt
+	| InsertStmt
 		{
 			$$ = $1
 		}
@@ -615,7 +615,7 @@ Statement:
 		{
 			$$ = $1
 		}
-	| DeleteFromStmt
+	| DeleteStmt
 		{
 			$$ = $1
 		}
@@ -711,7 +711,7 @@ Statement:
 		{
 			$$ = $1
 		}
-	| PrepareStmt
+	| PreparedStmt
 		{
 			$$ = $1
 		}
@@ -811,7 +811,7 @@ Statement:
 		{
 			$$ = $1
 		}
-	| CreatedbStmt
+	| CreateDatabaseStmt
 		{
 			$$ = $1
 		}
@@ -823,7 +823,7 @@ Statement:
 		{
 			$$ = $1
 		}
-	| DropdbStmt
+	| DropDatabaseStmt
 		{
 			$$ = $1
 		}
@@ -835,11 +835,11 @@ Statement:
 		{
 			$$ = $1
 		}
-	| CreateSeqStmt
+	| CreateSequenceStmt
 		{
 			$$ = $1
 		}
-	| AlterSeqStmt
+	| AlterSequenceStmt
 		{
 			$$ = $1
 		}
@@ -895,7 +895,7 @@ Statement:
 		{
 			$$ = $1
 		}
-	| CreateTrigStmt
+	| CreateTriggerStmt
 		{
 			$$ = $1
 		}
@@ -963,15 +963,15 @@ Statement:
 		{
 			$$ = $1
 		}
-	| CreateTableSpaceStmt
+	| CreateTablespaceStmt
 		{
 			$$ = $1
 		}
-	| DropTableSpaceStmt
+	| DropTablespaceStmt
 		{
 			$$ = $1
 		}
-	| AlterTblSpcStmt
+	| AlterTablespaceStmt
 		{
 			$$ = $1
 		}
@@ -1127,7 +1127,7 @@ Statement:
  *
  *****************************************************************************/
 
-InsertIntoStmt:
+InsertStmt:
 	OptWithClause INSERT INTO InsertTarget InsertRest OptOnConflict ReturningOpt
 		{
 			n := $5.(*ast.InsertStmt)
@@ -1221,7 +1221,7 @@ OptOnConflict:
 				DoNothing: true,
 			}
 		}
-	| ON CONFLICT DO UPDATE SET AssignmentList WhereClauseOptional
+	| ON CONFLICT DO UPDATE SET AssignmentList WhereClauseOpt
 		{
 			$$ = &ast.OnConflictClause{
 				UpdateList: $6,
@@ -1235,7 +1235,7 @@ OptOnConflict:
 				DoNothing: true,
 			}
 		}
-	| ON CONFLICT '(' IndexParams ')' DO UPDATE SET AssignmentList WhereClauseOptional
+	| ON CONFLICT '(' IndexParams ')' DO UPDATE SET AssignmentList WhereClauseOpt
 		{
 			$$ = &ast.OnConflictClause{
 				IndexCols:  indexElemColNames($4),
@@ -1250,7 +1250,7 @@ OptOnConflict:
 				DoNothing:  true,
 			}
 		}
-	| ON CONFLICT ON CONSTRAINT Name DO UPDATE SET AssignmentList WhereClauseOptional
+	| ON CONFLICT ON CONSTRAINT Name DO UPDATE SET AssignmentList WhereClauseOpt
 		{
 			$$ = &ast.OnConflictClause{
 				Constraint: $5,
@@ -1258,7 +1258,7 @@ OptOnConflict:
 				UpdateWhere: $10,
 			}
 		}
-	| ON CONFLICT '(' IndexParams ')' WhereClauseOptional DO NOTHING
+	| ON CONFLICT '(' IndexParams ')' WhereClauseOpt DO NOTHING
 		{
 			$$ = &ast.OnConflictClause{
 				IndexCols:  indexElemColNames($4),
@@ -1266,7 +1266,7 @@ OptOnConflict:
 				DoNothing:  true,
 			}
 		}
-	| ON CONFLICT '(' IndexParams ')' WhereClauseOptional DO UPDATE SET AssignmentList WhereClauseOptional
+	| ON CONFLICT '(' IndexParams ')' WhereClauseOpt DO UPDATE SET AssignmentList WhereClauseOpt
 		{
 			$$ = &ast.OnConflictClause{
 				IndexCols:  indexElemColNames($4),
@@ -1362,7 +1362,7 @@ UpdateStmt:
  *
  *****************************************************************************/
 
-DeleteFromStmt:
+DeleteStmt:
 	OptWithClause DELETE_P FROM RelationExprOptAlias UsingClause WhereClause ReturningOpt
 		{
 			n := &ast.DeleteStmt{BaseDeleteStmt: pkast.BaseDeleteStmt{
@@ -1686,7 +1686,7 @@ PathOpt:
 	;
 
 CreateTableStmt:
-	CREATE OptTemp TABLE QualifiedName '(' OptTableElementList ')' OptInherit OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTableSpace
+	CREATE OptTemp TABLE QualifiedName '(' OptTableElementList ')' OptInherit OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTablespace
 		{
 			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $4)...))
 			table.Relpersistence = relpersistenceForTemp($2)
@@ -1705,7 +1705,7 @@ CreateTableStmt:
 				Tablespace:  $13,
 			}
 		}
-	| CREATE OptTemp TABLE IF_P NOT EXISTS QualifiedName '(' OptTableElementList ')' OptInherit OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTableSpace
+	| CREATE OptTemp TABLE IF_P NOT EXISTS QualifiedName '(' OptTableElementList ')' OptInherit OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTablespace
 		{
 			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $7)...))
 			table.Relpersistence = relpersistenceForTemp($2)
@@ -1756,7 +1756,7 @@ CreateTableStmt:
 				PartitionBy: $11,
 			}
 		}
-	| CREATE OptTemp TABLE QualifiedName PARTITION OF QualifiedName OptTypedTableElementList PartitionBoundSpecClause OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTableSpace
+	| CREATE OptTemp TABLE QualifiedName PARTITION OF QualifiedName OptTypedTableElementList PartitionBoundSpecClause OptPartitionSpec OptAccessMethod OptWith OnCommitOption OptTablespace
 		{
 			table := syntaxTableName(syntaxName(syntaxIdents(yylex, $4)...))
 			table.Relpersistence = relpersistenceForTemp($2)
@@ -1817,7 +1817,7 @@ OnCommitOption:
 	| /* EMPTY */				{ $$ = int64(ast.ONCOMMIT_NOOP) }
 	;
 
-OptTableSpace:
+OptTablespace:
 	TABLESPACE Name				{ $$ = syntaxIdent(yylex, $2, yyS[yypt].span) }
 	| /* EMPTY */				{ $$ = lex.Ident{Span: loc.InvalidSpan()} }
 	;
@@ -2109,11 +2109,11 @@ ColConstraintElem:
 		{
 			$$ = &ast.ColumnOption{Tp: ast.ColumnOptionNull}
 		}
-	| UNIQUE OptUniqueNullTreatment OptDefinition OptConsTableSpace
+	| UNIQUE OptUniqueNullTreatment OptDefinition OptConsTablespace
 		{
 			$$ = &ast.ColumnOption{Tp: ast.ColumnOptionUniqKey, NullsNotDistinct: $2}
 		}
-	| PRIMARY KEY OptDefinition OptConsTableSpace
+	| PRIMARY KEY OptDefinition OptConsTablespace
 		{
 			$$ = &ast.ColumnOption{Tp: ast.ColumnOptionPrimaryKey}
 		}
@@ -2132,7 +2132,7 @@ ColConstraintElem:
 				Refer: makeReferenceDef($2, $3, $4, $5),
 			}
 		}
-	| GENERATED ALWAYS AS IDENTITY_P OptParenthesizedSeqOptList
+	| GENERATED ALWAYS AS IDENTITY_P OptParenthesizedSequenceOptList
 		{
 			$$ = &ast.ColumnOption{
 				Tp:              ast.ColumnOptionIdentity,
@@ -2140,7 +2140,7 @@ ColConstraintElem:
 				SequenceOptions: $5,
 			}
 		}
-	| GENERATED BY DEFAULT AS IDENTITY_P OptParenthesizedSeqOptList
+	| GENERATED BY DEFAULT AS IDENTITY_P OptParenthesizedSequenceOptList
 		{
 			$$ = &ast.ColumnOption{
 				Tp:              ast.ColumnOptionIdentity,
@@ -2207,7 +2207,7 @@ TableConstraint:
 	;
 
 ConstraintElem:
-	UNIQUE OptUniqueNullTreatment '(' ColumnList ')' OptCInclude OptDefinition OptConsTableSpace ConstraintAttributeSpec
+	UNIQUE OptUniqueNullTreatment '(' ColumnList ')' OptCInclude OptDefinition OptConsTablespace ConstraintAttributeSpec
 		{
 			n := &ast.Constraint{
 				Tp:              ast.ConstraintUniq,
@@ -2230,7 +2230,7 @@ ConstraintElem:
 			applyConstraintAttrs(n, $3)
 			$$ = n
 		}
-	| PRIMARY KEY '(' ColumnList ')' OptCInclude OptDefinition OptConsTableSpace ConstraintAttributeSpec
+	| PRIMARY KEY '(' ColumnList ')' OptCInclude OptDefinition OptConsTablespace ConstraintAttributeSpec
 		{
 			n := &ast.Constraint{
 				Tp:             ast.ConstraintPrimaryKey,
@@ -2273,7 +2273,7 @@ ConstraintElem:
 			applyConstraintAttrs(n, $11)
 			$$ = n
 		}
-	| EXCLUDE AccessMethodClause '(' ExclusionConstraintList ')' OptCInclude OptDefinition OptConsTableSpace WhereClauseOptional ConstraintAttributeSpec
+	| EXCLUDE AccessMethodClause '(' ExclusionConstraintList ')' OptCInclude OptDefinition OptConsTablespace WhereClauseOpt ConstraintAttributeSpec
 		{
 			n := &ast.Constraint{
 				Tp:             ast.ConstraintUniq,
@@ -2352,7 +2352,7 @@ OptCInclude:
 	| /* EMPTY */               { $$ = nil }
 	;
 
-OptConsTableSpace:
+OptConsTablespace:
 	USING INDEX TABLESPACE Name { $$ = syntaxIdent(yylex, $4, yyS[yypt].span) }
 	| /* EMPTY */               { $$ = lex.Ident{Span: loc.InvalidSpan()} }
 	;
@@ -3313,7 +3313,7 @@ AlterTableCmd:
 				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
 			}
 		}
-	| ALTER COLUMN ColId ADD_P GENERATED ALWAYS AS IDENTITY_P '(' OptSeqOptList ')'
+	| ALTER COLUMN ColId ADD_P GENERATED ALWAYS AS IDENTITY_P '(' OptSequenceOptList ')'
 		{
 			$$ = &ast.AlterTableSpec{
 
@@ -3329,7 +3329,7 @@ AlterTableCmd:
 				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
 			}
 		}
-	| ALTER COLUMN ColId ADD_P GENERATED BY DEFAULT AS IDENTITY_P '(' OptSeqOptList ')'
+	| ALTER COLUMN ColId ADD_P GENERATED BY DEFAULT AS IDENTITY_P '(' OptSequenceOptList ')'
 		{
 			$$ = &ast.AlterTableSpec{
 
@@ -3356,7 +3356,7 @@ AlterTableCmd:
 			}
 		}
 	/* ADD GENERATED identity */
-	| ALTER COLUMN ColId ADD_P GENERATED GeneratedWhen AS IDENTITY_P OptParenthesizedSeqOptList
+	| ALTER COLUMN ColId ADD_P GENERATED GeneratedWhen AS IDENTITY_P OptParenthesizedSequenceOptList
 		{
 			c := &ast.Constraint{
 				Tp:             ast.ConstraintNoConstraint,
@@ -3369,7 +3369,7 @@ AlterTableCmd:
 				Def: c,
 			}
 		}
-	| ALTER ColId ADD_P GENERATED GeneratedWhen AS IDENTITY_P OptParenthesizedSeqOptList
+	| ALTER ColId ADD_P GENERATED GeneratedWhen AS IDENTITY_P OptParenthesizedSequenceOptList
 		{
 			c := &ast.Constraint{
 				Tp:             ast.ConstraintNoConstraint,
@@ -4372,7 +4372,7 @@ AnyNameList:
 
 IndexStmt:
 	CREATE OptUnique INDEX OptConcurrently IF_P NOT EXISTS OptIndexName
-	ON TableName AccessMethodClause '(' IndexParams ')' OptInclude OptUniqueNullTreatment OptRelOptions OptTableSpace WhereClauseOptional
+	ON TableName AccessMethodClause '(' IndexParams ')' OptInclude OptUniqueNullTreatment OptRelOptions OptTablespace WhereClauseOpt
 		{
 			$$ = &ast.CreateIndexStmt{
 				IndexName:     indexNameFromList(yylex, $8),
@@ -4390,7 +4390,7 @@ IndexStmt:
 			}
 		}
 	| CREATE OptUnique INDEX OptConcurrently OptIndexName
-	ON TableName AccessMethodClause '(' IndexParams ')' OptInclude OptUniqueNullTreatment OptRelOptions OptTableSpace WhereClauseOptional
+	ON TableName AccessMethodClause '(' IndexParams ')' OptInclude OptUniqueNullTreatment OptRelOptions OptTablespace WhereClauseOpt
 		{
 			$$ = &ast.CreateIndexStmt{
 				IndexName:     indexNameFromList(yylex, $5),
@@ -5196,9 +5196,9 @@ ExplainStmt:
 
 ExplainableStmt:
 	SelectStmt          { $$ = $1 }
-	| InsertIntoStmt        { $$ = $1 }
+	| InsertStmt        { $$ = $1 }
 	| UpdateStmt        { $$ = $1 }
-	| DeleteFromStmt    { $$ = $1 }
+	| DeleteStmt    { $$ = $1 }
 	| MergeStmt         { $$ = $1 }
 	| DeclareCursorStmt { $$ = $1 }
 	| CreateAsStmt      { $$ = $1 }
@@ -5217,7 +5217,7 @@ ExplainableStmt:
 CopyStmt:
 	COPY OptBinary TableName OptColumnList
 			CopyFrom OptProgram CopyFileName CopyDelimiter CopyOptWith
-			CopyOptions WhereClauseOptional
+			CopyOptions WhereClauseOpt
 		{
 			rv := relationName($3)
 			stmt := &ast.CopyStmt{
@@ -6171,19 +6171,19 @@ AddDrop:
 
 /*****************************************************************************
  *
- *      CREATE DATABASE
+ *      CREATE DATABASE statement
  *
  *****************************************************************************/
 
-CreatedbStmt:
-	CREATE DATABASE Name OptWithOptions CreatedbOptList
+CreateDatabaseStmt:
+	CREATE DATABASE Name OptWithOptions CreateDatabaseOptList
 		{
 			$$ = &ast.CreateDatabaseStmt{
 				Name:    syntaxIdent(yylex, $3, yyS[yypt-2].span),
 				Options: databaseOptions($5),
 			}
 		}
-	| CREATE DATABASE IF_P NOT EXISTS Name OptWithOptions CreatedbOptList
+	| CREATE DATABASE IF_P NOT EXISTS Name OptWithOptions CreateDatabaseOptList
 		{
 			$$ = &ast.CreateDatabaseStmt{
 				Name:        syntaxIdent(yylex, $6, yyS[yypt-2].span),
@@ -6193,30 +6193,30 @@ CreatedbStmt:
 		}
 	;
 
-CreatedbOptList:
-	CreatedbOptItems
+CreateDatabaseOptList:
+	CreateDatabaseOptItems
 		{ $$ = $1 }
 	| /* EMPTY */
 		{ $$ = nil }
 	;
 
-CreatedbOptItems:
-	CreatedbOptItem
+CreateDatabaseOptItems:
+	CreateDatabaseOptItem
 		{ $$ = makeList($1) }
-	| CreatedbOptItems CreatedbOptItem
+	| CreateDatabaseOptItems CreateDatabaseOptItem
 		{ $$ = appendList($1, $2) }
 	;
 
-CreatedbOptItem:
-	CreatedbOptName OptEqual NumericOnly
+CreateDatabaseOptItem:
+	CreateDatabaseOptName OptEqual NumericOnly
 		{
 			$$ = makeDefElem($1, $3)
 		}
-	| CreatedbOptName OptEqual OptBooleanOrString
+	| CreateDatabaseOptName OptEqual OptBooleanOrString
 		{
 			$$ = makeDefElem($1, &ast.String{Str: $3})
 		}
-	| CreatedbOptName OptEqual DEFAULT
+	| CreateDatabaseOptName OptEqual DEFAULT
 		{
 			$$ = makeDefElem($1, nil)
 		}
@@ -6228,7 +6228,7 @@ CreatedbOptItem:
  * we need, and allow IDENT so that database option names don't have to be
  * parser keywords unless they are already keywords for other reasons.
  */
-CreatedbOptName:
+CreateDatabaseOptName:
 	IDENT                  { $$ = $1 }
 	| CONNECTION LIMIT     { $$ = "connection_limit" }
 	| ENCODING             { $$ = "encoding" }
@@ -6256,14 +6256,14 @@ OptEqual:
  *****************************************************************************/
 
 AlterDatabaseStmt:
-	ALTER DATABASE Name WITH CreatedbOptList
+	ALTER DATABASE Name WITH CreateDatabaseOptList
 		{
 			$$ = &ast.AlterDatabaseStmt{
 				Name:  syntaxIdent(yylex, $3, yyS[yypt-2].span),
 				Options: defElemsToDatabaseOptions($5),
 			}
 		}
-	| ALTER DATABASE Name CreatedbOptList
+	| ALTER DATABASE Name CreateDatabaseOptList
 		{
 			$$ = &ast.AlterDatabaseStmt{
 				Name:  syntaxIdent(yylex, $3, yyS[yypt-1].span),
@@ -6295,7 +6295,7 @@ AlterDatabaseSetStmt:
  *
  *****************************************************************************/
 
-DropdbStmt:
+DropDatabaseStmt:
 	DROP DATABASE Name
 		{
 			$$ = &ast.DropdbStmt{
@@ -6414,8 +6414,8 @@ OptSchemaEltList:
 SchemaStmt:
 	CreateTableStmt        { $$ = $1 }
 	| IndexStmt       { $$ = $1 }
-	| CreateSeqStmt   { $$ = $1 }
-	| CreateTrigStmt  { $$ = $1 }
+	| CreateSequenceStmt   { $$ = $1 }
+	| CreateTriggerStmt  { $$ = $1 }
 	| CreateViewStmt        { $$ = $1 }
 	| GrantStmt       { $$ = $1 }
 	;
@@ -6426,8 +6426,8 @@ SchemaStmt:
  *
  *****************************************************************************/
 
-CreateSeqStmt:
-	CREATE OptTemp SEQUENCE QualifiedName OptSeqOptList
+CreateSequenceStmt:
+	CREATE OptTemp SEQUENCE QualifiedName OptSequenceOptList
 		{
 			rv := makeRangeVar($4)
 			relationName(rv).Relpersistence = relpersistenceForTemp($2)
@@ -6436,7 +6436,7 @@ CreateSeqStmt:
 				Options: $5,
 			}
 		}
-	| CREATE OptTemp SEQUENCE IF_P NOT EXISTS QualifiedName OptSeqOptList
+	| CREATE OptTemp SEQUENCE IF_P NOT EXISTS QualifiedName OptSequenceOptList
 		{
 			rv := makeRangeVar($7)
 			relationName(rv).Relpersistence = relpersistenceForTemp($2)
@@ -6448,8 +6448,8 @@ CreateSeqStmt:
 		}
 	;
 
-AlterSeqStmt:
-	ALTER SEQUENCE QualifiedName SeqOptList
+AlterSequenceStmt:
+	ALTER SEQUENCE QualifiedName SequenceOptList
 		{
 			rv := makeRangeVar($3)
 			$$ = &ast.AlterSeqStmt{
@@ -6457,7 +6457,7 @@ AlterSeqStmt:
 				Options:  $4,
 			}
 		}
-	| ALTER SEQUENCE IF_P EXISTS QualifiedName SeqOptList
+	| ALTER SEQUENCE IF_P EXISTS QualifiedName SequenceOptList
 		{
 			rv := makeRangeVar($5)
 			$$ = &ast.AlterSeqStmt{
@@ -6468,24 +6468,24 @@ AlterSeqStmt:
 		}
 	;
 
-OptParenthesizedSeqOptList:
-	'(' SeqOptList ')'	{ $$ = $2 }
+OptParenthesizedSequenceOptList:
+	'(' SequenceOptList ')'	{ $$ = $2 }
 	| /* EMPTY */		{ $$ = nil }
 	;
 
-OptSeqOptList:
-	SeqOptList  { $$ = $1 }
+OptSequenceOptList:
+	SequenceOptList  { $$ = $1 }
 	| /* EMPTY */ { $$ = nil }
 	;
 
-SeqOptList:
-	SeqOptElem
+SequenceOptList:
+	SequenceOptElem
 		{ $$ = makeList($1) }
-	| SeqOptList SeqOptElem
+	| SequenceOptList SequenceOptElem
 		{ $$ = appendList($1, $2) }
 	;
 
-SeqOptElem:
+SequenceOptElem:
 	AS SimpleTypename
 		{
 			$$ = makeDefElem("as", typeNameNode($2))
@@ -6578,7 +6578,7 @@ AlterIdentityColumnOption:
 		{
 			$$ = makeDefElem("restart", $3)
 		}
-	| SET SeqOptElem
+	| SET SequenceOptElem
 		{
 			$$ = $2
 		}
@@ -7321,11 +7321,11 @@ SelectNoParens:
 		{
 			$$ = setSelectOptions($1, $2, nil, nil)
 		}
-	| SelectClause OrderByOptional ForLockingClause OptSelectLimit
+	| SelectClause OrderByOpt ForLockingClause OptSelectLimit
 		{
 			$$ = setSelectOptions($1, $2, $3, $4)
 		}
-	| SelectClause OrderByOptional SelectLimit OptForLockingClause
+	| SelectClause OrderByOpt SelectLimit OptForLockingClause
 		{
 			$$ = setSelectOptions($1, $2, $4, $3)
 		}
@@ -7337,11 +7337,11 @@ SelectNoParens:
 		{
 			$$ = setSelectOptions(setWithClause($2, $1), $3, nil, nil)
 		}
-	| WithClause SelectClause OrderByOptional ForLockingClause OptSelectLimit
+	| WithClause SelectClause OrderByOpt ForLockingClause OptSelectLimit
 		{
 			$$ = setSelectOptions(setWithClause($2, $1), $3, $4, $5)
 		}
-	| WithClause SelectClause OrderByOptional SelectLimit OptForLockingClause
+	| WithClause SelectClause OrderByOpt SelectLimit OptForLockingClause
 		{
 			$$ = setSelectOptions(setWithClause($2, $1), $3, $5, $4)
 		}
@@ -7359,7 +7359,7 @@ SelectClause:
 	;
 
 SimpleSelect:
-	SELECT OptAllClause OptTargetList IntoClause TableRefsClause WhereClauseOptional GroupByClause HavingClause WindowClauseOptional
+	SELECT OptAllClause OptTargetList IntoClause TableRefsClause WhereClauseOpt GroupByClause HavingClause WindowClauseOpt
 		{
 			n := &ast.SelectStmt{
 				SelectStmtOpts: &ast.SelectStmtOpts{},
@@ -7371,7 +7371,7 @@ SimpleSelect:
 			if $4 != nil { n.IntoTable = $4.(*ast.IntoClause) }
 			$$ = n
 		}
-	| SELECT DistinctClause FieldList IntoClause TableRefsClause WhereClauseOptional GroupByClause HavingClause WindowClauseOptional
+	| SELECT DistinctClause FieldList IntoClause TableRefsClause WhereClauseOpt GroupByClause HavingClause WindowClauseOpt
 		{
 			n := &ast.SelectStmt{
 				Distinct:      true,
@@ -7917,8 +7917,8 @@ OptRepeatableClause:
 	| /* EMPTY */				{ $$ = nil }
 	;
 
-// WHERE clause
-WhereClauseOptional:
+// optional WHERE clause
+WhereClauseOpt:
 	WHERE AExpr { $$ = $2 }
 	| /* EMPTY */ { $$ = nil }
 	;
@@ -8003,7 +8003,8 @@ OrderBy:
 	ORDER BY ByList { $$ = orderByFromList($3) }
 	;
 
-OrderByOptional:
+// optional ORDER BY clause
+OrderByOpt:
 	OrderBy { $$ = $1 }
 	| /* EMPTY */ { $$ = nil }
 	;
@@ -8891,7 +8892,8 @@ OverClause:
 	| /* EMPTY */				{ $$ = nil }
 	;
 
-WindowClauseOptional:
+// optional WINDOW clause
+WindowClauseOpt:
 	WINDOW WindowDefinitionList	{ $$ = $2 }
 	| /* EMPTY */					{ $$ = nil }
 	;
@@ -8911,7 +8913,7 @@ WindowDefinition:
 	;
 
 WindowSpec:
-	'(' OptExistingWindowName OptPartitionClause OrderByOptional OptWindowFrameClause ')'
+	'(' OptExistingWindowName OptPartitionClause OrderByOpt OptWindowFrameClause ')'
 		{
 			spec := &ast.WindowSpec{Ref: syntaxIdent(yylex, $2, yyS[yypt-4].span)}
 			if $3 != nil {
@@ -8993,16 +8995,16 @@ FuncApplication:
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1))
 		}
-	| FunctionName '(' FuncArgList OrderByOptional ')'
+	| FunctionName '(' FuncArgList OrderByOpt ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($3)...)
 			if $4 != nil { $$.(*ast.FuncCallExpr).OrderBy = $4.(*ast.OrderByClause) }
 		}
-	| FunctionName '(' VARIADIC FuncArgExpr OrderByOptional ')'
+	| FunctionName '(' VARIADIC FuncArgExpr OrderByOpt ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), $4)
 		}
-	| FunctionName '(' FuncArgList ',' VARIADIC FuncArgExpr OrderByOptional ')'
+	| FunctionName '(' FuncArgList ',' VARIADIC FuncArgExpr OrderByOpt ')'
 		{
 			args := append(exprsFromList($3), $6)
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), args...)
@@ -9013,13 +9015,13 @@ FuncApplication:
 			fn.Star = true
 			$$ = fn
 		}
-	| FunctionName '(' DISTINCT FuncArgList OrderByOptional ')'
+	| FunctionName '(' DISTINCT FuncArgList OrderByOpt ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($4)...)
 			$$.(*ast.FuncCallExpr).Distinct = true
 			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
 		}
-	| FunctionName '(' ALL FuncArgList OrderByOptional ')'
+	| FunctionName '(' ALL FuncArgList OrderByOpt ')'
 		{
 			$$ = ast.NewFuncCallExprParts(funcNameParts($1), exprsFromList($4)...)
 			if $5 != nil { $$.(*ast.FuncCallExpr).OrderBy = $5.(*ast.OrderByClause) }
@@ -10082,7 +10084,7 @@ AExprConst:
 		{
 			$$ = ast.NewTypeCastExpr(ast.NewValueExpr($2), typeNameFromList($1))
 		}
-	| FunctionName '(' FuncArgList OrderByOptional ')' SConst
+	| FunctionName '(' FuncArgList OrderByOpt ')' SConst
 		{
 			tp := typeNameFromList($1)
 			if $4 != nil { yylex.Error("type modifier cannot have ORDER BY") }
@@ -11256,7 +11258,7 @@ GenericReset:
  *
  *****************************************************************************/
 
-PrepareStmt:
+PreparedStmt:
 	PREPARE Name PrepTypeClause AS PreparableStmt
 		{
 			$$ = &ast.PrepareStmt{
@@ -11285,9 +11287,9 @@ TypeList:
 
 PreparableStmt:
 	SelectStmt  { $$ = $1 }
-	| InsertIntoStmt { $$ = $1 }
+	| InsertStmt { $$ = $1 }
 	| UpdateStmt { $$ = $1 }
-	| DeleteFromStmt { $$ = $1 }
+	| DeleteStmt { $$ = $1 }
 	| MergeStmt  { $$ = $1 }
 	;
 
@@ -11340,7 +11342,7 @@ DeallocateStmt:
  *****************************************************************************/
 
 TruncateTableStmt:
-	TRUNCATE OptTable RelationExprList OptRestartSeqs OptDropBehavior
+	TRUNCATE OptTable RelationExprList OptRestartSequences OptDropBehavior
 		{
 			tables := tableNamesFromList($3)
 			stmt := &ast.TruncateTableStmt{
@@ -11355,7 +11357,7 @@ TruncateTableStmt:
 		}
 	;
 
-OptRestartSeqs:
+OptRestartSequences:
 	CONTINUE_P IDENTITY_P { $$ = false }
 	| RESTART IDENTITY_P  { $$ = true }
 	| /* EMPTY */          { $$ = false }
@@ -12637,7 +12639,7 @@ OperArgTypes:
  *
  *****************************************************************************/
 
-CreateTrigStmt:
+CreateTriggerStmt:
 	CREATE OptOrReplace TRIGGER Name TriggerActionTime TriggerEvents ON
 	QualifiedName TriggerReferencing TriggerForSpec TriggerWhen
 	EXECUTE FunctionOrPROCEDURE FunctionName '(' TriggerFuncArgs ')'
@@ -12968,7 +12970,7 @@ EnableTrigger:
 
 RuleStmt:
 	CREATE OptOrReplace RULE Name AS
-	ON Event TO QualifiedName WhereClauseOptional
+	ON Event TO QualifiedName WhereClauseOpt
 	DO OptInstead RuleActionList
 		{
 			$$ = &ast.RuleStmt{
@@ -13013,9 +13015,9 @@ RuleActionMulti:
 
 RuleActionStmt:
 	SelectStmt  { $$ = $1 }
-	| InsertIntoStmt { $$ = $1 }
+	| InsertStmt { $$ = $1 }
 	| UpdateStmt { $$ = $1 }
-	| DeleteFromStmt { $$ = $1 }
+	| DeleteStmt { $$ = $1 }
 	| NotifyStmt { $$ = $1 }
 	;
 
@@ -13526,8 +13528,8 @@ AlterUserMappingStmt:
  *
  *****************************************************************************/
 
-CreateTableSpaceStmt:
-	CREATE TABLESPACE Name OptTableSpaceOwner LOCATION SConst OptRelOptions
+CreateTablespaceStmt:
+	CREATE TABLESPACE Name OptTablespaceOwner LOCATION SConst OptRelOptions
 		{
 			$$ = &ast.CreateTablespaceStmt{
 				Name:     syntaxIdent(yylex, $3, yyS[yypt-4].span),
@@ -13538,7 +13540,7 @@ CreateTableSpaceStmt:
 		}
 	;
 
-OptTableSpaceOwner:
+OptTablespaceOwner:
 	OWNER RoleSpec { $$ = $2 }
 	| /* EMPTY */  { $$ = nil }
 	;
@@ -13559,7 +13561,7 @@ DropServerStmt:
 		}
 	;
 
-DropTableSpaceStmt:
+DropTablespaceStmt:
 	DROP TABLESPACE Name
 		{
 			$$ = &ast.DropTablespaceStmt{
@@ -13575,7 +13577,7 @@ DropTableSpaceStmt:
 		}
 	;
 
-AlterTblSpcStmt:
+AlterTablespaceStmt:
 	ALTER TABLESPACE Name SET RelOptions
 		{
 			$$ = &ast.AlterTablespaceStmt{
@@ -13852,7 +13854,7 @@ AMType:
 CreatePolicyStmt:
 	CREATE POLICY Name ON QualifiedName RowSecurityDefaultPermissive
 		RowSecurityDefaultForCmd RowSecurityDefaultToRole
-		RowSecurityOptionalExpr RowSecurityOptionalWithCheck
+		RowSecurityOptExpr RowSecurityOptWithCheck
 		{
 			$$ = &ast.CreatePolicyStmt{
 				PolicyName: $3,
@@ -13867,8 +13869,8 @@ CreatePolicyStmt:
 	;
 
 AlterPolicyStmt:
-	ALTER POLICY Name ON QualifiedName RowSecurityOptionalToRole
-		RowSecurityOptionalExpr RowSecurityOptionalWithCheck
+	ALTER POLICY Name ON QualifiedName RowSecurityOptToRole
+		RowSecurityOptExpr RowSecurityOptWithCheck
 		{
 			$$ = &ast.AlterPolicyStmt{
 				PolicyName: $3,
@@ -13880,12 +13882,12 @@ AlterPolicyStmt:
 		}
 	;
 
-RowSecurityOptionalExpr:
+RowSecurityOptExpr:
 	USING '(' AExpr ')'    { $$ = $3 }
 	| /* EMPTY */            { $$ = nil }
 	;
 
-RowSecurityOptionalWithCheck:
+RowSecurityOptWithCheck:
 	WITH CHECK '(' AExpr ')'    { $$ = $4 }
 	| /* EMPTY */                 { $$ = nil }
 	;
@@ -13902,7 +13904,7 @@ RowSecurityDefaultToRole:
 		}
 	;
 
-RowSecurityOptionalToRole:
+RowSecurityOptToRole:
 	TO RoleList    { $$ = $2 }
 	| /* EMPTY */   { $$ = nil }
 	;
@@ -15503,7 +15505,7 @@ CreateAsStmt:
 	;
 
 CreateAsTarget:
-	QualifiedName OptColumnList OptAccessMethod OptWith OnCommitOption OptTableSpace
+	QualifiedName OptColumnList OptAccessMethod OptWith OnCommitOption OptTablespace
 		{
 			rv := makeRangeVarFromAnyName($1)
 			$$ = &ast.IntoClause{
@@ -15561,7 +15563,7 @@ CreateMatViewStmt:
 	;
 
 CreateMVTarget:
-	QualifiedName OptColumnList OptAccessMethod OptRelOptions OptTableSpace
+	QualifiedName OptColumnList OptAccessMethod OptRelOptions OptTablespace
 		{
 			rv := makeRangeVarFromAnyName($1)
 			$$ = &ast.IntoClause{
