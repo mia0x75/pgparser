@@ -167,3 +167,9 @@
 - PG `AExpr` 的 TRUE／FALSE 四种形式与 MySQL `Expression` 中对应的 `IsOrNotOp` 分支统一调用 `isTruthExpr(expr, not, truth, span)`；四种形式都检查 AST 标志与完整源码跨度。
 - `UNKNOWN` 仍按旧动作映射：PG 使用 `IsTruthExpr`，MySQL 使用 `IsNullExpr`。方言用例分别固定其字段和值，未改写成对方仓库的表达。
 - PG `d0de4e8` → E2c 生成文件由 1,238,485 变为 1,238,488 字节；MySQL `bd89b62` → E2c 由 892,126 变为 892,024 字节。解析表逐字节不变，PG 冲突 418／37、MySQL 0／0；双仓语料结果与 E2b 基线一致。交错基准各 12 次，耗时无显著变化，分配字节及分配次数不变。
+
+## E2d LIKE 谓词
+
+- 双仓增加普通 `LIKE`／`NOT LIKE` 的节点与跨度护栏；PG 另测 `NOT ILIKE ... ESCAPE`，MySQL 另测单字符 ESCAPE，既有 MySQL 表达式 ESCAPE 回归测试仍覆盖 `EscapeExpr`。
+- 尝试把 PG 与 MySQL 的共同节点构造提取为 `patternLikeExpr`。固定 CPU、交错 12 次的 PG 基准显示耗时增加 3.6%–8.3%，分配不变；MySQL 未显示显著变化。PG 生成解析器已经统一补 AST span，helper 方案被撤回以避免热路径回退；grammar、helper 和生成文件现恢复基线。
+- E2d 最终只保留双仓测试与本记录，不改变解析行为；生成文件逐字节不变。撤回后固定 CPU、每项 1 秒的交错基准各 8 次，双仓耗时无显著变化，分配字节及次数不变。双仓 build、vet、race、lint、tidy、生成检查和语料核对通过；PG 40,644 条无新增异常，MySQL 87,549 条 MTR 逐用例一致。

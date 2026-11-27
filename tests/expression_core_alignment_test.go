@@ -237,3 +237,50 @@ func TestParsePostgresUnknownTruthCompatibility(t *testing.T) {
 		}
 	}
 }
+
+func TestParseSharedLikePredicateCore(t *testing.T) {
+	tests := []struct {
+		name    string
+		raw     string
+		pattern string
+		not     bool
+	}{
+		{name: "like", raw: "a LIKE 'x%'", pattern: "'x%'"},
+		{name: "not like", raw: "a NOT LIKE 'y%'", pattern: "'y%'", not: true},
+	}
+	sql := "SELECT " + tests[0].raw + ", " + tests[1].raw
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.PatternLikeExpr)
+			if !ok || expr.Not != tc.not {
+				t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i].Expr)
+			}
+			span := expr.Span()
+			if !span.Within(len(sql)) || sql[span.Start:span.End] != tc.raw {
+				t.Fatalf("%s has span %v", tc.raw, span)
+			}
+			childSpan := expr.Expr.Span()
+			if !childSpan.Within(len(sql)) || sql[childSpan.Start:childSpan.End] != "a" {
+				t.Fatalf("%s subject has span %v", tc.raw, childSpan)
+			}
+			patternSpan := expr.Pattern.Span()
+			if !patternSpan.Within(len(sql)) || sql[patternSpan.Start:patternSpan.End] != tc.pattern {
+				t.Fatalf("%s pattern has span %v", tc.raw, patternSpan)
+			}
+		})
+	}
+}
+
+func TestParsePostgresILikeCompatibility(t *testing.T) {
+	const sql = "SELECT a NOT ILIKE 'x%' ESCAPE '!'"
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	expr, ok := stmt.Fields.Items[0].Expr.(*dialectast.PatternLikeExpr)
+	if !ok || !expr.ILike || !expr.Not || expr.Escape == nil {
+		t.Fatalf("ILIKE expression = %#v", stmt.Fields.Items[0].Expr)
+	}
+	span := expr.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != "a NOT ILIKE 'x%' ESCAPE '!'" {
+		t.Fatalf("ILIKE expression has span %v", span)
+	}
+}
