@@ -8,14 +8,18 @@ import (
 )
 
 func TestParseSharedQueryCore(t *testing.T) {
-	const query = `WITH q AS (SELECT id FROM source) SELECT t.id, q.id FROM target AS t JOIN q ON t.id = q.id WHERE t.id > 0 ORDER BY t.id LIMIT 3`
+	const query = `WITH q AS (SELECT id FROM source) SELECT t.id, q.id FROM target AS t JOIN q ON t.id = q.id WHERE t.id > 0 GROUP BY t.id, q.id HAVING COUNT(*) > 0 ORDER BY t.id LIMIT 3`
 	node := mustParseOne(t, query)
 	stmt, ok := node.(*dialectast.SelectStmt)
 	if !ok {
 		t.Fatalf("statement type = %T, want *dialectast.SelectStmt", node)
 	}
-	if stmt.Fields == nil || len(stmt.Fields.Items) != 2 || stmt.From == nil || stmt.Where == nil || stmt.OrderBy == nil || stmt.Limit == nil {
+	if stmt.Fields == nil || len(stmt.Fields.Items) != 2 || stmt.From == nil || stmt.Where == nil || stmt.GroupBy == nil || stmt.Having == nil || stmt.OrderBy == nil || stmt.Limit == nil {
 		t.Fatalf("shared select core is incomplete: %#v", stmt.BaseSelectStmt)
+	}
+	groupBy := stmt.GroupBy.GroupByClauseCore()
+	if groupBy == nil || len(groupBy.Items) != 2 {
+		t.Fatalf("shared GROUP BY core = %#v", groupBy)
 	}
 
 	from := stmt.From.FromClauseCore()
