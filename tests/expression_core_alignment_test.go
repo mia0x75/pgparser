@@ -597,3 +597,23 @@ func TestParseSharedParenthesesAndScalarSubqueryCore(t *testing.T) {
 		t.Fatalf("scalar subquery span = %v", span)
 	}
 }
+
+func TestParseSharedDefaultExpressionCore(t *testing.T) {
+	const raw = "DEFAULT"
+	const sql = "UPDATE t SET a = " + raw
+	stmt := mustParseOne(t, sql).(*dialectast.UpdateStmt)
+	if len(stmt.Assignments) != 1 {
+		t.Fatalf("assignments = %d", len(stmt.Assignments))
+	}
+	expr, ok := stmt.Assignments[0].Expr.(*dialectast.DefaultExpr)
+	if !ok {
+		t.Fatalf("default expression = %#v", stmt.Assignments[0].Expr)
+	}
+	span := expr.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != raw {
+		t.Fatalf("DEFAULT span = %v", span)
+	}
+	if _, err := parser.New().ParseOneStmt("SELECT DEFAULT(a)"); err == nil {
+		t.Fatal("accepted MySQL DEFAULT(column) syntax")
+	}
+}

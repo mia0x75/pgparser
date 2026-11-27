@@ -230,3 +230,15 @@
 
 - 双仓 `(a + b)` 均以 `ParenthesesExpr` 保留括号节点，内部仍是共享 `BinaryOperationExpr`；`(SELECT 1)` 均以 `SubqueryExpr` 表示标量查询。
 - 测试锁定子节点及两个完整源码跨度；仅增加测试与记录，不改语法或生成文件。双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2o DEFAULT 表达式
+
+- 双仓 `UPDATE t SET a = DEFAULT` 均构造 `DefaultExpr`，并固定表达式精确跨度。MySQL `ExprOrDefault` 显式记录 `DefaultExpr` 的语法跨度；不改接受输入或恢复行为。
+- MySQL 的 `DEFAULT(a)` 继续作为额外语法接受，名称以 `QualifiedName` 保留；PG `DefaultExpr.Name *ColumnName` 与 MySQL 名称字段类型差异保持现状，且测试 PG 仍拒绝该语法。
+- 固定 CPU 交错基准 6 组：默认赋值解析无统计显著耗时变化，分配量保持 2.711 KiB/op、15 allocs/op。MySQL MTR 87,549 条逐用例与 D3b 基线一致；PG 40,644 条语料无新增异常。
+
+## E2 完成盘点
+
+- E2a–E2o 已为共同表达式语法及 AST 核心建立双仓护栏；E2o 唯一生产动作变化只为 MySQL `DefaultExpr` 记录精确跨度，接受范围、恢复文本和生成解析表均未改变。
+- 未纳入强行统一的剩余节点均有清楚边界：`PositionExpr` 是排序序号的方言表示；`ValuesExpr`／`VariableExpr` 保留 MySQL 特有形式；`MaxValueExpr` 是分区边界哨兵；聚合/窗口节点字段含方言语义修饰，普通调用共有部分由 `BaseCallExpr` 测试覆盖。
+- 双仓 build、vet、race、lint、tidy、生成复跑通过；PG 冲突保持 418 shift/reduce、37 reduce/reduce，MySQL 0/0。E2 完成。
