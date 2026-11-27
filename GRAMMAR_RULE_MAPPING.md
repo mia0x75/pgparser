@@ -79,3 +79,9 @@
 - PG 在 `SelectClause` 中接入 SELECT、集合运算、`VALUES` 和 `TABLE`；MySQL 将 `SelectStmt`、`SetOprStmt`、`ValuesSetOprStmt` 与 `TableStmt` 作为不同入口。保持入口分离，避免 `VALUES` 表达式歧义和入口消歧变化。
 - 双仓 `TestParseSharedSetOperationCore` 断言共享 `BaseSetOperation`、`INTERSECT` 优先级、显式括号组和 `VALUES ... UNION VALUES ...` 的共同核心。单 SELECT 分支、VALUES 构造和 TABLE 查询仍由各自现有方言测试覆盖。
 - 两仓用共享 `QueryTailStmt` 的 `Parenthesized` 标记包装显式括号内的集合操作；PG 还以 `SelectStmt.IsInBraces` 标记简单 SELECT 分支。继续保留此 AST 层次，不为规则同名而折叠。
+
+## Q5 结构核对记录
+
+- `TestParseSharedQueryTailCore` 断言普通 SELECT 和集合整体上的共享 `OrderByClauseCore`、排序方向及 `LimitCore` 的 Count/Offset；两仓均把集合整体的尾部保存在 `SetOprStmt.Tail`。
+- `TestLimitCommaKeepsOffsetAndCountOrder` 固定 `LIMIT 2, 3` 的现有映射：共享 Count 为 3、Offset 为 2。PG 恢复为 `LIMIT 3 OFFSET 2`，MySQL 保留 `LIMIT 2,3`；仅输出拼写不同。
+- 括号分支的尾部作用域已有方言测试：PG `TestSetOpParenthesizedScopeAndTail` 将尾部留在 `SelectStmt`；MySQL `TestSetOperationPaginationSpans` 检查括号分支和集合整体尾部的各自归属。PG `FETCH ... WITH TIES` 与 MySQL 锁尾语法继续分离。

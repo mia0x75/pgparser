@@ -103,3 +103,42 @@ func TestParseSharedSetOperationCore(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSharedQueryTailCore(t *testing.T) {
+	stmt, ok := mustParseOne(t, "SELECT 1 ORDER BY 1 DESC LIMIT 3 OFFSET 2").(*dialectast.SelectStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.SelectStmt")
+	}
+	assertSharedQueryTailCore(t, stmt.OrderBy, stmt.Limit)
+
+	setOperation, ok := mustParseOne(t, "SELECT 1 UNION SELECT 2 ORDER BY 1 DESC LIMIT 3 OFFSET 2").(*dialectast.SetOprStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.SetOprStmt")
+	}
+	assertSharedQueryTailCore(t, setOperation.Tail.OrderBy, setOperation.Tail.Limit)
+}
+
+func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
+	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
+	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {
+		t.Fatalf("restored LIMIT = %q, want %q", got, want)
+	}
+}
+
+func assertSharedQueryTailCore(t *testing.T, orderBy pkast.OrderByClauseNode, limit pkast.LimitNode) {
+	t.Helper()
+	if orderBy == nil || orderBy.OrderByClauseCore() == nil {
+		t.Fatal("shared ORDER BY core is nil")
+	}
+	items := orderBy.OrderByClauseCore().Items
+	if len(items) != 1 {
+		t.Fatalf("shared ORDER BY item count = %d, want 1", len(items))
+	}
+	item := items[0].OrderItemCore()
+	if item == nil || !item.Desc {
+		t.Fatalf("shared ORDER BY item core = %#v", item)
+	}
+	if limit == nil || limit.LimitCore() == nil || limit.LimitCore().Count == nil || limit.LimitCore().Offset == nil {
+		t.Fatalf("shared LIMIT core = %#v", limit)
+	}
+}
