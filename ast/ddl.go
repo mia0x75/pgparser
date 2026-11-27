@@ -433,7 +433,7 @@ func (n *IndexColName) Restore(ctx *format.RestoreCtx) error {
 		return errors.New("index element has both a column and an expression")
 	}
 	switch {
-	case n.Column != nil && n.Column.Name.O != "":
+	case n.Column != nil && n.Column.Name != "":
 		if err := n.Column.Restore(ctx); err != nil {
 			return errors.Annotate(err, "An error occurred while splicing IndexColName")
 		}
@@ -1997,7 +1997,7 @@ func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 			if i > 0 {
 				ctx.WritePlain(", ")
 			}
-			ctx.WriteName(col.Name.O)
+			ctx.WriteName(col.Name)
 		}
 		ctx.WritePlain(")")
 	}
@@ -2715,7 +2715,7 @@ func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 			return errors.New("ALTER TYPE has no data type")
 		}
 		ctx.WriteKeyword("ALTER " + column + " ")
-		ctx.WriteName(n.OldColumnName.Name.O)
+		ctx.WriteName(n.OldColumnName.Name)
 		ctx.WriteKeyword(" TYPE ")
 		definition := n.NewColumns[0]
 		if err := definition.Tp.Restore(ctx); err != nil {
@@ -2738,20 +2738,20 @@ func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 		}
 	case AlterTableDropDefault:
 		ctx.WriteKeyword("ALTER COLUMN ")
-		ctx.WriteName(n.OldColumnName.Name.O)
+		ctx.WriteName(n.OldColumnName.Name)
 		ctx.WriteKeyword(" DROP DEFAULT")
 	case AlterTableSetNotNull:
 		ctx.WriteKeyword("ALTER COLUMN ")
-		ctx.WriteName(n.OldColumnName.Name.O)
+		ctx.WriteName(n.OldColumnName.Name)
 		ctx.WriteKeyword(" SET NOT NULL")
 	case AlterTableDropNotNull:
 		ctx.WriteKeyword("ALTER COLUMN ")
-		ctx.WriteName(n.OldColumnName.Name.O)
+		ctx.WriteName(n.OldColumnName.Name)
 		ctx.WriteKeyword(" DROP NOT NULL")
 	case AlterTableSetStatistics:
 		ctx.WriteKeyword("ALTER COLUMN ")
 		if n.OldColumnName != nil {
-			ctx.WriteName(n.OldColumnName.Name.O)
+			ctx.WriteName(n.OldColumnName.Name)
 		} else {
 			if n.Def == nil {
 				return errors.New("SET STATISTICS has no column number")
@@ -2764,7 +2764,7 @@ func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 		ctx.WritePlainf("%d", n.Num)
 	case AlterTableSetStorage:
 		ctx.WriteKeyword("ALTER COLUMN ")
-		ctx.WriteName(n.OldColumnName.Name.O)
+		ctx.WriteName(n.OldColumnName.Name)
 		ctx.WriteKeyword(" SET STORAGE ")
 		ctx.WriteKeyword(n.Storage)
 	case AlterTableOwner:
@@ -2803,7 +2803,7 @@ func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 	case AlterTableSetRelOptions, AlterTableResetRelOptions:
 		if n.OldColumnName != nil {
 			ctx.WriteKeyword("ALTER COLUMN ")
-			ctx.WriteName(n.OldColumnName.Name.O)
+			ctx.WriteName(n.OldColumnName.Name)
 			ctx.WritePlain(" ")
 		}
 		if n.Tp == AlterTableSetRelOptions {
@@ -2859,7 +2859,7 @@ func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyword("RENAME CONSTRAINT ")
 		ctx.WriteName(n.Name)
 		ctx.WriteKeyword(" TO ")
-		ctx.WriteName(n.NewColumnName.Name.O)
+		ctx.WriteName(n.NewColumnName.Name)
 	case AlterTableValidateConstraint:
 		ctx.WriteKeyword("VALIDATE CONSTRAINT ")
 		ctx.WriteName(n.Name)

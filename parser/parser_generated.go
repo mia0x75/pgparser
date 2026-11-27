@@ -13,7 +13,6 @@ import (
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
 	"github.com/mia0x75/pgparser/types"
 )
@@ -18835,10 +18834,12 @@ yydefault:
 	case 143:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
+			span := yyS[yypt-1].span
+			ref := columnRef(syntaxName(syntaxIdent(yylex, yyDollar[1].str, span)), span)
 			if yyDollar[2].list == nil {
-				yyVAL.node = ast.NewColumnNameExpr("", "", yyDollar[1].str)
+				yyVAL.node = ref
 			} else {
-				yyVAL.node = &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", yyDollar[1].str), Indirection: yyDollar[2].list}
+				yyVAL.node = &ast.A_Indirection{Arg: ref, Indirection: yyDollar[2].list}
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -18956,8 +18957,9 @@ yydefault:
 	case 158:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
+			span := yyS[yypt-2].span
 			yyVAL.node = &ast.Assignment{
-				Target: ast.NewColumnNameExpr("", "", yyDollar[1].str),
+				Target: columnRef(syntaxName(syntaxIdent(yylex, yyDollar[1].str, span)), span),
 				Expr:   yyDollar[3].expr,
 			}
 		}
@@ -18965,8 +18967,9 @@ yydefault:
 	case 159:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
+			span := yyS[yypt-3].span
 			yyVAL.node = &ast.Assignment{
-				Target: &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", yyDollar[1].str), Indirection: yyDollar[2].list},
+				Target: &ast.A_Indirection{Arg: columnRef(syntaxName(syntaxIdent(yylex, yyDollar[1].str, span)), span), Indirection: yyDollar[2].list},
 				Expr:   yyDollar[4].expr,
 			}
 		}
@@ -19732,7 +19735,7 @@ yydefault:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.node = &ast.ColumnDef{
-				Name:    &ast.ColumnName{Name: model.NewCIStr(yyDollar[1].str)},
+				Name:    &ast.ColumnName{Name: yyDollar[1].str},
 				Options: yyDollar[2].colopts,
 			}
 		}
@@ -19741,7 +19744,7 @@ yydefault:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
 			yyVAL.node = &ast.ColumnDef{
-				Name:    &ast.ColumnName{Name: model.NewCIStr(yyDollar[1].str)},
+				Name:    &ast.ColumnName{Name: yyDollar[1].str},
 				Options: yyDollar[4].colopts,
 			}
 		}
@@ -19867,7 +19870,7 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			yyVAL.node = &ast.ColumnDef{
-				Name:    &ast.ColumnName{Name: model.NewCIStr(yyDollar[1].str)},
+				Name:    &ast.ColumnName{Name: yyDollar[1].str},
 				Tp:      yyDollar[2].tp,
 				Options: yyDollar[3].colopts,
 			}
@@ -20614,7 +20617,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Behavior:      ast.DropBehavior(int(yyDollar[4].ival)),
 			}
 		}
@@ -20625,7 +20628,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[5].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[5].str},
 				Behavior:      ast.DropBehavior(int(yyDollar[6].ival)),
 				MissingOk:     true,
 			}
@@ -20637,7 +20640,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableModifyColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Def:           yyDollar[6].expr,
 			}
 		}
@@ -20648,7 +20651,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropDefault,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -20658,7 +20661,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -20668,7 +20671,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -20682,7 +20685,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 			}
 		}
@@ -20740,7 +20743,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 			}
 		}
@@ -20755,7 +20758,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 				Def:           yyDollar[8].expr,
 			}
@@ -20771,7 +20774,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 				Def:           yyDollar[10].expr,
 			}
@@ -20787,7 +20790,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 			}
 		}
@@ -20802,7 +20805,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 			}
 		}
@@ -20817,7 +20820,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 				Def:           yyDollar[9].expr,
 			}
@@ -20829,7 +20832,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableModifyColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Def:           yyDollar[5].expr,
 			}
 		}
@@ -20840,7 +20843,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropDefault,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -20850,7 +20853,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -20860,7 +20863,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -20874,7 +20877,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 				Def:           yyDollar[7].expr,
 			}
@@ -20886,7 +20889,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Def:           yyDollar[4].list,
 			}
 		}
@@ -20897,7 +20900,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableAlterColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Def:           yyDollar[3].list,
 			}
 		}
@@ -21237,7 +21240,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Behavior:      ast.DropBehavior(int(yyDollar[3].ival)),
 			}
 		}
@@ -21248,7 +21251,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[4].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[4].str},
 				Behavior:      ast.DropBehavior(int(yyDollar[5].ival)),
 				MissingOk:     true,
 			}
@@ -21301,7 +21304,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Storage:       yyDollar[6].str,
 			}
 		}
@@ -21312,7 +21315,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Storage:       "default",
 			}
 		}
@@ -21323,7 +21326,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Storage:       yyDollar[5].str,
 			}
 		}
@@ -21334,7 +21337,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Storage:       "default",
 			}
 		}
@@ -21345,7 +21348,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetStatistics,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Num:           yyDollar[6].ival,
 			}
 		}
@@ -21356,7 +21359,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetStatistics,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Num:           yyDollar[5].ival,
 			}
 		}
@@ -21389,7 +21392,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Def:           &ast.String{Str: yyDollar[5].str},
 			}
 		}
@@ -21400,7 +21403,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Def:           &ast.String{Str: yyDollar[4].str},
 			}
 		}
@@ -21411,7 +21414,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Def:           yyDollar[8].expr,
 			}
 		}
@@ -21422,7 +21425,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Def:           yyDollar[7].expr,
 			}
 		}
@@ -21433,7 +21436,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -21443,7 +21446,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				MissingOk:     true,
 			}
 		}
@@ -21454,7 +21457,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -21464,7 +21467,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -21474,7 +21477,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -21484,7 +21487,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -21494,7 +21497,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
@@ -21504,7 +21507,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				MissingOk:     true,
 			}
 		}
@@ -21519,7 +21522,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Def:           c,
 			}
 		}
@@ -21534,7 +21537,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[2].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[2].str},
 				Def:           c,
 			}
 		}
@@ -21545,7 +21548,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Def:           yyDollar[4].list,
 			}
 		}
@@ -21556,7 +21559,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableSetRelOptions,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				RelOptions:    yyDollar[6].list,
 			}
 		}
@@ -21567,7 +21570,7 @@ yydefault:
 			yyVAL.node = &ast.AlterTableSpec{
 
 				Tp:            ast.AlterTableResetRelOptions,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				RelOptions:    yyDollar[6].list,
 			}
 		}
@@ -21708,7 +21711,7 @@ yydefault:
 				Specs: []*ast.AlterTableSpec{{
 					Tp:            ast.AlterTableRenameConstraint,
 					Name:          yyDollar[6].str,
-					NewColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[8].str)},
+					NewColumnName: &ast.ColumnName{Name: yyDollar[8].str},
 				}},
 			}
 		}
@@ -21747,7 +21750,7 @@ yydefault:
 				Specs: []*ast.AlterTableSpec{{
 					Tp:            ast.AlterTableRenameConstraint,
 					Name:          yyDollar[8].str,
-					NewColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[10].str)},
+					NewColumnName: &ast.ColumnName{Name: yyDollar[10].str},
 				}},
 				MissingOk: true,
 			}
@@ -25843,7 +25846,7 @@ yydefault:
 
 				Tp:            ast.AlterTableDropColumn,
 				Attribute:     true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				Behavior:      ast.DropBehavior(int(yyDollar[4].ival)),
 			}
 		}
@@ -25855,7 +25858,7 @@ yydefault:
 
 				Tp:            ast.AlterTableDropColumn,
 				Attribute:     true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[5].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[5].str},
 				Behavior:      ast.DropBehavior(int(yyDollar[6].ival)),
 				MissingOk:     true,
 			}
@@ -25865,7 +25868,7 @@ yydefault:
 		yyDollar = yyS[yypt-9 : yypt+1]
 		{
 			coldef := &ast.ColumnDef{
-				Name: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				Name: &ast.ColumnName{Name: yyDollar[3].str},
 				Tp:   yyDollar[7].tp,
 			}
 			if yyDollar[8].node != nil {
@@ -25875,7 +25878,7 @@ yydefault:
 
 				Tp:            ast.AlterTableAlterColumnType,
 				Attribute:     true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 				Behavior:      ast.DropBehavior(int(yyDollar[9].ival)),
 			}
@@ -25885,7 +25888,7 @@ yydefault:
 		yyDollar = yyS[yypt-7 : yypt+1]
 		{
 			coldef := &ast.ColumnDef{
-				Name: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				Name: &ast.ColumnName{Name: yyDollar[3].str},
 				Tp:   yyDollar[5].tp,
 			}
 			if yyDollar[6].node != nil {
@@ -25895,7 +25898,7 @@ yydefault:
 
 				Tp:            ast.AlterTableAlterColumnType,
 				Attribute:     true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr(yyDollar[3].str)},
+				OldColumnName: &ast.ColumnName{Name: yyDollar[3].str},
 				NewColumns:    []*ast.ColumnDef{coldef},
 				Behavior:      ast.DropBehavior(int(yyDollar[7].ival)),
 			}
@@ -25905,7 +25908,7 @@ yydefault:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{
 			coldef := &ast.ColumnDef{
-				Name: &ast.ColumnName{Name: model.NewCIStr(yyDollar[1].str)},
+				Name: &ast.ColumnName{Name: yyDollar[1].str},
 				Tp:   yyDollar[2].tp,
 			}
 			if yyDollar[3].node != nil {
@@ -30143,7 +30146,7 @@ yydefault:
 	case 1642:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewColumnNameExpr("", "", yyDollar[1].str)
+			yyVAL.expr = columnRef(syntaxName(syntaxIdent(yylex, yyDollar[1].str, yyS[yypt].span)), yyVAL.span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1643:

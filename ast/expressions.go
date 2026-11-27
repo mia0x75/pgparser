@@ -12,7 +12,6 @@ import (
 	"github.com/mia0x75/pgparser/errors"
 
 	"github.com/mia0x75/pgparser/format"
-	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
 )
 
@@ -39,6 +38,8 @@ var (
 
 	_ Node = &ColumnName{}
 	_ Node = &WhenClause{}
+
+	_ pkast.ColumnRefNode = (*ColumnNameExpr)(nil)
 )
 
 // ValueExpr is the accessor kept by syntax literals for legacy callers.
@@ -538,48 +539,18 @@ func (n *CompareSubqueryExpr) Accept(v Visitor) (Node, bool) {
 // ColumnName represents column name.
 type ColumnName struct {
 	node
-	Catalog model.CIStr
-	Schema  model.CIStr
-	Table   model.CIStr
-	Name    model.CIStr
+	Name string
 }
 
 // Restore implements Node interface.
 func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
-	if n.Catalog.O != "" {
-		ctx.WriteName(n.Catalog.O)
-		ctx.WritePlain(".")
-	}
-	if n.Schema.O != "" {
-		ctx.WriteName(n.Schema.O)
-		ctx.WritePlain(".")
-	}
-	if n.Table.O != "" {
-		ctx.WriteName(n.Table.O)
-		ctx.WritePlain(".")
-	}
-	ctx.WriteName(n.Name.O)
+	ctx.WriteName(n.Name)
 	return ctx.Err()
 }
 
 // Format formats the ColumnName into a Writer.
 func (n *ColumnName) Format(w io.Writer) {
-	if n.Catalog.O != "" {
-		_, _ = fmt.Fprint(w, n.Catalog.O, ".")
-	}
-	if n.Schema.O != "" {
-		_, _ = fmt.Fprint(w, n.Schema.O)
-		_, _ = fmt.Fprint(w, ".")
-	}
-	if n.Table.O != "" {
-		_, _ = fmt.Fprint(w, n.Table.O)
-		_, _ = fmt.Fprint(w, ".")
-	}
-	if n.Name.O == "*" {
-		_, _ = fmt.Fprint(w, "*")
-		return
-	}
-	_, _ = fmt.Fprint(w, n.Name.O)
+	_, _ = fmt.Fprint(w, n.Name)
 }
 
 // Accept implements Node Accept interface.
@@ -594,42 +565,17 @@ func (n *ColumnName) Accept(v Visitor) (Node, bool) {
 
 // String implements Stringer interface.
 func (n *ColumnName) String() string {
-	result := n.Name.L
-	if n.Table.L != "" {
-		result = n.Table.L + "." + result
-	}
-	if n.Schema.L != "" {
-		result = n.Schema.L + "." + result
-	}
-	if n.Catalog.L != "" {
-		result = n.Catalog.L + "." + result
-	}
-	return result
+	return strings.ToLower(n.Name)
 }
 
-// OrigColName returns the full original column name.
-func (n *ColumnName) OrigColName() (ret string) {
-	ret = n.Name.O
-	if n.Table.O == "" {
-		return
-	}
-	ret = n.Table.O + "." + ret
-	if n.Schema.O == "" {
-		return
-	}
-	ret = n.Schema.O + "." + ret
-	if n.Catalog.O != "" {
-		ret = n.Catalog.O + "." + ret
-	}
-	return
+// OrigColName preserves the original case rather than folding like String.
+func (n *ColumnName) OrigColName() string {
+	return n.Name
 }
 
 // ColumnNameExpr represents a column name expression.
 type ColumnNameExpr struct {
-	exprNode
-
-	// Name is the referenced column name.
-	Name *ColumnName
+	pkast.BaseColumnRef
 
 	// Refer is the result field the column name refers to.
 	// The value of Refer.Expr is used as the value of the expression.
@@ -638,15 +584,21 @@ type ColumnNameExpr struct {
 
 // Restore implements Node interface.
 func (n *ColumnNameExpr) Restore(ctx *format.RestoreCtx) error {
-	if err := n.Name.Restore(ctx); err != nil {
-		return errors.Trace(err)
+	if n == nil || len(n.Name.Parts) == 0 {
+		return errors.New("column reference has no name")
+	}
+	for i, part := range n.Name.Parts {
+		if i > 0 {
+			ctx.WritePlain(".")
+		}
+		ctx.WriteName(part.Name)
 	}
 	return ctx.Err()
 }
 
 // Format the ExprNode into a Writer.
 func (n *ColumnNameExpr) Format(w io.Writer) {
-	name := strings.ReplaceAll(n.Name.String(), ".", "`.`")
+	name := strings.ReplaceAll(strings.ToLower(qualifiedNameString(n.Name)), ".", "`.`")
 	_, _ = fmt.Fprintf(w, "`%s`", name)
 }
 
@@ -657,11 +609,6 @@ func (n *ColumnNameExpr) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*ColumnNameExpr)
-	node, ok := n.Name.Accept(v)
-	if !ok {
-		return n, false
-	}
-	n.Name = node.(*ColumnName)
 	return v.Leave(n)
 }
 

@@ -17,7 +17,6 @@ import (
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
 	"github.com/mia0x75/pgparser/types"
 )
@@ -1206,10 +1205,12 @@ InsertColumnList:
 InsertColumnItem:
 	ColId OptIndirection
 		{
+			span := yyS[yypt-1].span
+			ref := columnRef(syntaxName(syntaxIdent(yylex, $1, span)), span)
 			if $2 == nil {
-				$$ = ast.NewColumnNameExpr("", "", $1)
+				$$ = ref
 			} else {
-				$$ = &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", $1), Indirection: $2}
+				$$ = &ast.A_Indirection{Arg: ref, Indirection: $2}
 			}
 		}
 	;
@@ -1313,15 +1314,17 @@ Assignment:
 		}
 	| ColId '=' AExpr
 		{
+			span := yyS[yypt-2].span
 			$$ = &ast.Assignment{
-				Target: ast.NewColumnNameExpr("", "", $1),
+				Target: columnRef(syntaxName(syntaxIdent(yylex, $1, span)), span),
 				Expr:   $3,
 			}
 		}
 	| ColId Indirection '=' AExpr
 		{
+			span := yyS[yypt-3].span
 			$$ = &ast.Assignment{
-				Target: &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", $1), Indirection: $2},
+				Target: &ast.A_Indirection{Arg: columnRef(syntaxName(syntaxIdent(yylex, $1, span)), span), Indirection: $2},
 				Expr:   $4,
 			}
 		}
@@ -1954,14 +1957,14 @@ ColumnOptions:
 	ColId OptColumnConstraints
 		{
 			$$ = &ast.ColumnDef{
-				Name:    &ast.ColumnName{Name: model.NewCIStr($1)},
+				Name:    &ast.ColumnName{Name: $1},
 				Options: $2,
 			}
 		}
 	| ColId WITH OPTIONS OptColumnConstraints
 		{
 			$$ = &ast.ColumnDef{
-				Name:    &ast.ColumnName{Name: model.NewCIStr($1)},
+				Name:    &ast.ColumnName{Name: $1},
 				Options: $4,
 			}
 		}
@@ -2024,7 +2027,7 @@ ColumnDef:
 	ColId Typename OptColumnConstraints
 		{
 			$$ = &ast.ColumnDef{
-				Name:    &ast.ColumnName{Name: model.NewCIStr($1)},
+				Name:    &ast.ColumnName{Name: $1},
 				Tp:      $2,
 				Options: $3,
 			}
@@ -2603,7 +2606,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Behavior: ast.DropBehavior(int($4)),
 			}
 		}
@@ -2612,7 +2615,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($5)},
+				OldColumnName: &ast.ColumnName{Name: $5},
 				Behavior: ast.DropBehavior(int($6)),
 				MissingOk: true,
 			}
@@ -2622,7 +2625,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableModifyColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Def: $6,
 			}
 		}
@@ -2631,7 +2634,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropDefault,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId SET NOT NULL_P
@@ -2639,7 +2642,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId DROP NOT NULL_P
@@ -2647,7 +2650,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId TYPE_P Typename OptCollateClause
@@ -2659,7 +2662,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				NewColumns: []*ast.ColumnDef{coldef},
 			}
 		}
@@ -2708,7 +2711,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				NewColumns: []*ast.ColumnDef{coldef},
 			}
 		}
@@ -2721,7 +2724,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				NewColumns: []*ast.ColumnDef{coldef},
 				Def: $8,
 			}
@@ -2735,7 +2738,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				NewColumns: []*ast.ColumnDef{coldef},
 				Def: $10,
 			}
@@ -2749,7 +2752,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				NewColumns: []*ast.ColumnDef{coldef},
 			}
 		}
@@ -2762,7 +2765,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				NewColumns: []*ast.ColumnDef{coldef},
 			}
 		}
@@ -2775,7 +2778,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				NewColumns: []*ast.ColumnDef{coldef},
 				Def: $9,
 			}
@@ -2785,7 +2788,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableModifyColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Def: $5,
 			}
 		}
@@ -2794,7 +2797,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropDefault,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 			}
 		}
 	| ALTER ColId SET NOT NULL_P
@@ -2802,7 +2805,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 			}
 		}
 	| ALTER ColId DROP NOT NULL_P
@@ -2810,7 +2813,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropNotNull,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 			}
 		}
 	| ALTER ColId TYPE_P Typename OptCollateClause USING AExpr
@@ -2822,7 +2825,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumnType,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				NewColumns: []*ast.ColumnDef{coldef},
 				Def: $7,
 			}
@@ -2833,7 +2836,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Def: $4,
 			}
 		}
@@ -2842,7 +2845,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableAlterColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Def: $3,
 			}
 		}
@@ -3127,7 +3130,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Behavior: ast.DropBehavior(int($3)),
 			}
 		}
@@ -3136,7 +3139,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableDropColumn,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($4)},
+				OldColumnName: &ast.ColumnName{Name: $4},
 				Behavior: ast.DropBehavior(int($5)),
 				MissingOk: true,
 			}
@@ -3181,7 +3184,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Storage: $6,
 			}
 		}
@@ -3190,7 +3193,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Storage: "default",
 			}
 		}
@@ -3199,7 +3202,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Storage: $5,
 			}
 		}
@@ -3208,7 +3211,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetStorage,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Storage: "default",
 			}
 		}
@@ -3218,7 +3221,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetStatistics,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Num: $6,
 			}
 		}
@@ -3227,7 +3230,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetStatistics,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Num: $5,
 			}
 		}
@@ -3255,7 +3258,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Def: &ast.String{Str: $5},
 			}
 		}
@@ -3264,7 +3267,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Def: &ast.String{Str: $4},
 			}
 		}
@@ -3274,7 +3277,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Def: $8,
 			}
 		}
@@ -3283,7 +3286,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Def: $7,
 			}
 		}
@@ -3292,7 +3295,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId DROP EXPRESSION IF_P EXISTS
@@ -3300,7 +3303,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				MissingOk: true,
 			}
 		}
@@ -3310,7 +3313,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId ADD_P GENERATED ALWAYS AS IDENTITY_P '(' OptSequenceOptList ')'
@@ -3318,7 +3321,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId ADD_P GENERATED BY DEFAULT AS IDENTITY_P
@@ -3326,7 +3329,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId ADD_P GENERATED BY DEFAULT AS IDENTITY_P '(' OptSequenceOptList ')'
@@ -3334,7 +3337,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	/* DROP/SET IDENTITY */
@@ -3343,7 +3346,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 			}
 		}
 	| ALTER COLUMN ColId DROP IDENTITY_P IF_P EXISTS
@@ -3351,7 +3354,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				MissingOk: true,
 			}
 		}
@@ -3365,7 +3368,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Def: c,
 			}
 		}
@@ -3378,7 +3381,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($2)},
+				OldColumnName: &ast.ColumnName{Name: $2},
 				Def: c,
 			}
 		}
@@ -3388,7 +3391,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableGeneric,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Def: $4,
 			}
 		}
@@ -3398,7 +3401,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableSetRelOptions,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				RelOptions: $6,
 			}
 		}
@@ -3407,7 +3410,7 @@ AlterTableCmd:
 			$$ = &ast.AlterTableSpec{
 
 				Tp: ast.AlterTableResetRelOptions,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				RelOptions: $6,
 			}
 		}
@@ -3526,7 +3529,7 @@ RenameStmt:
 				Specs: []*ast.AlterTableSpec{{
 					Tp:           ast.AlterTableRenameConstraint,
 					Name:         $6,
-					NewColumnName: &ast.ColumnName{Name: model.NewCIStr($8)},
+					NewColumnName: &ast.ColumnName{Name: $8},
 				}},
 			}
 		}
@@ -3559,7 +3562,7 @@ RenameStmt:
 				Specs: []*ast.AlterTableSpec{{
 					Tp:           ast.AlterTableRenameConstraint,
 					Name:         $8,
-					NewColumnName: &ast.ColumnName{Name: model.NewCIStr($10)},
+					NewColumnName: &ast.ColumnName{Name: $10},
 				}},
 				MissingOk: true,
 			}
@@ -6803,7 +6806,7 @@ AlterTypeCmd:
 
 				Tp: ast.AlterTableDropColumn,
 				Attribute: true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				Behavior: ast.DropBehavior(int($4)),
 			}
 		}
@@ -6813,7 +6816,7 @@ AlterTypeCmd:
 
 				Tp: ast.AlterTableDropColumn,
 				Attribute: true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($5)},
+				OldColumnName: &ast.ColumnName{Name: $5},
 				Behavior: ast.DropBehavior(int($6)),
 				MissingOk: true,
 			}
@@ -6821,7 +6824,7 @@ AlterTypeCmd:
 	| ALTER ATTRIBUTE ColId SET DATA_P TYPE_P Typename OptCollateClause OptDropBehavior
 		{
 			coldef := &ast.ColumnDef{
-				Name: &ast.ColumnName{Name: model.NewCIStr($3)},
+				Name: &ast.ColumnName{Name: $3},
 				Tp: $7,
 				}
 			if $8 != nil {
@@ -6831,7 +6834,7 @@ AlterTypeCmd:
 
 				Tp: ast.AlterTableAlterColumnType,
 				Attribute: true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				NewColumns: []*ast.ColumnDef{coldef},
 				Behavior: ast.DropBehavior(int($9)),
 			}
@@ -6839,7 +6842,7 @@ AlterTypeCmd:
 	| ALTER ATTRIBUTE ColId TYPE_P Typename OptCollateClause OptDropBehavior
 		{
 			coldef := &ast.ColumnDef{
-				Name: &ast.ColumnName{Name: model.NewCIStr($3)},
+				Name: &ast.ColumnName{Name: $3},
 				Tp: $5,
 				}
 			if $6 != nil {
@@ -6849,7 +6852,7 @@ AlterTypeCmd:
 
 				Tp: ast.AlterTableAlterColumnType,
 				Attribute: true,
-				OldColumnName: &ast.ColumnName{Name: model.NewCIStr($3)},
+				OldColumnName: &ast.ColumnName{Name: $3},
 				NewColumns: []*ast.ColumnDef{coldef},
 				Behavior: ast.DropBehavior(int($7)),
 			}
@@ -6860,7 +6863,7 @@ TableFuncElement:
 	ColId Typename OptCollateClause
 		{
 			coldef := &ast.ColumnDef{
-				Name: &ast.ColumnName{Name: model.NewCIStr($1)},
+				Name: &ast.ColumnName{Name: $1},
 				Tp: $2,
 				}
 			if $3 != nil {
@@ -9989,7 +9992,7 @@ FunctionName:
 ColumnRef:
 	ColId
 		{
-			$$ = ast.NewColumnNameExpr("", "", $1)
+			$$ = columnRef(syntaxName(syntaxIdent(yylex, $1, yyS[yypt].span)), yyVAL.span)
 		}
 	| ColId Indirection
 		{

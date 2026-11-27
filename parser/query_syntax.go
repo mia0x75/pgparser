@@ -6,7 +6,6 @@ import (
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/model"
 )
 
 // makeSetOp returns the set operation of two query blocks.
@@ -308,7 +307,7 @@ func columnNamesFromList(l *ast.List) []*ast.ColumnName {
 	var result []*ast.ColumnName
 	for _, item := range l.Items {
 		if s, ok := item.(*ast.String); ok {
-			result = append(result, &ast.ColumnName{Name: model.NewCIStr(s.Str)})
+			result = append(result, &ast.ColumnName{Name: s.Str})
 		}
 	}
 	return result
@@ -325,7 +324,7 @@ func indexElemColNames(l *ast.List) []*ast.IndexColName {
 		case *ast.IndexElem:
 			col := &ast.IndexColName{Length: -1}
 			if v.Name != "" {
-				col.Column = &ast.ColumnName{Name: model.NewCIStr(v.Name)}
+				col.Column = &ast.ColumnName{Name: v.Name}
 			} else if expr, ok := v.Expr.(ast.ExprNode); ok {
 				col.Expr = expr
 			}
@@ -344,7 +343,7 @@ func indexElemColNames(l *ast.List) []*ast.IndexColName {
 			result = append(result, col)
 		case *ast.String:
 			result = append(result, &ast.IndexColName{
-				Column: &ast.ColumnName{Name: model.NewCIStr(v.Str)},
+				Column: &ast.ColumnName{Name: v.Str},
 				Length: -1,
 			})
 		}

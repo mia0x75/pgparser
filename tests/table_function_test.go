@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/model"
 )
 
 func TestRestoreTableFunctionDefinitions(t *testing.T) {
@@ -63,7 +62,7 @@ func TestTableFunctionVisitorDefinitions(t *testing.T) {
 			visitor := pgRewriteVisitor{rewrite: func(n ast.Node) ast.Node {
 				if col, ok := n.(*ast.ColumnDef); ok {
 					copy := *col
-					copy.Name = &ast.ColumnName{Name: model.NewCIStr("renamed")}
+					copy.Name = &ast.ColumnName{Name: "renamed"}
 					return &copy
 				}
 				return n

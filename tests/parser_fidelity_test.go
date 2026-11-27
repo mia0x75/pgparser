@@ -16,6 +16,7 @@ func TestRestoreParserFidelity(t *testing.T) {
 	cases := []struct{ name, sql, want string }{
 		{"catalog_delete", `DELETE FROM catalog_name.schema_name.table_name WHERE a = 1`, `DELETE FROM "catalog_name"."schema_name"."table_name" WHERE "a"=1`},
 		{"catalog_select", `SELECT catalog_name.schema_name.table_name.column_name FROM catalog_name.schema_name.table_name`, `SELECT "catalog_name"."schema_name"."table_name"."column_name" FROM "catalog_name"."schema_name"."table_name"`},
+		{"extra_indirection", `SELECT a.b.c.d.e`, `SELECT "a"."b"."c"."d"."e"`},
 		{"catalog_wildcard", `SELECT catalog_name.schema_name.table_name.* FROM catalog_name.schema_name.table_name`, `SELECT "catalog_name"."schema_name"."table_name".* FROM "catalog_name"."schema_name"."table_name"`},
 		{"catalog_subscript", `SELECT catalog_name.schema_name.table_name.column_name[1] FROM catalog_name.schema_name.table_name`, `SELECT "catalog_name"."schema_name"."table_name"."column_name"[1] FROM "catalog_name"."schema_name"."table_name"`},
 		{"qualified_subscript", `SELECT t.a[1] FROM t`, `SELECT "t"."a"[1] FROM "t"`},
@@ -52,6 +53,15 @@ func TestRestoreParserFidelity(t *testing.T) {
 				t.Fatalf("unstable restore: %q -> %q", got, next)
 			}
 		})
+	}
+}
+
+func TestFormatColumnRefCase(t *testing.T) {
+	stmt := mustParseOne(t, `SELECT "MyTable"."MyColumn"`).(*ast.SelectStmt)
+	var formatted strings.Builder
+	stmt.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Format(&formatted)
+	if got, want := formatted.String(), "`mytable`.`mycolumn`"; got != want {
+		t.Fatalf("format = %q, want %q", got, want)
 	}
 }
 

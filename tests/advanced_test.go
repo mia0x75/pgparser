@@ -356,9 +356,9 @@ func TestParseSQLAlterTableStructuredSpecsAST(t *testing.T) {
 		want ast.AlterTableType
 		chk  func(*ast.AlterTableSpec) bool
 	}{
-		{`ALTER TABLE t ALTER COLUMN a DROP DEFAULT;`, ast.AlterTableDropDefault, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name.L == "a" }},
-		{`ALTER TABLE t ALTER COLUMN a SET NOT NULL;`, ast.AlterTableSetNotNull, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name.L == "a" }},
-		{`ALTER TABLE t ALTER COLUMN a DROP NOT NULL;`, ast.AlterTableDropNotNull, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name.L == "a" }},
+		{`ALTER TABLE t ALTER COLUMN a DROP DEFAULT;`, ast.AlterTableDropDefault, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name == "a" }},
+		{`ALTER TABLE t ALTER COLUMN a SET NOT NULL;`, ast.AlterTableSetNotNull, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name == "a" }},
+		{`ALTER TABLE t ALTER COLUMN a DROP NOT NULL;`, ast.AlterTableDropNotNull, func(s *ast.AlterTableSpec) bool { return s.OldColumnName.Name == "a" }},
 		{`ALTER TABLE t ALTER COLUMN a SET STATISTICS 100;`, ast.AlterTableSetStatistics, func(s *ast.AlterTableSpec) bool { return s.Num == 100 }},
 		{`ALTER TABLE t ALTER COLUMN a SET STORAGE external;`, ast.AlterTableSetStorage, func(s *ast.AlterTableSpec) bool { return s.Storage == "external" }},
 		{`ALTER TABLE t OWNER TO u;`, ast.AlterTableOwner, func(s *ast.AlterTableSpec) bool {
@@ -371,7 +371,7 @@ func TestParseSQLAlterTableStructuredSpecsAST(t *testing.T) {
 			return s.RelOptions != nil && len(s.RelOptions.Items) == 1 && s.RelOptions.Items[0].(*ast.DefElem).Defname == "fillfactor"
 		}},
 		{`ALTER TABLE t ALTER COLUMN a RESET (n_distinct);`, ast.AlterTableResetRelOptions, func(s *ast.AlterTableSpec) bool {
-			return s.OldColumnName.Name.L == "a" && s.RelOptions != nil && s.RelOptions.Items[0].(*ast.DefElem).Defname == "n_distinct"
+			return s.OldColumnName.Name == "a" && s.RelOptions != nil && s.RelOptions.Items[0].(*ast.DefElem).Defname == "n_distinct"
 		}},
 		{`ALTER TABLE t CLUSTER ON ix;`, ast.AlterTableSetCluster, func(s *ast.AlterTableSpec) bool { return s.Name == "ix" }},
 		{`ALTER TABLE t SET WITHOUT CLUSTER;`, ast.AlterTableSetWithoutCluster, func(s *ast.AlterTableSpec) bool { return true }},
@@ -379,7 +379,7 @@ func TestParseSQLAlterTableStructuredSpecsAST(t *testing.T) {
 		{`ALTER TABLE t OF typ;`, ast.AlterTableOf, func(s *ast.AlterTableSpec) bool { return s.NewTable.Name.Parts[0].Name == "typ" }},
 		{`ALTER TABLE t REPLICA IDENTITY USING INDEX ix;`, ast.AlterTableReplicaIdentity, func(s *ast.AlterTableSpec) bool { return s.Name == "ix" }},
 		{`ALTER TABLE t FORCE ROW LEVEL SECURITY;`, ast.AlterTableRowLevelSecurity, func(s *ast.AlterTableSpec) bool { return s.RowLevelSecurity == "FORCE" }},
-		{`ALTER TABLE t RENAME CONSTRAINT a TO b;`, ast.AlterTableRenameConstraint, func(s *ast.AlterTableSpec) bool { return s.Name == "a" && s.NewColumnName.Name.L == "b" }},
+		{`ALTER TABLE t RENAME CONSTRAINT a TO b;`, ast.AlterTableRenameConstraint, func(s *ast.AlterTableSpec) bool { return s.Name == "a" && s.NewColumnName.Name == "b" }},
 		{`ALTER TABLE t ALTER CONSTRAINT c DEFERRABLE INITIALLY DEFERRED;`, ast.AlterTableAlterConstraint, func(s *ast.AlterTableSpec) bool { return s.ConstraintOptions == "DEFERRABLE initially deferred" }},
 		{`ALTER TABLE t ATTACH PARTITION p FOR VALUES FROM (1) TO (10);`, ast.AlterTableAttachPartition, func(s *ast.AlterTableSpec) bool {
 			return s.NewTable.Name.Parts[0].Name == "p" && s.PartitionBound.BoundType == "FROM" && len(s.PartitionBound.From) == 1 && len(s.PartitionBound.To) == 1

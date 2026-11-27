@@ -4,22 +4,26 @@ import (
 	"io"
 
 	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/format"
-	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
 	"github.com/mia0x75/pgparser/types"
 )
 
 // NewColumnNameExpr returns a ColumnNameExpr for the given qualified name.
 func NewColumnNameExpr(schema, table, name string) *ColumnNameExpr {
+	qualified := nameFromStrings([]string{schema, table, name})
+	if name == "" {
+		qualified.Parts = append(qualified.Parts, pkast.Ident{})
+	}
+	qualified.Span = loc.InvalidSpan()
+	for i := range qualified.Parts {
+		qualified.Parts[i].Span = loc.InvalidSpan()
+	}
 	return &ColumnNameExpr{
-		Name: &ColumnName{
-			Schema: model.NewCIStr(schema),
-			Table:  model.NewCIStr(table),
-			Name:   model.NewCIStr(name),
-		},
+		BaseColumnRef: pkast.BaseColumnRef{Name: qualified},
 	}
 }
 

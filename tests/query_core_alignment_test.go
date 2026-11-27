@@ -4,7 +4,9 @@ import (
 	"testing"
 
 	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/lex"
 	dialectast "github.com/mia0x75/pgparser/ast"
+	"github.com/mia0x75/pgparser/parser"
 )
 
 func TestParseSharedQueryCore(t *testing.T) {
@@ -45,6 +47,44 @@ func TestParseSharedQueryCore(t *testing.T) {
 	cte := with.CTEs[0].CTECore()
 	if cte == nil || cte.Name.Name != "q" || cte.Query == nil {
 		t.Fatalf("shared CTE core = %#v", cte)
+	}
+}
+
+func TestParseSharedColumnRefCore(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		ref  string
+		want []string
+	}{
+		{name: "single", ref: `"Simple"`, want: []string{"Simple"}},
+		{name: "qualified", ref: `"db.dot"."T"."C"`, want: []string{"db.dot", "T", "C"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sql := "SELECT " + tc.ref + " FROM t"
+			stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+			expr := stmt.Fields.Items[0].Expr
+			ref, ok := expr.(pkast.ColumnRefNode)
+			if !ok {
+				t.Fatalf("column expression = %T, want shared ColumnRefNode", expr)
+			}
+			name := ref.ColumnRefCore().Name
+			if !name.Span.Within(len(sql)) || sql[name.Span.Start:name.Span.End] != tc.ref || expr.Span() != name.Span {
+				t.Fatalf("column span = %#v, name span = %#v, want extent of %s", expr.Span(), name.Span, tc.ref)
+			}
+			if len(name.Parts) != len(tc.want) {
+				t.Fatalf("name parts = %#v, want %v", name.Parts, tc.want)
+			}
+			for i, part := range name.Parts {
+				raw := `"` + tc.want[i] + `"`
+				if part.Name != tc.want[i] || part.Raw != raw || part.Quote != lex.QuoteDouble ||
+					!part.Span.Within(len(sql)) || sql[part.Span.Start:part.Span.End] != raw {
+					t.Fatalf("name part %d = %#v, want %s at its original span", i, part, raw)
+				}
+			}
+		})
+	}
+	if _, err := parser.New().ParseOneStmt("SELECT t."); err == nil {
+		t.Fatal("accepted a dangling column qualifier")
 	}
 }
 

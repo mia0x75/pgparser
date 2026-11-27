@@ -9,7 +9,6 @@ import (
 
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/auth"
-	"github.com/mia0x75/pgparser/model"
 )
 
 func syntaxIdent(l yyLexer, name string, span loc.Span) lex.Ident {
@@ -52,6 +51,12 @@ func syntaxName(parts ...lex.Ident) ast.QualifiedName {
 		name.Span = loc.Cover(name.Span, part.Span)
 	}
 	return name
+}
+
+func columnRef(name ast.QualifiedName, span loc.Span) *ast.ColumnNameExpr {
+	ref := &ast.ColumnNameExpr{BaseColumnRef: pkast.BaseColumnRef{Name: name}}
+	ref.SetSpan(span)
+	return ref
 }
 
 // syntaxIdents converts a name list into identifiers with spelling.
@@ -395,7 +400,7 @@ func columnNameListFromStrings(l *ast.List) []*ast.ColumnName {
 		if !ok {
 			continue
 		}
-		cols = append(cols, &ast.ColumnName{Name: model.NewCIStr(s.Str)})
+		cols = append(cols, &ast.ColumnName{Name: s.Str})
 	}
 	return cols
 }

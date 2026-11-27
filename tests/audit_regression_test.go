@@ -214,7 +214,7 @@ func (v *auditVisitor) Enter(n ast.Node) (ast.Node, bool) {
 			return &copy, false
 		}
 	}
-	if col, ok := n.(*ast.ColumnName); ok && col.Name.O == "source" {
+	if col, ok := n.(*ast.ColumnName); ok && col.Name == "source" {
 		v.seen++
 	}
 	if ref, ok := n.(*ast.TableName); ok && ref.Name.Parts[0].Name == "saved" {

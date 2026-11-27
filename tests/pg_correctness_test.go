@@ -13,7 +13,6 @@ import (
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
 	"github.com/mia0x75/pgparser/format"
-	"github.com/mia0x75/pgparser/model"
 	pgparser "github.com/mia0x75/pgparser/parser"
 )
 
@@ -380,7 +379,7 @@ func TestAlterVisitorWritesBackChildren(t *testing.T) {
 				case *ast.ColumnDef:
 					copy := *child
 					copy.Name = &ast.ColumnName{}
-					copy.Name.Name.O = "renamed"
+					copy.Name.Name = "renamed"
 					return &copy
 				case ast.ValueExpr:
 					return ast.NewValueExpr(int64(2))
@@ -455,7 +454,7 @@ func TestIdentifierTruncationKeepsValidUTF8(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			sel := mustParseOne(t, tc.sql).(*ast.SelectStmt)
-			got := sel.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Name.O
+			got := sel.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Parts[0].Name
 			if !utf8.ValidString(got) || got != tc.want {
 				t.Fatalf("identifier = %q, want %q", got, tc.want)
 			}
@@ -653,7 +652,7 @@ func TestTypeNameMetadataPreserved(t *testing.T) {
 
 func TestRestoreRejectsInvalidAST(t *testing.T) {
 	table := &ast.TableName{BaseTableRef: pkast.BaseTableRef{Name: pkast.QualifiedName{Parts: []pkast.Ident{{Name: "t"}}}}}
-	column := &ast.ColumnName{Name: model.NewCIStr("c")}
+	column := &ast.ColumnName{Name: "c"}
 	for _, tc := range []struct {
 		name string
 		node ast.Node
@@ -735,8 +734,15 @@ func TestVisitorWritesBackRestoredChildren(t *testing.T) {
 				case *ast.Integer:
 					return &ast.Integer{Ival: 2}
 				case *ast.ColumnName:
-					if child.Name.O == "c" {
-						return &ast.ColumnName{Name: model.NewCIStr("renamed")}
+					if child.Name == "c" {
+						return &ast.ColumnName{Name: "renamed"}
+					}
+				case *ast.ColumnNameExpr:
+					if len(child.Name.Parts) != 0 && child.Name.Parts[len(child.Name.Parts)-1].Name == "c" {
+						copy := *child
+						copy.Name.Parts = append([]lex.Ident(nil), child.Name.Parts...)
+						copy.Name.Parts[len(copy.Name.Parts)-1].Name = "renamed"
+						return &copy
 					}
 				case *ast.String:
 					if child.Str == "c" {

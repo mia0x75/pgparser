@@ -8,7 +8,6 @@ import (
 	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
-	"github.com/mia0x75/pgparser/model"
 	"github.com/mia0x75/pgparser/opcode"
 )
 
@@ -148,11 +147,10 @@ func validBinaryDigits(value string, base int) bool {
 	return true
 }
 
-// columnRefWithIndirection builds a column reference with an indirection list.
+const maxColumnRefParts = 4
+
+// columnRefWithIndirection keeps suffixes that cannot be stored in a qualified name.
 func columnRefWithIndirection(l yyLexer, name lex.Ident, ind *ast.List, span loc.Span) ast.ExprNode {
-	if ind == nil {
-		return ast.NewColumnNameExpr("", "", name.Name)
-	}
 	parts := make([]lex.Ident, 1, len(ind.Items)+1)
 	parts[0] = name
 	wildcard := false
@@ -173,29 +171,15 @@ func columnRefWithIndirection(l yyLexer, name lex.Ident, ind *ast.List, span loc
 		}
 	}
 	if wildcard {
-		if len(parts) > 3 {
-			return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name.Name), Indirection: ind}
+		if len(parts) >= maxColumnRefParts {
+			return &ast.A_Indirection{Arg: columnRef(syntaxName(name), name.Span), Indirection: ind}
 		}
 		return syntaxWildcard(syntaxName(parts...), span)
 	}
-	schema, table, col := "", "", parts[0].Name
-	switch len(parts) {
-	case 1:
-	case 2:
-		table = parts[0].Name
-		col = parts[1].Name
-	case 3:
-		schema = parts[0].Name
-		table = parts[1].Name
-		col = parts[2].Name
-	case 4:
-		expr := ast.NewColumnNameExpr(parts[1].Name, parts[2].Name, parts[3].Name)
-		expr.Name.Catalog = model.NewCIStr(parts[0].Name)
-		return expr
-	default:
-		return &ast.A_Indirection{Arg: ast.NewColumnNameExpr("", "", name.Name), Indirection: ind}
+	if len(parts) > maxColumnRefParts {
+		return &ast.A_Indirection{Arg: columnRef(syntaxName(name), name.Span), Indirection: ind}
 	}
-	return ast.NewColumnNameExpr(schema, table, col)
+	return columnRef(syntaxName(parts...), span)
 }
 
 // exprsFromList returns the expressions of a list.

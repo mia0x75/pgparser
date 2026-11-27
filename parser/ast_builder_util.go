@@ -191,12 +191,12 @@ func makeIndexColNameList(l *ast.List) []*ast.IndexColName {
 		switch v := item.(type) {
 		case *ast.String:
 			result = append(result, &ast.IndexColName{
-				Column: &ast.ColumnName{Name: model.NewCIStr(v.Str)},
+				Column: &ast.ColumnName{Name: v.Str},
 				Length: -1,
 			})
 		case *ast.IndexElem:
 			result = append(result, &ast.IndexColName{
-				Column: &ast.ColumnName{Name: model.NewCIStr(v.Name)},
+				Column: &ast.ColumnName{Name: v.Name},
 				Length: -1,
 			})
 		}
@@ -216,15 +216,14 @@ func commentNameParts(n ast.Node) []string {
 	case *ast.ColumnRef:
 		return commentNameParts(v.Fields)
 	case *ast.ColumnNameExpr:
-		if v.Name == nil {
-			return nil
+		idents := v.Name.Parts
+		// Keep the legacy COMMENT target without its catalog qualifier.
+		if len(idents) == maxColumnRefParts {
+			idents = idents[1:]
 		}
-		parts := []string{v.Name.Name.String()}
-		if v.Name.Table.String() != "" {
-			parts = append([]string{v.Name.Table.String()}, parts...)
-		}
-		if v.Name.Schema.String() != "" {
-			parts = append([]string{v.Name.Schema.String()}, parts...)
+		parts := make([]string, 0, len(idents))
+		for _, part := range idents {
+			parts = append(parts, part.Name)
 		}
 		return parts
 	case *ast.String:
@@ -643,9 +642,9 @@ func indexIncludeNames(l *ast.List) []*ast.ColumnName {
 	for _, item := range l.Items {
 		switch v := item.(type) {
 		case *ast.IndexElem:
-			result = append(result, &ast.ColumnName{Name: model.NewCIStr(v.Name)})
+			result = append(result, &ast.ColumnName{Name: v.Name})
 		case *ast.String:
-			result = append(result, &ast.ColumnName{Name: model.NewCIStr(v.Str)})
+			result = append(result, &ast.ColumnName{Name: v.Str})
 		}
 	}
 	return result

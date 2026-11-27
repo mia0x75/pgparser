@@ -123,3 +123,11 @@
 
 - 双仓 `TestParseSharedDeleteCore` 核对共享目标、过滤和 WITH CTE 核心；单目标删除中共享 `Using` 槽位保持 nil。
 - PG `DELETE ... USING` 与 MySQL 多表 DELETE 的目标列表／来源语法由既有方言用例单独覆盖；MySQL 单表 `ORDER BY`／`LIMIT` 和 RETURNING 附着也不移动或改写。本子批不改产生式和动作。
+
+## E1a 列名核心
+
+- PG `ColumnRef` 与 MySQL `ColumnName` 的单段表达式路径统一使用 `columnRef`、`syntaxName`、`syntaxIdent` 构造。MySQL 的 `ColumnName` 还供 DDL 等调用方使用，返回 `QualifiedName`；PG `ColumnRef` 支持目录限定、下标和通配符，返回表达式。两仓保留各自产生式。
+- PG `ColumnNameExpr.Name` 现在是共享 `QualifiedName`；处理列引用的访问器应访问 `ColumnNameExpr`，不再等待它产生 `ColumnName` 子节点。DDL 的 `ColumnName.Name` 改为 `string`；本批不移除其他节点的 `CIStr`。既有 `Format` 和 `COMMENT ON COLUMN` 输出不变。
+- `TestParseSharedColumnRefCore` 检查单段和含引号内点号的多段名称、原文和跨度，也检查不完整限定名被拒绝。PG 还覆盖目录限定和继续走独立节点的长后缀、下标及通配符。
+- E1a 之前／之后：PG `5a0a726` 的解析表不变（3,012 个产生式、6,204 个状态）；生成文件为 1,238,265 字节。MySQL `3a0ed33` 的生成文件不变（894,175 字节）。
+- PG 交错运行 `BenchmarkParse` 各 12 次：小／中／宽查询的耗时无显著变化；每次解析的分配字节分别减少 3.0%、6.4%、18.5%。

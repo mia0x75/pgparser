@@ -167,10 +167,10 @@ func TestParseSQLSimpleSelect(t *testing.T) {
 	if st.Fields == nil || len(st.Fields.Items) != 2 {
 		t.Fatalf("expected 2 columns, got %#v", st.Fields)
 	}
-	if got := st.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Name.O; got != "id" {
+	if got := st.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Parts[0].Name; got != "id" {
 		t.Fatalf("column 1 = %q, want id", got)
 	}
-	if got := st.Fields.Items[1].Expr.(*ast.ColumnNameExpr).Name.Name.O; got != "name" {
+	if got := st.Fields.Items[1].Expr.(*ast.ColumnNameExpr).Name.Parts[0].Name; got != "name" {
 		t.Fatalf("column 2 = %q, want name", got)
 	}
 	if st.From == nil || fromClause(t, st.From).Table == nil {
@@ -384,8 +384,8 @@ func TestParseSQLExpressions(t *testing.T) {
 				if !ok {
 					t.Fatalf("expected *ast.ColumnNameExpr, got %T", st.Fields.Items[0].Expr)
 				}
-				if e.Name.Table.O != "t" || e.Name.Name.O != "a" {
-					t.Fatalf("got %s.%s, want t.a", e.Name.Table.O, e.Name.Name.O)
+				if len(e.Name.Parts) != 2 || e.Name.Parts[0].Name != "t" || e.Name.Parts[1].Name != "a" {
+					t.Fatalf("got %#v, want t.a", e.Name)
 				}
 			},
 		},
@@ -475,7 +475,7 @@ func TestParseSQLQuotedIdentifier(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected *ast.ColumnNameExpr, got %T", st.Fields.Items[0].Expr)
 	}
-	if got := e.Name.Name.O; got != "MyColumn" {
+	if got := e.Name.Parts[0].Name; got != "MyColumn" {
 		t.Fatalf("quoted identifier = %q, want MyColumn", got)
 	}
 }
@@ -672,6 +672,10 @@ func TestParseSQLCommentOn(t *testing.T) {
 	c, ok := mustParseOne(t, "COMMENT ON COLUMN s.t.c IS 'hello';").(*ast.CommentStmt)
 	if !ok || c.ObjectType != "column" || !reflect.DeepEqual(c.ObjectName, []string{"s", "t", "c"}) || c.Comment == nil || *c.Comment != "hello" {
 		t.Fatalf("unexpected comment: %#v", c)
+	}
+	c = mustParseOne(t, `COMMENT ON COLUMN db."MySchema"."MyTable"."MyColumn" IS NULL`).(*ast.CommentStmt)
+	if want := []string{"MySchema", "MyTable", "MyColumn"}; !reflect.DeepEqual(c.ObjectName, want) {
+		t.Fatalf("legacy column comment target = %v, want %v", c.ObjectName, want)
 	}
 	c, ok = mustParseOne(t, "COMMENT ON TABLE t IS NULL;").(*ast.CommentStmt)
 	if !ok || c.ObjectType != "table" || c.Comment != nil {
@@ -1148,7 +1152,7 @@ WHERE active_users.id = $2;`)
 	if len(cte.Fields.Items) != 2 {
 		t.Fatalf("expected 2 CTE fields, got %d", len(cte.Fields.Items))
 	}
-	if got := cte.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.String(); got != "users.id" {
+	if got := strings.Join([]string{cte.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Parts[0].Name, cte.Fields.Items[0].Expr.(*ast.ColumnNameExpr).Name.Parts[1].Name}, "."); got != "users.id" {
 		t.Fatalf("first CTE field = %q, want users.id", got)
 	}
 	if !hasTable(collectTables(cte), "", "users") {
@@ -1589,7 +1593,7 @@ func TestParseSQLUpsertTargetAndActionWhere(t *testing.T) {
 	if oc.DoNothing || len(oc.UpdateList) != 1 || oc.TargetWhere == nil || oc.UpdateWhere == nil {
 		t.Fatalf("unexpected ON CONFLICT clause: %#v", oc)
 	}
-	if len(oc.IndexCols) != 1 || oc.IndexCols[0].Column.Name.L != "id" {
+	if len(oc.IndexCols) != 1 || oc.IndexCols[0].Column.Name != "id" {
 		t.Fatalf("unexpected conflict target: %#v", oc.IndexCols)
 	}
 }
@@ -1626,7 +1630,7 @@ func TestParseSQLInsertOnConflictDoNothing(t *testing.T) {
 	if !oc.DoNothing || len(oc.UpdateList) != 0 || oc.TargetWhere == nil {
 		t.Fatalf("unexpected ON CONFLICT: %#v", oc)
 	}
-	if len(oc.IndexCols) != 1 || oc.IndexCols[0].Column.Name.L != "id" {
+	if len(oc.IndexCols) != 1 || oc.IndexCols[0].Column.Name != "id" {
 		t.Fatalf("unexpected conflict target: %#v", oc.IndexCols)
 	}
 }
