@@ -173,3 +173,8 @@
 - 双仓增加普通 `LIKE`／`NOT LIKE` 的节点与跨度护栏；PG 另测 `NOT ILIKE ... ESCAPE`，MySQL 另测单字符 ESCAPE，既有 MySQL 表达式 ESCAPE 回归测试仍覆盖 `EscapeExpr`。
 - 尝试把 PG 与 MySQL 的共同节点构造提取为 `patternLikeExpr`。固定 CPU、交错 12 次的 PG 基准显示耗时增加 3.6%–8.3%，分配不变；MySQL 未显示显著变化。PG 生成解析器已经统一补 AST span，helper 方案被撤回以避免热路径回退；grammar、helper 和生成文件现恢复基线。
 - E2d 最终只保留双仓测试与本记录，不改变解析行为；生成文件逐字节不变。撤回后固定 CPU、每项 1 秒的交错基准各 8 次，双仓耗时无显著变化，分配字节及次数不变。双仓 build、vet、race、lint、tidy、生成检查和语料核对通过；PG 40,644 条无新增异常，MySQL 87,549 条 MTR 逐用例一致。
+
+## E2e PatternRegexp 核心
+
+- PG `SIMILAR TO`（含 `NOT`／`ESCAPE`）和 MySQL `REGEXP/RLIKE`（含 `NOT`）均构造 `PatternRegexpExpr`，双仓新增测试锁定核心节点、Not 标记及整个谓词源码跨度。运算符语法和恢复文本仍保持方言差异。
+- 只增加测试与批次记录，不改 grammar、AST 或生成文件；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。

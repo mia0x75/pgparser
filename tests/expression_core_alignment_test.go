@@ -284,3 +284,26 @@ func TestParsePostgresILikeCompatibility(t *testing.T) {
 		t.Fatalf("ILIKE expression has span %v", span)
 	}
 }
+
+func TestParsePostgresSimilarToCompatibility(t *testing.T) {
+	const similar = "a SIMILAR TO 'x%'"
+	const notSimilarEscape = "a NOT SIMILAR TO 'y%' ESCAPE '!'"
+	const sql = "SELECT " + similar + ", " + notSimilarEscape
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	for i, tc := range []struct {
+		raw string
+		not bool
+	}{{raw: similar}, {raw: notSimilarEscape, not: true}} {
+		expr, ok := stmt.Fields.Items[i].Expr.(*dialectast.PatternRegexpExpr)
+		if !ok || expr.Not != tc.not {
+			t.Fatalf("%s = %#v", tc.raw, stmt.Fields.Items[i].Expr)
+		}
+		span := expr.Span()
+		if !span.Within(len(sql)) || sql[span.Start:span.End] != tc.raw {
+			t.Fatalf("%s has span %v", tc.raw, span)
+		}
+	}
+	if expr := stmt.Fields.Items[1].Expr.(*dialectast.PatternRegexpExpr); expr.Escape == nil {
+		t.Fatal("SIMILAR TO ESCAPE expression was not preserved")
+	}
+}
