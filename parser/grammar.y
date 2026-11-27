@@ -10,6 +10,7 @@ package parser
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	pkast "github.com/mia0x75/parserkit/ast"
@@ -8795,7 +8796,7 @@ CExpr:
 	| AExprConst { $$ = $1 }
 	| PARAM OptIndirection
 		{
-			$$ = withIndirection(ast.NewParamMarkerExpr(int($1)-1), $2)
+			$$ = withIndirection(ast.NewParamMarkerExprAt(yyS[yypt-1].span, int($1)-1), $2)
 		}
 	| '(' AExpr ')' OptIndirection
 		{
@@ -10056,35 +10057,35 @@ Attrs:
 AExprConst:
 	IConst
 		{
-			$$ = ast.NewValueExpr($1)
+			$$ = syntaxLiteral(yylex, pkast.LiteralInteger, strconv.FormatInt($1, 10), yyS[yypt].span)
 		}
 	| FCONST
 		{
-			$$ = floatValueExpr($1)
+			$$ = numericLiteral(yylex, $1, yyS[yypt].span)
 		}
 	| SConst
 		{
-			$$ = ast.NewValueExpr($1)
+			$$ = syntaxLiteral(yylex, pkast.LiteralString, $1, yyS[yypt].span)
 		}
 	| BCONST
 		{
-			$$ = bitStringLiteral($1)
+			$$ = bitStringLiteral(yylex, $1, yyS[yypt].span)
 		}
 	| XCONST
 		{
-			$$ = hexStringLiteral($1)
+			$$ = hexStringLiteral(yylex, $1, yyS[yypt].span)
 		}
 	| TRUE_P
 		{
-			$$ = ast.NewValueExpr(true)
+			$$ = syntaxLiteral(yylex, pkast.LiteralBoolean, "true", yyS[yypt].span)
 		}
 	| FALSE_P
 		{
-			$$ = ast.NewValueExpr(false)
+			$$ = syntaxLiteral(yylex, pkast.LiteralBoolean, "false", yyS[yypt].span)
 		}
 	| NULL_P
 		{
-			$$ = ast.NewValueExpr(nil)
+			$$ = syntaxLiteral(yylex, pkast.LiteralNull, "", yyS[yypt].span)
 		}
 	| FunctionName SConst
 		{

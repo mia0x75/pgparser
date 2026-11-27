@@ -99,36 +99,46 @@ func whenClauses(l *ast.List) []*ast.WhenClause {
 	return result
 }
 
-// floatValueExpr keeps the source spelling of a floating point constant. The
-// lexer leaves oversized PostgreSQL integer forms (0x, 0o, 0b) as strings.
-func floatValueExpr(s string) ast.ExprNode {
+func syntaxLiteral(l yyLexer, kind pkast.LiteralKind, value string, span loc.Span) *ast.LiteralExpr {
+	literal := ast.NewLiteralExpr(kind, value)
+	literal.SetSpan(span)
+	if scanner, ok := l.(*Scanner); ok && scanner.lexer != nil {
+		if src := scanner.lexer.input; span.Within(len(src)) {
+			literal.Raw = src[span.Start:span.End]
+		}
+	}
+	return literal
+}
+
+// numericLiteral preserves the lexer text, including oversized non-decimal integers.
+func numericLiteral(l yyLexer, s string, span loc.Span) *ast.LiteralExpr {
 	kind := pkast.LiteralFloat
 	unsigned := strings.TrimPrefix(strings.TrimPrefix(s, "+"), "-")
 	if strings.HasPrefix(unsigned, "0x") || strings.HasPrefix(unsigned, "0o") || strings.HasPrefix(unsigned, "0b") {
 		kind = pkast.LiteralInteger
 	}
-	return ast.NewLiteralExpr(kind, s)
+	return syntaxLiteral(l, kind, s, span)
 }
 
 // bitStringLiteral strips the token's b prefix; the value is restored with it.
 // shortcut: the lexer accepts invalid bit digits, so those tokens keep the
 // legacy string form; drop the fallback when the lexer rejects them.
-func bitStringLiteral(token string) ast.ExprNode {
+func bitStringLiteral(l yyLexer, token string, span loc.Span) *ast.LiteralExpr {
 	value := strings.TrimPrefix(strings.TrimPrefix(token, "b"), "B")
 	if !validBinaryDigits(value, 2) {
-		return ast.NewLiteralExpr(pkast.LiteralString, token)
+		return syntaxLiteral(l, pkast.LiteralString, token, span)
 	}
-	return ast.NewLiteralExpr(pkast.LiteralBit, value)
+	return syntaxLiteral(l, pkast.LiteralBit, value, span)
 }
 
 // hexStringLiteral strips the token's x prefix; the value is restored with it.
 // shortcut: see bitStringLiteral; malformed hex tokens keep the string form.
-func hexStringLiteral(token string) ast.ExprNode {
+func hexStringLiteral(l yyLexer, token string, span loc.Span) *ast.LiteralExpr {
 	value := strings.TrimPrefix(strings.TrimPrefix(token, "x"), "X")
 	if !validBinaryDigits(value, 16) {
-		return ast.NewLiteralExpr(pkast.LiteralString, token)
+		return syntaxLiteral(l, pkast.LiteralString, token, span)
 	}
-	return ast.NewLiteralExpr(pkast.LiteralHex, value)
+	return syntaxLiteral(l, pkast.LiteralHex, value, span)
 }
 
 func validBinaryDigits(value string, base int) bool {

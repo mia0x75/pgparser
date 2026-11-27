@@ -43,7 +43,7 @@
 | UPDATE / DELETE | `UpdateStmt`、`DeleteStmt`、`AssignmentList`、`ReturningOpt` | `UpdateStmt`、`DeleteStmt`、`AssignmentList`、`ReturningOpt` | `BaseUpdateStmt`、`BaseDeleteStmt`、Assignment、Where、Returning | 核心重叠；PG `FROM`/`USING` 与 MySQL 多表规则分离。 |
 | 约束 | `ConstraintElem`、`KeyActions`、`ConstraintAttributeSpec` | `ConstraintElem`、`ReferDef`、`Constraint` | Constraint 类型、外键动作、命名与选项 | 仅比对外键动作；PG 可延迟/排斥约束保留。 |
 | 表与索引 | `CreateTableStmt`、`ColumnDef`、`TableConstraint`、`IndexStmt` | `CreateTableStmt`、`ColumnDef`、`CreateTableDefinition`、`CreateIndexStmt` | ColumnDef、Constraint、Index 共享字段 | 部分重叠；存储、分区、索引前缀各自保留。 |
-| 表达式 / 类型 | `AExpr`、`BExpr`、`CExpr`、`ColumnRef`、`AExprConst`、`FuncApplication`、`Typename` | `Expression`、`PredicateExpr`、`BitExpr`、`SimpleExpr`、`Literal`、`FunctionCallGeneric`、`Type` | Expr、Literal、TypeName、FunctionCall | 语义映射而非规则合并；E1–E3 分开推进。 |
+| 表达式 / 类型 | `AExpr`、`BExpr`、`CExpr`、`ColumnRef`、`AExprConst`、`FuncApplication`、`Typename` | `Expression`、`PredicateExpr`、`BitExpr`、`SimpleExpr`、`SimpleIdent`、`Literal`、`FunctionCallGeneric`、`Type` | Expr、Literal、TypeName、FunctionCall | 语义映射而非规则合并；E1–E3 分开推进。 |
 
 ## 明确的方言锚点
 
@@ -126,7 +126,7 @@
 
 ## E1a 列名核心
 
-- PG `ColumnRef` 与 MySQL `ColumnName` 的单段表达式路径统一使用 `columnRef`、`syntaxName`、`syntaxIdent` 构造。MySQL 的 `ColumnName` 还供 DDL 等调用方使用，返回 `QualifiedName`；PG `ColumnRef` 支持目录限定、下标和通配符，返回表达式。两仓保留各自产生式。
+- PG `ColumnRef` 与 MySQL `SimpleIdent` 的单段表达式路径统一使用 `columnRef`、`syntaxName`、`syntaxIdent` 构造。MySQL 的 `ColumnName` 是独立规则，返回 `QualifiedName` 供 DDL 等调用方使用；PG `ColumnRef` 还支持目录限定、下标和通配符。两仓保留各自产生式。
 - PG `ColumnNameExpr.Name` 现在是共享 `QualifiedName`；处理列引用的访问器应访问 `ColumnNameExpr`，不再等待它产生 `ColumnName` 子节点。DDL 的 `ColumnName.Name` 改为 `string`；本批不移除其他节点的 `CIStr`。既有 `Format` 和 `COMMENT ON COLUMN` 输出不变。
 - `TestParseSharedColumnRefCore` 检查单段和含引号内点号的多段名称、原文和跨度，也检查不完整限定名被拒绝。PG 还覆盖目录限定和继续走独立节点的长后缀、下标及通配符。
 - E1a 之前／之后：PG `5a0a726` 的解析表不变（3,012 个产生式、6,204 个状态）；生成文件为 1,238,265 字节。MySQL `3a0ed33` 的生成文件不变（894,175 字节）。
@@ -135,3 +135,9 @@
 ## E1a 后插入：SQL 错误包合并
 
 - PG 调用方由 `pgparser/sqlerr` 改用 `pgparser/postgres`；类到错误码的映射、SQLSTATE、诊断信息及原因链不变。MySQL 已在 `1424c86` 迁移至 `myparser/mysql`，本批无需修改。两仓 grammar 与生成表不变。
+
+## E1b 字面量和参数核心
+
+- PG `AExprConst` 的普通常量与 MySQL `Literal` 共享 `BaseLiteralExpr`；布尔常量以及浮点令牌的构造动作同形。`Raw` 保留原文，`Kind`／`Value` 维持旧行为。PG 的类型前缀常量仍走类型转换；MySQL 保留字符集引导符与引号样式。`NULL` 的值字段及小数字面量的分类也维持各自现状。
+- 两仓均使用 `BaseParameterExpr` 和 `NewParamMarkerExprAt`。PG 下标表达式中的参数只记录参数令牌跨度，索引由 `$n` 指定；MySQL `?` 按出现顺序编号。共享测试检查字面量原文、值与跨度，并覆盖参数以及两仓的拒绝边界。
+- PG 生成文件更新至 1,238,597 字节，解析表不变。交错运行 `BenchmarkParse` 各 12 次，耗时无显著变化，分配量和分配次数不变；MySQL 生成文件不变。

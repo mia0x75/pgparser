@@ -6,6 +6,7 @@ import __yyfmt__ "fmt"
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	pkast "github.com/mia0x75/parserkit/ast"
@@ -28466,7 +28467,7 @@ yydefault:
 	case 1396:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			yyVAL.expr = withIndirection(ast.NewParamMarkerExpr(int(yyDollar[1].ival)-1), yyDollar[2].list)
+			yyVAL.expr = withIndirection(ast.NewParamMarkerExprAt(yyS[yypt-1].span, int(yyDollar[1].ival)-1), yyDollar[2].list)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1397:
@@ -30232,49 +30233,49 @@ yydefault:
 	case 1656:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewValueExpr(yyDollar[1].ival)
+			yyVAL.expr = syntaxLiteral(yylex, pkast.LiteralInteger, strconv.FormatInt(yyDollar[1].ival, 10), yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1657:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = floatValueExpr(yyDollar[1].str)
+			yyVAL.expr = numericLiteral(yylex, yyDollar[1].str, yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1658:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewValueExpr(yyDollar[1].str)
+			yyVAL.expr = syntaxLiteral(yylex, pkast.LiteralString, yyDollar[1].str, yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1659:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = bitStringLiteral(yyDollar[1].str)
+			yyVAL.expr = bitStringLiteral(yylex, yyDollar[1].str, yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1660:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = hexStringLiteral(yyDollar[1].str)
+			yyVAL.expr = hexStringLiteral(yylex, yyDollar[1].str, yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1661:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewValueExpr(true)
+			yyVAL.expr = syntaxLiteral(yylex, pkast.LiteralBoolean, "true", yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1662:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewValueExpr(false)
+			yyVAL.expr = syntaxLiteral(yylex, pkast.LiteralBoolean, "false", yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1663:
 		yyDollar = yyS[yypt-1 : yypt+1]
 		{
-			yyVAL.expr = ast.NewValueExpr(nil)
+			yyVAL.expr = syntaxLiteral(yylex, pkast.LiteralNull, "", yyS[yypt].span)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1664:
