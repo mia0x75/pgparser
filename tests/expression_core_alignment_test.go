@@ -307,3 +307,35 @@ func TestParsePostgresSimilarToCompatibility(t *testing.T) {
 		t.Fatal("SIMILAR TO ESCAPE expression was not preserved")
 	}
 }
+
+func TestParseSharedExistsSubqueryCore(t *testing.T) {
+	const existsSQL = "EXISTS (SELECT 1)"
+	const notExistsSQL = "NOT EXISTS (SELECT 2)"
+	const sql = "SELECT " + existsSQL + ", " + notExistsSQL
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+
+	expr, ok := stmt.Fields.Items[0].Expr.(*dialectast.ExistsSubqueryExpr)
+	if !ok || expr.Not {
+		t.Fatalf("EXISTS expression = %#v", stmt.Fields.Items[0].Expr)
+	}
+	if _, ok := expr.Sel.(*dialectast.SubqueryExpr); !ok {
+		t.Fatalf("EXISTS subquery = %T", expr.Sel)
+	}
+	span := expr.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != existsSQL {
+		t.Fatalf("EXISTS span = %v", span)
+	}
+
+	notExpr, ok := stmt.Fields.Items[1].Expr.(*dialectast.UnaryOperationExpr)
+	if !ok || notExpr.Op != opcode.Not {
+		t.Fatalf("NOT EXISTS expression = %#v", stmt.Fields.Items[1].Expr)
+	}
+	inner, ok := notExpr.Expr.(*dialectast.ExistsSubqueryExpr)
+	if !ok || inner.Not {
+		t.Fatalf("NOT EXISTS inner expression = %#v", notExpr.Expr)
+	}
+	span = notExpr.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != notExistsSQL {
+		t.Fatalf("NOT EXISTS span = %v", span)
+	}
+}

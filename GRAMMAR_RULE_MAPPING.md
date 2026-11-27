@@ -178,3 +178,9 @@
 
 - PG `SIMILAR TO`（含 `NOT`／`ESCAPE`）和 MySQL `REGEXP/RLIKE`（含 `NOT`）均构造 `PatternRegexpExpr`，双仓新增测试锁定核心节点、Not 标记及整个谓词源码跨度。运算符语法和恢复文本仍保持方言差异。
 - 只增加测试与批次记录，不改 grammar、AST 或生成文件；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2f EXISTS 子查询
+
+- 双仓正向 `EXISTS (SELECT ...)` 均产生 `ExistsSubqueryExpr`，其 Sel 为 `SubqueryExpr`；共享测试检查节点和完整表达式跨度。
+- 否定形式保留既有 AST 差异：PG `NOT EXISTS` 使用 `UnaryOperationExpr{Op: Not}` 包裹 `ExistsSubqueryExpr`；MySQL 将 `Not` 写入该节点。测试分别固定两种形状及覆盖完整 SQL 的跨度，不做不必要的 grammar 动作改写。
+- 双仓 build、vet、race、lint、tidy、生成检查通过；PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
