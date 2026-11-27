@@ -118,3 +118,8 @@
 
 - 双仓 `TestParseSharedUpdateCore` 检查共享 `BaseUpdateStmt` 的目标、赋值和过滤条件，并确认共同 CTE 挂在 UPDATE 外层节点。
 - PG `UPDATE ... FROM` 仍由 `UpdateStmt.From` 承载；MySQL JOIN 仍在共享 `BaseUpdateStmt.Table` 关系树内，单表 `ORDER BY`／`LIMIT` 与多表限制保留。现有方言用例继续覆盖这些差异；本子批不改产生式和动作。
+
+## D3b 结构核对记录
+
+- 双仓 `TestParseSharedDeleteCore` 核对共享目标、过滤和 WITH CTE 核心；单目标删除中共享 `Using` 槽位保持 nil。
+- PG `DELETE ... USING` 与 MySQL 多表 DELETE 的目标列表／来源语法由既有方言用例单独覆盖；MySQL 单表 `ORDER BY`／`LIMIT` 和 RETURNING 附着也不移动或改写。本子批不改产生式和动作。

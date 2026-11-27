@@ -304,6 +304,27 @@ func TestParseSharedUpdateCore(t *testing.T) {
 	}
 }
 
+func TestParseSharedDeleteCore(t *testing.T) {
+	stmt, ok := mustParseOne(t, "WITH q AS (SELECT 1 AS id) DELETE FROM t WHERE id IN (SELECT id FROM q)").(*dialectast.DeleteStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.DeleteStmt")
+	}
+	if stmt.Table == nil || stmt.Where == nil || stmt.Using != nil {
+		t.Fatalf("shared DELETE core = %#v", stmt.BaseDeleteStmt)
+	}
+	table, ok := stmt.Table.(pkast.TableSourceNode)
+	if !ok || table.TableSourceCore() == nil || table.TableSourceCore().Source == nil {
+		t.Fatalf("shared DELETE target = %T, want populated TableSourceNode", stmt.Table)
+	}
+	if stmt.With == nil {
+		t.Fatal("shared DELETE WITH clause is nil")
+	}
+	with := stmt.With.WithClauseCore()
+	if with == nil || len(with.CTEs) != 1 || with.CTEs[0].CTECore() == nil || with.CTEs[0].CTECore().Query == nil {
+		t.Fatalf("shared DELETE WITH core = %#v", with)
+	}
+}
+
 func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
 	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
 	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {
