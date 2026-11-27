@@ -482,3 +482,21 @@ func TestParseSharedCaseExpressionCore(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSharedCollateExpressionCore(t *testing.T) {
+	const raw = "a COLLATE utf8mb4_bin"
+	const sql = "SELECT " + raw
+	stmt := mustParseOne(t, sql).(*dialectast.SelectStmt)
+	expr, ok := stmt.Fields.Items[0].Expr.(*dialectast.CollateExpr)
+	if !ok || expr.Collation != "utf8mb4_bin" || expr.Expr == nil {
+		t.Fatalf("COLLATE expression = %#v", stmt.Fields.Items[0].Expr)
+	}
+	span := expr.Span()
+	if !span.Within(len(sql)) || sql[span.Start:span.End] != raw {
+		t.Fatalf("COLLATE span = %v", span)
+	}
+	childSpan := expr.Expr.Span()
+	if !childSpan.Within(len(sql)) || sql[childSpan.Start:childSpan.End] != "a" {
+		t.Fatalf("COLLATE child span = %v", childSpan)
+	}
+}

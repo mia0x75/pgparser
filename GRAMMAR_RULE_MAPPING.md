@@ -201,3 +201,9 @@
 - 双仓 searched/simple `CASE` 均构造相同字段的 `CaseExpr` 与 `WhenClause`：`Value`、条件、结果和 `ElseClause`；测试锁定外层完整源码跨度及子表达式语义片段。
 - PG `CaseArg`／`WhenClauseList` 与 MySQL `ExpressionOpt`／`WhenClauseList` 的规则组织保持方言本地实现；PG 子节点跨度允许既有生成器保留的边界空白，不改变接受范围。
 - 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
+
+## E2j COLLATE 表达式
+
+- 双仓 `a COLLATE utf8mb4_bin` 均构造 `CollateExpr`，测试锁定输入表达式、collation 名称和完整表达式跨度。
+- PG 使用 `AnyName` 后归一化为字符串，MySQL 使用 `StringName`；两仓恢复时的名称引用规则继续保持方言差异。
+- 仅增加测试与本记录；双仓 build、vet、race、lint、tidy、生成检查通过，PG 40,644 条语料无新增异常，MySQL 87,549 条 MTR 逐用例与基线一致。
