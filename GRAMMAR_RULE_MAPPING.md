@@ -97,3 +97,9 @@
 - PG `WindowSpec` 的方言字段原先遮蔽 `BaseWindowSpec` 中的分区、排序和 frame 字段；窗口解析动作只填入方言视图。Q7 补齐解析时的共享字段，并为 PG 分区项提供 `WindowPartitionClauseNode`／`WindowPartitionItemNode` 适配，同时保留现有 `PartitionByClause.Items` 供 PG AST 使用。
 - 双仓 `TestParseSharedWindowCore` 固定命名窗口的共享名称、分区表达式、排序方向以及 ROWS frame 的边界和 offset 表达式；PG 另验证 visitor 替换分区节点后共享视图仍同步。
 - PG `OptPartitionClause` 接受 `ExpressionList`；MySQL `OptPartitionClause` 使用 `ByList`，其分区项另存方向。MySQL frame 起始项还保留数字、字符串、参数和 `INTERVAL` 形式的语义动作；不折叠这些解析差异。产生式分支与 SQL 接受范围不变。
+
+## D1a 结构核对记录
+
+- 双仓 `TestParseSharedInsertCore` 覆盖共享 INSERT 目标、两列、两行 values，以及单列查询来源；Values 与 Query 两个来源槽位保持互斥。
+- PG `InsertRest` 经 `SelectStmt` 承接 VALUES，再由 `InsertStmt` 动作转存到共享 `Values`；MySQL `InsertValues` 直接填充共享 `Values`。两者对外共享相同核心形状。
+- PG 目标别名独立存入 `TargetAlias`，MySQL 目标表保持直接表名并支持目标分区；`ON CONFLICT`、`ON DUPLICATE KEY UPDATE`、`REPLACE`、`INSERT ... SET`、行别名及 `OVERRIDING` 仍是方言扩展，本子批不调整语法或动作。

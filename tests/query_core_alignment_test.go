@@ -216,6 +216,34 @@ func TestParseSharedWindowCore(t *testing.T) {
 	}
 }
 
+func TestParseSharedInsertCore(t *testing.T) {
+	stmt, ok := mustParseOne(t, "INSERT INTO t (a, b) VALUES (1, 2), (3, 4)").(*dialectast.InsertStmt)
+	if !ok {
+		t.Fatal("expected *dialectast.InsertStmt")
+	}
+	if stmt.Table == nil || stmt.Table.TableRefCore() == nil || len(stmt.Columns) != 2 || len(stmt.Values) != 2 || stmt.Query != nil {
+		t.Fatalf("shared INSERT values core = %#v", stmt.BaseInsertStmt)
+	}
+	for i, column := range stmt.Columns {
+		if column == nil {
+			t.Fatalf("shared INSERT column %d is nil", i)
+		}
+	}
+	for i, row := range stmt.Values {
+		if len(row) != 2 || row[0] == nil || row[1] == nil {
+			t.Fatalf("shared INSERT values row %d = %#v", i, row)
+		}
+	}
+
+	query, ok := mustParseOne(t, "INSERT INTO t (a) SELECT 1").(*dialectast.InsertStmt)
+	if !ok || query.Table == nil || query.Table.TableRefCore() == nil || len(query.Columns) != 1 || query.Values != nil || query.Query == nil {
+		t.Fatalf("shared INSERT query core = %#v", query)
+	}
+	if _, ok := query.Query.(*dialectast.SelectStmt); !ok || query.Columns[0] == nil {
+		t.Fatalf("shared INSERT query source/column = %T / %#v", query.Query, query.Columns)
+	}
+}
+
 func TestLimitCommaKeepsOffsetAndCountOrder(t *testing.T) {
 	stmt := mustParseOne(t, "SELECT 1 LIMIT 2, 3")
 	if got, want := restoreString(t, stmt), "SELECT 1 LIMIT 3 OFFSET 2"; got != want {
