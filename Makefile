@@ -33,13 +33,12 @@ generate:
 	go run ./internal/astgen parser
 
 generate-check:
-	$(MAKE) generate
 	@set -eu; \
 	before=$$(mktemp); after=$$(mktemp); \
 	trap 'rm -f "$$before" "$$after"' EXIT HUP INT TERM; \
-	sha256sum parser/parser_generated.go ast/*_generated.go >"$$before"; \
+	sha256sum parser/parser_generated.go ast/*.go >"$$before"; \
 	$(MAKE) generate; \
-	sha256sum parser/parser_generated.go ast/*_generated.go >"$$after"; \
+	sha256sum parser/parser_generated.go ast/*.go >"$$after"; \
 	cmp "$$before" "$$after"
 
 test:

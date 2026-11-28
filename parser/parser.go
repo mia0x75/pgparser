@@ -77,6 +77,7 @@ func New() *Parser {
 func (*Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
 	state := parseState{}
 	state.lexer.reset(sql)
+	state.lexer.parser = &state
 	ret := yyParse(&state.lexer)
 
 	errs := state.lexer.Errors()
@@ -89,19 +90,6 @@ func (*Parser) Parse(sql string) (stmt []ast.StmtNode, err error) {
 	}
 	if ret != 0 {
 		return nil, errors.Trace(postgres.SyntaxDiagnostic(ErrSyntax.Error(), loc.InvalidSpan(), ErrSyntax))
-	}
-	if state.lexer.result != nil {
-		for _, item := range state.lexer.result.Items {
-			if raw, ok := item.(*ast.RawStmt); ok {
-				if stmt, ok := raw.Stmt.(ast.StmtNode); ok {
-					state.result = append(state.result, stmt)
-				}
-				continue
-			}
-			if stmt, ok := item.(ast.StmtNode); ok {
-				state.result = append(state.result, stmt)
-			}
-		}
 	}
 	return state.result, nil
 }

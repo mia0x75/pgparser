@@ -64,7 +64,12 @@ Each row is a separate follow-up task from the report's 34 production TODO comme
 
 ## Grammar Consistency
 
-- [x] Assess grammar section ordering and token/type declarations; no reorder was made because this task has no generated-parser baseline proving non-semantic output.
+- [x] 统一两仓 grammar 的声明分区、产生式格式、动作缩进、显式结束符与空产生式标记；93 个同名产生式的相对顺序及 19 个模块锚点的顺序全部对齐。
+- [x] 统一 `Start → StatementList → Statement` 的类型化语句列表流程：`appendStatement` 完成单条语句收尾和累积，`setParseResult` 仅在 `Start` 一次性交付结果；空输入仍返回 nil，错误批次不返回部分结果。
+- [x] MySQL 保留原有语句 Text、精确 Span、`?` 编号与逐语句清零语义；PostgreSQL 在相同收尾阶段保留原有 Span 和显式 `$n` 编号，并补齐顶层语句 Text。未给 PostgreSQL 增加无用途的隐式参数计数器。
+- [x] 双仓统一提供 `make generate` 与 `make generate-check`；检查先保存生成器可能改写的文件摘要再重新生成并比较，PostgreSQL 同时覆盖普通 AST 文件中的 visitor 防护，MySQL 保留 `make parser` 作为兼容入口。
+- [x] 逐规则核对重构前后的右部与动作签名：MySQL 738 条规则、2,890 个分支，PostgreSQL 698 条规则、3,008 个分支；除顶层三个规则外无变化。公共分发使用 goyacc 的默认首项传递，不再重复书写无作用的转发动作。
+- [x] 删除 PostgreSQL `%union` 中无声明引用或动作引用的 `ivalp`、`setop`、`colnames`，缩减语义栈元素；生成后的冲突数、冲突签名和语料结果均保持不变。
 - [x] Add a matching common SELECT semantic fixture in both parser repositories; dialect-specific AST and Restore behavior remain local.
 - [x] Normalize MySQL empty-production comments and split alternative markers; parser generation remains unchanged.
 - [x] Keep MySQL conflicts at 0/0; PostgreSQL conflict signature is pinned. Left-factor the shared identifier classes in `ColLabel`, reducing reduce/reduce conflicts from 37 to 24; the parser corpus must remain unchanged.
@@ -74,5 +79,7 @@ Each row is a separate follow-up task from the report's 34 production TODO comme
 ## External Verification
 
 - [x] PostgreSQL corpus baseline rerun: 40,644 statements and 141 known failures matched.
-- [x] MySQL/MariaDB offline MTR corpus check: 87,549 statements; 86,872 parsed, 677 rejected, 0 skipped, 0 mismatches and 0 panics. Report: `/tmp/opencode/myparser-mtr-alignment-715f045/` (not a server-backed MTR run).
+- [x] MySQL/MariaDB 离线 MTR SQL 语料复核：87,549 条语句，86,872 条成功解析、677 条拒绝、0 跳过、0 预期不匹配、0 panic；全部逐例 JSON 结果与重构前基线相同。最终报告：`/tmp/opencode/myparser-mtr-grammar-flow-delivery-20261128/`（未运行数据库服务端 MTR）。
+- [x] 2026-11-28 grammar 重构最终门禁：双仓 `make generate-check`、`go build ./...`、`go vet ./...`、`go test -race ./...`、`golangci-lint run ./...` 均通过且静态分析 0 问题；PostgreSQL 40,644 条语料及全部 141 个已知失败匹配，冲突数和签名保持 417/24 基线。
+- [x] 2026-11-28 最终基准复核：同一 Go 工具链、linux/amd64、AMD Ryzen 7 5700U、固定 CPU 8、`-cpu=1`、每项 250ms，预热后交错运行新旧版本各 12 轮。四项解析耗时均无显著变化；MySQL 简单解析多 384 B/op（+8.86%，类型化语句列表字段的固定成本），分配次数不变；PostgreSQL 32,768 层一元链由约 63 MiB/op 降至 60 MiB/op（-4.76%），分配次数由 26 降至 24。原始结果和 benchstat：`/tmp/opencode/grammar-flow-bench-interleaved-20261128/`。
 - [x] Database-backed verification was attempted but no local MySQL/PostgreSQL server is listening; no server-backed behavior is claimed.

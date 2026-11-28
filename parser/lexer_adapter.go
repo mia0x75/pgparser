@@ -7,7 +7,6 @@ import (
 	"github.com/mia0x75/parserkit/diagnostic"
 	"github.com/mia0x75/parserkit/loc"
 
-	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/postgres"
 )
 
@@ -15,9 +14,10 @@ import (
 // interface. It also implements the one-token lookahead logic used by
 // PostgreSQL's parser to disambiguate NOT, WITH, NULLS, WITHOUT and FORMAT.
 type Scanner struct {
-	lexer  *Lexer
-	result *ast.List
-	errs   []error
+	lexer        *Lexer
+	parser       *parseState
+	errs         []error
+	stmtStartPos int
 
 	haveLookahead    bool
 	lookaheadToken   Token
@@ -27,12 +27,34 @@ type Scanner struct {
 
 func (s *Scanner) reset(input string) {
 	s.lexer = NewLexer(input)
-	s.result = nil
+	s.parser = nil
 	s.errs = nil
+	s.stmtStartPos = 0
 	s.haveLookahead = false
 	s.lookaheadToken = Token{}
 	s.lookaheadTokType = 0
 	s.lookaheadSpan = loc.InvalidSpan()
+}
+
+func (s *Scanner) stmtText() string {
+	endPos := s.lexer.pos
+	if s.haveLookahead && s.lookaheadTokType != ';' && s.lookaheadTokType != 0 {
+		// A prefetched token can already belong to the next statement.
+		endPos = int(s.lookaheadSpan.Start)
+	}
+	if s.stmtStartPos >= endPos {
+		s.stmtStartPos = endPos
+		return ""
+	}
+	if s.lexer.input[endPos-1] == '\n' {
+		endPos--
+	}
+	if s.stmtStartPos < endPos && s.lexer.input[s.stmtStartPos] == '\n' {
+		s.stmtStartPos++
+	}
+	text := s.lexer.input[s.stmtStartPos:endPos]
+	s.stmtStartPos = endPos
+	return text
 }
 
 func (s *Scanner) Lex(lval *yySymType) int {
