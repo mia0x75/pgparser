@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"math"
 	"strings"
 
 	pkast "github.com/mia0x75/parserkit/ast"
@@ -421,7 +422,7 @@ func windowSpecsFromList(l *ast.List) []ast.WindowSpec {
 }
 
 // typeModifiers returns the length and the scale of a type modifier list.
-func typeModifiers(mods []ast.ExprNode) (int, int) {
+func typeModifiers(mods []ast.ExprNode, lexer yyLexer) (int, int) {
 	flen, dec := -1, -1
 	for i, item := range mods {
 		v, ok := item.(ast.ValueExpr)
@@ -431,6 +432,10 @@ func typeModifiers(mods []ast.ExprNode) (int, int) {
 		n, ok := v.GetValue().(int64)
 		if !ok {
 			continue
+		}
+		if n < math.MinInt || n > math.MaxInt {
+			lexer.Error("type modifier is out of range")
+			return -1, -1
 		}
 		if i == 0 {
 			flen = int(n)

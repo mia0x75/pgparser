@@ -29326,7 +29326,7 @@ yydefault:
 	case 1688:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			flen, dec := typeModifiers(yyDollar[2].exprs)
+			flen, dec := typeModifiers(yyDollar[2].exprs, yylex)
 			yyVAL.tp = newDataType(yyDollar[1].str, flen, dec)
 			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
 				yylex.Error(err.Error())
@@ -29335,7 +29335,7 @@ yydefault:
 	case 1689:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			flen, dec := typeModifiers(yyDollar[4].exprs)
+			flen, dec := typeModifiers(yyDollar[4].exprs, yylex)
 			yyVAL.tp = newDataType(yyDollar[1].str+"."+yyDollar[3].str, flen, dec)
 			yyVAL.tp.PGName = []string{yyDollar[1].str, yyDollar[3].str}
 			if err := setTypeModifiers(yyVAL.tp, yyDollar[4].exprs); err != nil {
@@ -29390,7 +29390,7 @@ yydefault:
 	case 1699:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			flen, dec := typeModifiers(yyDollar[2].exprs)
+			flen, dec := typeModifiers(yyDollar[2].exprs, yylex)
 			yyVAL.tp = newDataType("numeric", flen, dec)
 			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
 				yylex.Error(err.Error())
@@ -29399,7 +29399,7 @@ yydefault:
 	case 1700:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			flen, dec := typeModifiers(yyDollar[2].exprs)
+			flen, dec := typeModifiers(yyDollar[2].exprs, yylex)
 			yyVAL.tp = newDataType("numeric", flen, dec)
 			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
 				yylex.Error(err.Error())
@@ -29408,7 +29408,7 @@ yydefault:
 	case 1701:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
-			flen, dec := typeModifiers(yyDollar[2].exprs)
+			flen, dec := typeModifiers(yyDollar[2].exprs, yylex)
 			yyVAL.tp = newDataType("numeric", flen, dec)
 			if err := setTypeModifiers(yyVAL.tp, yyDollar[2].exprs); err != nil {
 				yylex.Error(err.Error())
@@ -29551,7 +29551,7 @@ yydefault:
 	case 1720:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			flen, _ := typeModifiers(yyDollar[4].exprs)
+			flen, _ := typeModifiers(yyDollar[4].exprs, yylex)
 			if yyDollar[2].boolean {
 				yyVAL.tp = newDataType("varbit", flen, -1)
 			} else {
@@ -35449,7 +35449,7 @@ yydefault:
 				Name:           yyDollar[4].str,
 				IsSystem:       yyDollar[5].boolean,
 				VCPU:           resourceGroupVCPU(yyDollar[6].list),
-				ThreadPriority: resourceGroupThreadPriority(yyDollar[6].list),
+				ThreadPriority: resourceGroupThreadPriority(yyDollar[6].list, yylex),
 				State:          resourceGroupState(yyDollar[6].list),
 			}
 		}
@@ -35460,7 +35460,7 @@ yydefault:
 			yyVAL.node = &ast.AlterResourceGroupStmt{
 				Name:           yyDollar[4].str,
 				VCPU:           resourceGroupVCPU(yyDollar[5].list),
-				ThreadPriority: resourceGroupThreadPriority(yyDollar[5].list),
+				ThreadPriority: resourceGroupThreadPriority(yyDollar[5].list, yylex),
 				State:          resourceGroupState(yyDollar[5].list),
 			}
 		}

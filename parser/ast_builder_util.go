@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -812,7 +813,7 @@ func resourceGroupVCPU(l *ast.List) []*ast.ResourceGroupVCPU {
 }
 
 // resourceGroupThreadPriority returns the thread priority of a resource group option list.
-func resourceGroupThreadPriority(l *ast.List) *int {
+func resourceGroupThreadPriority(l *ast.List, lexer yyLexer) *int {
 	if l == nil {
 		return nil
 	}
@@ -825,7 +826,12 @@ func resourceGroupThreadPriority(l *ast.List) *int {
 		if !ok {
 			continue
 		}
-		priority := int(exprIntValue(value))
+		n := exprIntValue(value)
+		if n < math.MinInt || n > math.MaxInt {
+			lexer.Error("thread priority is out of range")
+			return nil
+		}
+		priority := int(n)
 		return &priority
 	}
 	return nil

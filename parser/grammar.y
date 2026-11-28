@@ -12253,7 +12253,7 @@ SimpleTypename:
 GenericType:
 	TypeFunctionName OptTypeModifiers
 		{
-		flen, dec := typeModifiers($2)
+		flen, dec := typeModifiers($2, yylex)
 		$$ = newDataType($1, flen, dec)
 		if err := setTypeModifiers($$, $2); err != nil {
 			yylex.Error(err.Error())
@@ -12261,7 +12261,7 @@ GenericType:
 		}
 	| TypeFunctionName '.' AttrName OptTypeModifiers
 		{
-		flen, dec := typeModifiers($4)
+		flen, dec := typeModifiers($4, yylex)
 		$$ = newDataType($1+"."+$3, flen, dec)
 		$$.PGName = []string{$1, $3}
 		if err := setTypeModifiers($$, $4); err != nil {
@@ -12312,7 +12312,7 @@ Numeric:
 		}
 	| DECIMAL_P OptTypeModifiers
 		{
-		flen, dec := typeModifiers($2)
+		flen, dec := typeModifiers($2, yylex)
 		$$ = newDataType("numeric", flen, dec)
 		if err := setTypeModifiers($$, $2); err != nil {
 			yylex.Error(err.Error())
@@ -12320,7 +12320,7 @@ Numeric:
 		}
 	| DEC OptTypeModifiers
 		{
-		flen, dec := typeModifiers($2)
+		flen, dec := typeModifiers($2, yylex)
 		$$ = newDataType("numeric", flen, dec)
 		if err := setTypeModifiers($$, $2); err != nil {
 			yylex.Error(err.Error())
@@ -12328,7 +12328,7 @@ Numeric:
 		}
 	| NUMERIC OptTypeModifiers
 		{
-		flen, dec := typeModifiers($2)
+		flen, dec := typeModifiers($2, yylex)
 		$$ = newDataType("numeric", flen, dec)
 		if err := setTypeModifiers($$, $2); err != nil {
 			yylex.Error(err.Error())
@@ -12467,7 +12467,7 @@ OptVarying:
 BitWithLength:
 	BIT OptVarying '(' ExpressionList ')'
 		{
-		flen, _ := typeModifiers($4)
+		flen, _ := typeModifiers($4, yylex)
 		if $2 {
 			$$ = newDataType("varbit", flen, -1)
 		} else {
@@ -17984,7 +17984,7 @@ ResourceGroupStmt:
 			Name:           $4,
 			IsSystem:       $5,
 			VCPU:           resourceGroupVCPU($6),
-			ThreadPriority: resourceGroupThreadPriority($6),
+			ThreadPriority: resourceGroupThreadPriority($6, yylex),
 			State:          resourceGroupState($6),
 		}
 		}
@@ -17993,7 +17993,7 @@ ResourceGroupStmt:
 		$$ = &ast.AlterResourceGroupStmt{
 			Name:           $4,
 			VCPU:           resourceGroupVCPU($5),
-			ThreadPriority: resourceGroupThreadPriority($5),
+			ThreadPriority: resourceGroupThreadPriority($5, yylex),
 			State:          resourceGroupState($5),
 		}
 		}
