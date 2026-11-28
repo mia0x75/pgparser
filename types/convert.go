@@ -111,7 +111,7 @@ func ToString(value any) (string, error) {
 		return v.String(), nil
 	case Duration:
 		return v.String(), nil
-	case *PgDecimal:
+	case *Decimal:
 		return v.String(), nil
 	case BinaryLiteral:
 		return v.ToString(), nil

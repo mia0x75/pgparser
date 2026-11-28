@@ -102,7 +102,7 @@ var Ops = map[Op]string{
 func (o Op) String() string {
 	str, ok := Ops[o]
 	if !ok {
-		panic(fmt.Sprintf("%d", o))
+		return fmt.Sprintf("Op(%d)", o)
 	}
 
 	return str
@@ -152,7 +152,11 @@ var opsLiteral = map[Op]string{
 
 // Format the ExprNode into a Writer.
 func (o Op) Format(w io.Writer) {
-	_, _ = fmt.Fprintf(w, "%s", opsLiteral[o])
+	if literal, ok := opsLiteral[o]; ok {
+		_, _ = io.WriteString(w, literal)
+		return
+	}
+	_, _ = fmt.Fprint(w, o.String())
 }
 
 // Restore the Op into a Writer

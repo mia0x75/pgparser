@@ -17,7 +17,7 @@ type GenericStmt struct {
 // Restore implements Node interface.
 func (n *GenericStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword(n.Kind)
@@ -58,7 +58,7 @@ type RawStmt struct {
 // Restore implements Node interface.
 func (n *RawStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WritePlain(n.SQL)

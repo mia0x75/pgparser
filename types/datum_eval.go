@@ -38,9 +38,9 @@ func ComputePlus(a, b Datum) (d Datum, err error) {
 		}
 	case KindDecimal:
 		if b.Kind() == KindDecimal {
-			r := new(PgDecimal)
-			err = DecimalAdd(a.GetPgDecimal(), b.GetPgDecimal(), r)
-			d.SetPgDecimal(r)
+			r := new(Decimal)
+			err = DecimalAdd(a.GetDecimal(), b.GetDecimal(), r)
+			d.SetDecimal(r)
 			d.SetFrac(max(a.Frac(), b.Frac()))
 			return d, err
 		}

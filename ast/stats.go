@@ -12,7 +12,7 @@ type AnalyzeTableStmt struct {
 
 func (n *AnalyzeTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ANALYZE")

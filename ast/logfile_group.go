@@ -39,7 +39,7 @@ type LogfileGroupOption struct {
 // Restore implements Node interface.
 func (n *LogfileGroupOption) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	switch n.Tp {
@@ -110,7 +110,7 @@ type CreateLogfileGroupStmt struct {
 // Restore implements Node interface.
 func (n *CreateLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE LOGFILE GROUP ")
@@ -158,7 +158,7 @@ type AlterLogfileGroupStmt struct {
 // Restore implements Node interface.
 func (n *AlterLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ALTER LOGFILE GROUP ")
@@ -205,7 +205,7 @@ type DropLogfileGroupStmt struct {
 // Restore implements Node interface.
 func (n *DropLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP LOGFILE GROUP ")

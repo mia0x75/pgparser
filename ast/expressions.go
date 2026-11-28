@@ -66,7 +66,7 @@ type BetweenExpr struct {
 // Restore implements Node interface.
 func (n *BetweenExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -156,7 +156,7 @@ type BinaryOperationExpr struct {
 // Restore implements Node interface.
 func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Left.Restore(ctx); err != nil {
@@ -309,7 +309,7 @@ type WhenClause struct {
 // Restore implements Node interface.
 func (n *WhenClause) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("WHEN ")
@@ -368,7 +368,7 @@ type CaseExpr struct {
 // Restore implements Node interface.
 func (n *CaseExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CASE")
@@ -473,7 +473,7 @@ type SubqueryExpr struct {
 // Restore implements Node interface.
 func (n *SubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Array {
@@ -539,7 +539,7 @@ type CompareSubqueryExpr struct {
 // Restore implements Node interface.
 func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.L.Restore(ctx); err != nil {
@@ -623,7 +623,7 @@ type ColumnName struct {
 // Restore implements Node interface.
 func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteName(n.Name)
@@ -676,7 +676,7 @@ type ColumnNameExpr struct {
 // Restore implements Node interface.
 func (n *ColumnNameExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n == nil || len(n.Name.Parts) == 0 {
@@ -726,7 +726,7 @@ type DefaultExpr struct {
 // Restore implements Node interface.
 func (n *DefaultExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DEFAULT")
@@ -787,7 +787,7 @@ type ExistsSubqueryExpr struct {
 // Restore implements Node interface.
 func (n *ExistsSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Not {
@@ -853,7 +853,7 @@ type PatternInExpr struct {
 // Restore implements Node interface.
 func (n *PatternInExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -950,7 +950,7 @@ type IsNullExpr struct {
 // Restore implements Node interface.
 func (n *IsNullExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -1012,7 +1012,7 @@ type IsTruthExpr struct {
 // Restore implements Node interface.
 func (n *IsTruthExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -1092,7 +1092,7 @@ type PatternLikeExpr struct {
 // Restore implements Node interface.
 func (n *PatternLikeExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -1193,7 +1193,7 @@ type ParenthesesExpr struct {
 // Restore implements Node interface.
 func (n *ParenthesesExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WritePlain("(")
@@ -1250,7 +1250,7 @@ type PositionExpr struct {
 // Restore implements Node interface.
 func (n *PositionExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WritePlainf("%d", n.N)
@@ -1310,7 +1310,7 @@ type PatternRegexpExpr struct {
 // Restore implements Node interface.
 func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -1403,7 +1403,7 @@ func (n *RowExpr) RowCore() *pkast.BaseRowExpr {
 // Restore implements Node interface.
 func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ROW")
@@ -1470,7 +1470,7 @@ type UnaryOperationExpr struct {
 // Restore implements Node interface.
 func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	switch {
@@ -1548,7 +1548,7 @@ type ValuesExpr struct {
 // Restore implements Node interface.
 func (n *ValuesExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("VALUES")
@@ -1612,7 +1612,7 @@ type VariableExpr struct {
 // Restore implements Node interface.
 func (n *VariableExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.IsSystem {
@@ -1697,7 +1697,7 @@ type MaxValueExpr struct {
 // Restore implements Node interface.
 func (n *MaxValueExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("MAXVALUE")

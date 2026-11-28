@@ -211,9 +211,9 @@ const dateFormat = "%Y%m%d"
 // 2012-12-12 -> 20121212
 // 2012-12-12T10:10:10 -> 20121212101010
 // 2012-12-12T10:10:10.123456 -> 20121212101010.123456
-func (t Time) ToNumber() *PgDecimal {
+func (t Time) ToNumber() *Decimal {
 	if t.IsZero() {
-		return &PgDecimal{}
+		return &Decimal{}
 	}
 
 	// Fix issue #1046
@@ -238,7 +238,7 @@ func (t Time) ToNumber() *PgDecimal {
 	}
 
 	// We skip checking error here because time formatted string can be parsed certainly.
-	dec := new(PgDecimal)
+	dec := new(Decimal)
 	_ = dec.FromString([]byte(s))
 	return dec
 }
@@ -426,7 +426,7 @@ func (d Duration) formatFrac(frac int) string {
 // ToNumber changes duration to number format.
 // e.g,
 // 10:10:10 -> 101010
-func (d Duration) ToNumber() *PgDecimal {
+func (d Duration) ToNumber() *Decimal {
 	sign, hours, minutes, seconds, fraction := splitDuration(d.Duration)
 	var (
 		s       string
@@ -444,7 +444,7 @@ func (d Duration) ToNumber() *PgDecimal {
 	}
 
 	// We skip checking error here because time formatted string can be parsed certainly.
-	dec := new(PgDecimal)
+	dec := new(Decimal)
 	_ = dec.FromString([]byte(s))
 	return dec
 }

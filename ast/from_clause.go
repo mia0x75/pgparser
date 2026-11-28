@@ -23,7 +23,7 @@ func (n *FromClause) FromClauseCore() *pkast.BaseFromClause {
 
 func (n *FromClause) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {

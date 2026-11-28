@@ -9,6 +9,7 @@ import (
 
 	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/parserkit/lex"
+	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
 	_ "github.com/mia0x75/pgparser/driver"
@@ -726,11 +727,39 @@ func TestCreateExtensionRestoreRetainsOptions(t *testing.T) {
 			if !ok {
 				t.Fatalf("ParseOneStmt returned %T", parsed)
 			}
+			span := stmt.Span()
+			if !span.Within(len(tc.sql)) || tc.sql[span.Start:span.End] != tc.sql {
+				t.Fatalf("statement span = %v, want full input span", span)
+			}
+			if span != (loc.Span{Start: 0, End: loc.ByteOffset(len(tc.sql))}) {
+				t.Fatalf("statement span = %v, want exact input bounds", span)
+			}
 			got := restoreString(t, stmt)
 			if got != tc.want {
 				t.Fatalf("Restore = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestAlterTableRestoresMultipleCommands(t *testing.T) {
+	stmt := mustParseOne(t, "ALTER TABLE t ADD COLUMN a integer, ADD COLUMN b text")
+	alter, ok := stmt.(*ast.AlterTableStmt)
+	if !ok || len(alter.Specs) != 2 {
+		t.Fatalf("parsed ALTER TABLE = %#v, want two commands", stmt)
+	}
+	if got, want := restoreString(t, alter), "ALTER TABLE \"t\" ADD COLUMN \"a\" \"int4\", ADD COLUMN \"b\" \"text\""; got != want {
+		t.Fatalf("Restore = %q, want %q", got, want)
+	}
+}
+
+func TestAlterTableRejectsUnknownCommand(t *testing.T) {
+	var output strings.Builder
+	err := (&ast.AlterTableSpec{Tp: ast.AlterTableType(999)}).Restore(
+		format.NewRestoreCtx(format.DefaultRestoreFlags, &output),
+	)
+	if !errors.Is(err, ast.ErrUnsupportedRestore) {
+		t.Fatalf("Restore error = %v, want ErrUnsupportedRestore", err)
 	}
 }
 

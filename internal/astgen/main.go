@@ -89,7 +89,7 @@ func generate() error {
 					restoreGuards[name] = append(restoreGuards[name], sourceEdit{
 						pos:      pos,
 						typeName: receiverType,
-						text:     fmt.Sprintf("\n\tif %s == nil {\n\t\treturn restorePGNode(%s, %s)\n\t}\n", receiver, context, receiver),
+						text:     fmt.Sprintf("\n\tif %s == nil {\n\t\treturn restoreNode(%s, %s)\n\t}\n", receiver, context, receiver),
 					})
 				}
 				if d.Name.Name == "Accept" && d.Recv != nil {
@@ -117,7 +117,7 @@ func generate() error {
 		}
 	}
 	for name, edits := range guardEdits {
-		if name == "ast/pg_nodes_generated.go" {
+		if name == "ast/nodes_generated.go" {
 			continue
 		}
 		source, err := os.ReadFile(name)
@@ -132,7 +132,7 @@ func generate() error {
 			return err
 		}
 	}
-	for _, name := range []string{"ast/pg_nodes_generated.go", "ast/pg_ext.go"} {
+	for _, name := range []string{"ast/nodes_generated.go", "ast/collate.go", "ast/grouping_set.go", "ast/xml_table.go", "ast/json_table.go", "ast/rows_from.go", "ast/privilege_target.go"} {
 		source, err := os.ReadFile(name)
 		if err != nil {
 			return err
@@ -159,8 +159,8 @@ func generate() error {
 			if !ok {
 				continue
 			}
-			if d.Name.Name == "Restore" && name == "ast/pg_nodes_generated.go" {
-				edits = append(edits, edit{fset.Position(d.Body.Pos()).Offset, fset.Position(d.Body.End()).Offset, "{ return restorePGNode(ctx, n) }"})
+			if d.Name.Name == "Restore" && name == "ast/nodes_generated.go" {
+				edits = append(edits, edit{fset.Position(d.Body.Pos()).Offset, fset.Position(d.Body.End()).Offset, "{ return restoreNode(ctx, n) }"})
 			}
 			if d.Name.Name != "Accept" {
 				continue
@@ -215,6 +215,9 @@ func generate() error {
 			b.WriteString(acceptPrefix(id.Name))
 			for _, field := range structures[id.Name].Fields.List {
 				if len(field.Names) == 0 {
+					if err := validateEmbeddedField(field, id.Name, fset, structures, nodes); err != nil {
+						return err
+					}
 					continue
 				}
 				for _, f := range field.Names {
@@ -270,7 +273,7 @@ func needsRestoreGuard(d *ast.FuncDecl) bool {
 	}
 	if ret, ok := d.Body.List[0].(*ast.ReturnStmt); ok && len(ret.Results) == 1 {
 		if call, ok := ret.Results[0].(*ast.CallExpr); ok {
-			if fn, ok := call.Fun.(*ast.Ident); ok && fn.Name == "restorePGNode" {
+			if fn, ok := call.Fun.(*ast.Ident); ok && fn.Name == "restoreNode" {
 				return false
 			}
 		}
@@ -421,6 +424,36 @@ func isNode(expr ast.Expr, nodes map[string]bool) bool {
 func isValueNode(expr ast.Expr, nodes map[string]bool) bool {
 	id, ok := expr.(*ast.Ident)
 	return ok && nodes[id.Name]
+}
+
+func hasNodeChildren(structure *ast.StructType, nodes map[string]bool) bool {
+	for _, field := range structure.Fields.List {
+		if len(field.Names) == 0 || !field.Names[0].IsExported() {
+			continue
+		}
+		if fieldHasNode(field.Type, nodes) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateEmbeddedField(field *ast.Field, owner string, fset *token.FileSet, structures map[string]*ast.StructType, nodes map[string]bool) error {
+	embedded := fieldTypeName(field.Type, fset)
+	if structures[embedded] != nil && hasNodeChildren(structures[embedded], nodes) {
+		return fmt.Errorf("unsupported child-bearing embedded field %s in %s", embedded, owner)
+	}
+	return nil
+}
+
+func fieldHasNode(expr ast.Expr, nodes map[string]bool) bool {
+	if isNode(expr, nodes) || isValueNode(expr, nodes) {
+		return true
+	}
+	if list, ok := expr.(*ast.ArrayType); ok && list.Len == nil {
+		return fieldHasNode(list.Elt, nodes)
+	}
+	return false
 }
 
 func visitField(b *strings.Builder, fset *token.FileSet, expr ast.Expr, access string, nodes map[string]bool, depth int, optional bool) error {

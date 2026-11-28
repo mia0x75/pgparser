@@ -30,7 +30,7 @@ func (n *Limit) LimitCore() *pkast.BaseLimit {
 // Restore writes the LIMIT, FETCH or OFFSET clause.
 func (n *Limit) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {

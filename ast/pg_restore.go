@@ -10,7 +10,7 @@ import (
 
 var ErrUnsupportedRestore = errors.New("SQL restoration is unsupported")
 
-func restorePGNode(ctx *format.RestoreCtx, node Node) error {
+func restoreNode(ctx *format.RestoreCtx, node Node) error {
 	if !nodePresent(node) {
 		return fmt.Errorf("restore PostgreSQL node: nil node")
 	}

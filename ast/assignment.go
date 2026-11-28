@@ -32,7 +32,7 @@ type RowTarget struct {
 // Restore writes the parenthesized column list.
 func (n *RowTarget) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {

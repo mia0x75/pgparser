@@ -29,7 +29,7 @@ type ResourceGroupVCPU struct {
 // Restore implements Node interface.
 func (n *ResourceGroupVCPU) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.From == n.To {
@@ -99,7 +99,7 @@ type CreateResourceGroupStmt struct {
 // Restore implements Node interface.
 func (n *CreateResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE RESOURCE GROUP ")
@@ -158,7 +158,7 @@ type AlterResourceGroupStmt struct {
 // Restore implements Node interface.
 func (n *AlterResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ALTER RESOURCE GROUP ")
@@ -209,7 +209,7 @@ type DropResourceGroupStmt struct {
 // Restore implements Node interface.
 func (n *DropResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP RESOURCE GROUP ")

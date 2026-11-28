@@ -45,7 +45,7 @@ func NewValueExpr(value any) ValueExpr {
 		return NewLiteralExpr(pkast.LiteralFloat, strconv.FormatFloat(v, 'e', -1, 64))
 	case float32:
 		return NewLiteralExpr(pkast.LiteralFloat, strconv.FormatFloat(float64(v), 'e', -1, 32))
-	case *types.PgDecimal:
+	case *types.Decimal:
 		return NewLiteralExpr(pkast.LiteralDecimal, v.String())
 	case ValueExpr:
 		return v

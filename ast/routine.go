@@ -22,7 +22,7 @@ type CreateFunctionStmt struct {
 
 func (n *CreateFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Name == nil {
@@ -137,7 +137,7 @@ type AlterFunctionStmt struct {
 
 func (n *AlterFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Func == nil {
@@ -309,7 +309,7 @@ type ReturnStmt struct {
 
 func (n *ReturnStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Expr == nil {

@@ -24,7 +24,7 @@ type CreateSequenceStmt struct {
 // Restore implements Node interface.
 func (n *CreateSequenceStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE ")
@@ -83,7 +83,7 @@ type DropSequenceStmt struct {
 // Restore implements Node interface.
 func (n *DropSequenceStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP SEQUENCE ")

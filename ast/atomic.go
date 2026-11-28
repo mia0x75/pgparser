@@ -13,7 +13,7 @@ type BeginAtomicStmt struct {
 
 func (n *BeginAtomicStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("BEGIN ATOMIC ")

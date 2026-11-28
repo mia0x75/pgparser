@@ -29,7 +29,7 @@ type CreateTablespaceStmt struct {
 // Restore implements Node interface.
 func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE TABLESPACE ")
@@ -100,7 +100,7 @@ type AlterTablespaceStmt struct {
 // Restore implements Node interface.
 func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ALTER TABLESPACE ")
@@ -158,7 +158,7 @@ type DropTablespaceStmt struct {
 // Restore implements Node interface.
 func (n *DropTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP TABLESPACE ")

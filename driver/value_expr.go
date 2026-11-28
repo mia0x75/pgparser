@@ -13,7 +13,7 @@ import (
 
 // NewDecimal preserves the dialect's exact decimal representation.
 func NewDecimal(str string) (any, error) {
-	dec := new(types.PgDecimal)
+	dec := new(types.Decimal)
 	err := dec.FromString(hack.Slice(str))
 	return dec, err
 }
@@ -73,7 +73,7 @@ func valueExprString(n *ValueExpr) (string, error) {
 	case types.KindString, types.KindBytes:
 		return n.GetString(), nil
 	case types.KindDecimal:
-		return n.GetPgDecimal().String(), nil
+		return n.GetDecimal().String(), nil
 	case types.KindBinaryLiteral:
 		if n.Type.Flag&postgres.UnsignedFlag != 0 {
 			return fmt.Sprintf("x'%x'", n.GetBytes()), nil

@@ -51,7 +51,7 @@ func (n *BeginEndStmt) SetLabel(label string) { n.Label = label }
 // Restore implements Node interface.
 func (n *BeginEndStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Label != "" {
@@ -114,7 +114,7 @@ type DeclareStmt struct {
 // Restore implements Node interface.
 func (n *DeclareStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DECLARE ")
@@ -219,7 +219,7 @@ type DeclareConditionStmt struct {
 // Restore implements Node interface.
 func (n *DeclareConditionStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DECLARE ")
@@ -262,7 +262,7 @@ type DeclareCursorStmt struct {
 // Restore implements Node interface.
 func (n *DeclareCursorStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DECLARE ")
@@ -343,7 +343,7 @@ type DeclareHandlerStmt struct {
 // Restore implements Node interface.
 func (n *DeclareHandlerStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DECLARE ")
@@ -402,7 +402,7 @@ type IfStmt struct {
 // Restore implements Node interface.
 func (n *IfStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	for i, c := range n.Conditions {
@@ -485,7 +485,7 @@ type CaseStmt struct {
 // Restore implements Node interface.
 func (n *CaseStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CASE")
@@ -575,7 +575,7 @@ func (n *WhileStmt) SetLabel(label string) { n.Label = label }
 // Restore implements Node interface.
 func (n *WhileStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Label != "" {
@@ -642,7 +642,7 @@ func (n *RepeatStmt) SetLabel(label string) { n.Label = label }
 // Restore implements Node interface.
 func (n *RepeatStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Label != "" {
@@ -708,7 +708,7 @@ func (n *LoopStmt) SetLabel(label string) { n.Label = label }
 // Restore implements Node interface.
 func (n *LoopStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Label != "" {
@@ -761,7 +761,7 @@ type LeaveStmt struct {
 // Restore implements Node interface.
 func (n *LeaveStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("LEAVE ")
@@ -797,7 +797,7 @@ type IterateStmt struct {
 // Restore implements Node interface.
 func (n *IterateStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ITERATE ")
@@ -833,7 +833,7 @@ type OpenStmt struct {
 // Restore implements Node interface.
 func (n *OpenStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("OPEN ")
@@ -869,7 +869,7 @@ type CloseStmt struct {
 // Restore implements Node interface.
 func (n *CloseStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CLOSE ")
@@ -906,7 +906,7 @@ type FetchStmt struct {
 // Restore implements Node interface.
 func (n *FetchStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("FETCH ")
@@ -960,7 +960,7 @@ type SignalStmt struct {
 // Restore implements Node interface.
 func (n *SignalStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("SIGNAL ")
@@ -1020,7 +1020,7 @@ type ResignalStmt struct {
 // Restore implements Node interface.
 func (n *ResignalStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("RESIGNAL")

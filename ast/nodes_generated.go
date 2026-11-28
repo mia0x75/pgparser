@@ -85,7 +85,7 @@ type List struct {
 	Items []Node
 }
 
-func (n *List) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *List) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *List) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -118,7 +118,7 @@ type String struct {
 	Str string
 }
 
-func (n *String) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *String) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *String) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -141,7 +141,7 @@ type Integer struct {
 	Ival int64
 }
 
-func (n *Integer) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *Integer) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *Integer) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -164,7 +164,7 @@ type Float struct {
 	Fval string
 }
 
-func (n *Float) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *Float) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *Float) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -187,7 +187,7 @@ type Boolean struct {
 	Boolval bool
 }
 
-func (n *Boolean) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *Boolean) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *Boolean) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -210,7 +210,7 @@ type BitString struct {
 	Bsval string
 }
 
-func (n *BitString) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *BitString) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *BitString) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -244,7 +244,7 @@ type CreateStmt struct {
 	IfNotExists    bool
 }
 
-func (n *CreateStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -366,7 +366,7 @@ type ViewStmt struct {
 	WithCheckOption int
 }
 
-func (n *ViewStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *ViewStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *ViewStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -464,7 +464,7 @@ type IndexStmt struct {
 	ResetDefaultTblspc          bool
 }
 
-func (n *IndexStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *IndexStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -571,7 +571,7 @@ type DropStmt struct {
 	Concurrent bool
 }
 
-func (n *DropStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DropStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DropStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -614,7 +614,7 @@ type AlterTableCmd struct {
 	Missing_ok bool
 }
 
-func (n *AlterTableCmd) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterTableCmd) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterTableCmd) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -665,7 +665,7 @@ type AlterTableMoveAllStmt struct {
 	Nowait             bool
 }
 
-func (n *AlterTableMoveAllStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterTableMoveAllStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterTableMoveAllStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -708,7 +708,7 @@ type RangeVar struct {
 	Location       ParseLoc
 }
 
-func (n *RangeVar) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RangeVar) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RangeVar) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -746,7 +746,7 @@ type Alias struct {
 	Colnames  *List
 }
 
-func (n *Alias) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *Alias) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *Alias) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -790,7 +790,7 @@ type IntoClause struct {
 	SkipData       bool
 }
 
-func (n *IntoClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *IntoClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *IntoClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -866,7 +866,7 @@ type ColumnRef struct {
 	Location ParseLoc
 }
 
-func (n *ColumnRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *ColumnRef) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *ColumnRef) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -906,7 +906,7 @@ type ResTarget struct {
 	Location    ParseLoc
 }
 
-func (n *ResTarget) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *ResTarget) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *ResTarget) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -955,7 +955,7 @@ type MultiAssignRef struct {
 	Ncolumns int
 }
 
-func (n *MultiAssignRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *MultiAssignRef) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *MultiAssignRef) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -992,7 +992,7 @@ type A_Expr struct {
 	Location ParseLoc
 }
 
-func (n *A_Expr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *A_Expr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *A_Expr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1051,7 +1051,7 @@ type A_Const struct {
 	Location ParseLoc
 }
 
-func (n *A_Const) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *A_Const) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *A_Const) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1086,7 +1086,7 @@ type TypeCast struct {
 	Location ParseLoc
 }
 
-func (n *TypeCast) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *TypeCast) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *TypeCast) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1129,7 +1129,7 @@ type FuncCall struct {
 	Location       ParseLoc
 }
 
-func (n *FuncCall) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *FuncCall) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *FuncCall) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1217,7 +1217,7 @@ type NamedArgExpr struct {
 	Location  ParseLoc
 }
 
-func (n *NamedArgExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *NamedArgExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *NamedArgExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1257,7 +1257,7 @@ type TypeName struct {
 	Location    ParseLoc
 }
 
-func (n *TypeName) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *TypeName) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *TypeName) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1326,7 +1326,7 @@ type SortBy struct {
 	Location    ParseLoc
 }
 
-func (n *SortBy) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *SortBy) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *SortBy) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1385,7 +1385,7 @@ type CommonTableExpr struct {
 	Ctecolcollations *List
 }
 
-func (n *CommonTableExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CommonTableExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1511,7 +1511,7 @@ type CTESearchClause struct {
 	Location           ParseLoc
 }
 
-func (n *CTESearchClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CTESearchClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CTESearchClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1557,7 +1557,7 @@ type CTECycleClause struct {
 	Location           ParseLoc
 }
 
-func (n *CTECycleClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CTECycleClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CTECycleClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1616,7 +1616,7 @@ type RoleSpec struct {
 	Location ParseLoc
 }
 
-func (n *RoleSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RoleSpec) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RoleSpec) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1641,7 +1641,7 @@ type CollateClause struct {
 	Location ParseLoc
 }
 
-func (n *CollateClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CollateClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CollateClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1690,7 +1690,7 @@ type PartitionSpec struct {
 	Location   ParseLoc
 }
 
-func (n *PartitionSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *PartitionSpec) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *PartitionSpec) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1731,7 +1731,7 @@ type PartitionElem struct {
 	Location  ParseLoc
 }
 
-func (n *PartitionElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *PartitionElem) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *PartitionElem) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1794,7 +1794,7 @@ type PartitionCmd struct {
 	Concurrent bool
 }
 
-func (n *PartitionCmd) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *PartitionCmd) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *PartitionCmd) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1848,7 +1848,7 @@ type InferClause struct {
 	Location    ParseLoc
 }
 
-func (n *InferClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *InferClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *InferClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1899,7 +1899,7 @@ type DefElem struct {
 	Location     ParseLoc
 }
 
-func (n *DefElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DefElem) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DefElem) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1934,7 +1934,7 @@ type LockingClause struct {
 	WaitPolicy int
 }
 
-func (n *LockingClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *LockingClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *LockingClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1970,7 +1970,7 @@ type A_Star struct {
 	node
 }
 
-func (n *A_Star) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *A_Star) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *A_Star) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -1995,7 +1995,7 @@ type A_Indices struct {
 	Uidx    Node
 }
 
-func (n *A_Indices) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *A_Indices) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *A_Indices) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2039,7 +2039,7 @@ type A_Indirection struct {
 	Indirection *List
 }
 
-func (n *A_Indirection) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *A_Indirection) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *A_Indirection) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2093,7 +2093,7 @@ type WindowDef struct {
 	Location        ParseLoc
 }
 
-func (n *WindowDef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *WindowDef) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *WindowDef) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2172,7 +2172,7 @@ type JoinExpr struct {
 	Rtindex     int
 }
 
-func (n *JoinExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JoinExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2268,7 +2268,7 @@ type FromExpr struct {
 	Quals    Node
 }
 
-func (n *FromExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *FromExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *FromExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2322,7 +2322,7 @@ type IndexElem struct {
 	NullsOrdering SortByNulls
 }
 
-func (n *IndexElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *IndexElem) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *IndexElem) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2398,7 +2398,7 @@ type ParamRef struct {
 	Location ParseLoc
 }
 
-func (n *ParamRef) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *ParamRef) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *ParamRef) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2423,7 +2423,7 @@ type CurrentOfExpr struct {
 	CursorParam int
 }
 
-func (n *CurrentOfExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CurrentOfExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CurrentOfExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2451,7 +2451,7 @@ type SubLink struct {
 	Location    ParseLoc
 }
 
-func (n *SubLink) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *SubLink) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *SubLink) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2510,7 +2510,7 @@ type BoolExpr struct {
 	Location ParseLoc
 }
 
-func (n *BoolExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *BoolExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *BoolExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2552,7 +2552,7 @@ type NullTest struct {
 	Location     ParseLoc
 }
 
-func (n *NullTest) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *NullTest) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *NullTest) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2589,7 +2589,7 @@ type BooleanTest struct {
 	Location     ParseLoc
 }
 
-func (n *BooleanTest) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *BooleanTest) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *BooleanTest) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2624,7 +2624,7 @@ type RangeSubselect struct {
 	Alias    *Alias
 }
 
-func (n *RangeSubselect) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RangeSubselect) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RangeSubselect) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2676,7 +2676,7 @@ type RangeFunction struct {
 	Coldeflist *List
 }
 
-func (n *RangeFunction) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RangeFunction) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RangeFunction) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2745,7 +2745,7 @@ type RangeTableSample struct {
 	Location   ParseLoc
 }
 
-func (n *RangeTableSample) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RangeTableSample) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2820,7 +2820,7 @@ type TableLikeClause struct {
 	AncillaryData *List
 }
 
-func (n *TableLikeClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *TableLikeClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *TableLikeClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2887,7 +2887,7 @@ type CaseWhen struct {
 	Location ParseLoc
 }
 
-func (n *CaseWhen) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CaseWhen) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CaseWhen) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2933,7 +2933,7 @@ type CoalesceExpr struct {
 	Location       ParseLoc
 }
 
-func (n *CoalesceExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CoalesceExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CoalesceExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -2974,7 +2974,7 @@ type MinMaxExpr struct {
 	Location     ParseLoc
 }
 
-func (n *MinMaxExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *MinMaxExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *MinMaxExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3020,7 +3020,7 @@ type NullIfExpr struct {
 	Location     ParseLoc
 }
 
-func (n *NullIfExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *NullIfExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *NullIfExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3058,7 +3058,7 @@ type A_ArrayExpr struct {
 	Location ParseLoc
 }
 
-func (n *A_ArrayExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *A_ArrayExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *A_ArrayExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3098,7 +3098,7 @@ type GroupingFunc struct {
 	Location    ParseLoc
 }
 
-func (n *GroupingFunc) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *GroupingFunc) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *GroupingFunc) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3165,7 +3165,7 @@ type WindowClause struct {
 	Copiedorder       bool
 }
 
-func (n *WindowClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *WindowClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *WindowClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3254,7 +3254,7 @@ type TruncateStmt struct {
 	Behavior    DropBehavior
 }
 
-func (n *TruncateStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *TruncateStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *TruncateStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3295,7 +3295,7 @@ type CreateSeqStmt struct {
 	IfNotExists bool
 }
 
-func (n *CreateSeqStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateSeqStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateSeqStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3349,7 +3349,7 @@ type AlterSeqStmt struct {
 	MissingOk   bool
 }
 
-func (n *AlterSeqStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterSeqStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterSeqStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3403,7 +3403,7 @@ type FunctionParameter struct {
 	Defexpr Node
 }
 
-func (n *FunctionParameter) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *FunctionParameter) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *FunctionParameter) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3439,7 +3439,7 @@ type CreateEnumStmt struct {
 	Vals     *List
 }
 
-func (n *CreateEnumStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateEnumStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateEnumStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3495,7 +3495,7 @@ type AlterEnumStmt struct {
 	SkipIfNewvalExists bool
 }
 
-func (n *AlterEnumStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterEnumStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterEnumStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3535,7 +3535,7 @@ type CreateDomainStmt struct {
 	Constraints []*ColumnOption
 }
 
-func (n *CreateDomainStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateDomainStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateDomainStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3605,7 +3605,7 @@ type AlterDomainStmt struct {
 	MissingOk bool
 }
 
-func (n *AlterDomainStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterDomainStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterDomainStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3666,7 +3666,7 @@ type CreateTrigStmt struct {
 	Constrrel      *RangeVar
 }
 
-func (n *CreateTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateTrigStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3786,7 +3786,7 @@ type AccessPriv struct {
 	Cols     *List
 }
 
-func (n *AccessPriv) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AccessPriv) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AccessPriv) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3827,7 +3827,7 @@ type CreateTableAsStmt struct {
 	IfNotExists  bool
 }
 
-func (n *CreateTableAsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateTableAsStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateTableAsStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3876,7 +3876,7 @@ type VacuumRelation struct {
 	VaCols   *List
 }
 
-func (n *VacuumRelation) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *VacuumRelation) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *VacuumRelation) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3932,7 +3932,7 @@ type TransactionStmt struct {
 	Location  ParseLoc
 }
 
-func (n *TransactionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *TransactionStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *TransactionStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -3973,7 +3973,7 @@ type LockStmt struct {
 	Nowait    bool
 }
 
-func (n *LockStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *LockStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *LockStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4017,7 +4017,7 @@ type SetOperationStmt struct {
 	GroupClauses  *List
 }
 
-func (n *SetOperationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *SetOperationStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4120,7 +4120,7 @@ type SortGroupClause struct {
 	Hashable        bool
 }
 
-func (n *SortGroupClause) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *SortGroupClause) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *SortGroupClause) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4150,7 +4150,7 @@ type RenameStmt struct {
 	MissingOk    bool
 }
 
-func (n *RenameStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RenameStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RenameStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4201,7 +4201,7 @@ type AlterObjectSchemaStmt struct {
 	MissingOk  bool
 }
 
-func (n *AlterObjectSchemaStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterObjectSchemaStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterObjectSchemaStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4251,7 +4251,7 @@ type AlterOwnerStmt struct {
 	Newowner   *RoleSpec
 }
 
-func (n *AlterOwnerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterOwnerStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterOwnerStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4313,7 +4313,7 @@ type CheckPointStmt struct {
 	stmtNode
 }
 
-func (n *CheckPointStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CheckPointStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CheckPointStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4336,7 +4336,7 @@ type ClosePortalStmt struct {
 	Portalname string
 }
 
-func (n *ClosePortalStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *ClosePortalStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *ClosePortalStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4360,7 +4360,7 @@ type ConstraintsSetStmt struct {
 	Deferred    bool
 }
 
-func (n *ConstraintsSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *ConstraintsSetStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *ConstraintsSetStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4400,7 +4400,7 @@ type VariableSetStmt struct {
 	IsLocal bool
 }
 
-func (n *VariableSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *VariableSetStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *VariableSetStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4437,7 +4437,7 @@ type VariableShowStmt struct {
 	Name string
 }
 
-func (n *VariableShowStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *VariableShowStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *VariableShowStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4466,7 +4466,7 @@ type SecLabelStmt struct {
 	Label      string
 }
 
-func (n *SecLabelStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *SecLabelStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *SecLabelStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4501,7 +4501,7 @@ type CreateRoleStmt struct {
 	Options  *List
 }
 
-func (n *CreateRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateRoleStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateRoleStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4540,7 +4540,7 @@ type AlterRoleStmt struct {
 	Action  int
 }
 
-func (n *AlterRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterRoleStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterRoleStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4593,7 +4593,7 @@ type AlterRoleSetStmt struct {
 	Setstmt  Node
 }
 
-func (n *AlterRoleSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterRoleSetStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterRoleSetStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4641,7 +4641,7 @@ type DropRoleStmt struct {
 	MissingOk bool
 }
 
-func (n *DropRoleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DropRoleStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DropRoleStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4679,7 +4679,7 @@ type CreatedbStmt struct {
 	Options *List
 }
 
-func (n *CreatedbStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreatedbStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreatedbStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4717,7 +4717,7 @@ type AlterDatabaseSetStmt struct {
 	Setstmt Node
 }
 
-func (n *AlterDatabaseSetStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterDatabaseSetStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterDatabaseSetStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4752,7 +4752,7 @@ type DropdbStmt struct {
 	Options   *List
 }
 
-func (n *DropdbStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DropdbStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DropdbStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4789,7 +4789,7 @@ type AlterSystemStmt struct {
 	Setstmt Node
 }
 
-func (n *AlterSystemStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterSystemStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterSystemStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4822,7 +4822,7 @@ type AlterCollationStmt struct {
 	Collname *List
 }
 
-func (n *AlterCollationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterCollationStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterCollationStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4865,7 +4865,7 @@ type DefineStmt struct {
 	Replace     bool
 }
 
-func (n *DefineStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DefineStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DefineStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4931,7 +4931,7 @@ type CompositeTypeStmt struct {
 	Coldeflist *List
 }
 
-func (n *CompositeTypeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CompositeTypeStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CompositeTypeStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -4983,7 +4983,7 @@ type CreateRangeStmt struct {
 	Params   *List
 }
 
-func (n *CreateRangeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateRangeStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateRangeStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5036,7 +5036,7 @@ type ObjectWithArgs struct {
 	ArgsUnspecified bool
 }
 
-func (n *ObjectWithArgs) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *ObjectWithArgs) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *ObjectWithArgs) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5090,7 +5090,7 @@ type CreateEventTrigStmt struct {
 	Funcname   *List
 }
 
-func (n *CreateEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateEventTrigStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5142,7 +5142,7 @@ type AlterEventTrigStmt struct {
 	Tgenabled byte
 }
 
-func (n *AlterEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterEventTrigStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterEventTrigStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5171,7 +5171,7 @@ type RuleStmt struct {
 	Replace     bool
 }
 
-func (n *RuleStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RuleStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RuleStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5237,7 +5237,7 @@ type CreatePLangStmt struct {
 	Pltrusted   bool
 }
 
-func (n *CreatePLangStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreatePLangStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreatePLangStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5304,7 +5304,7 @@ type TriggerTransition struct {
 	IsTable bool
 }
 
-func (n *TriggerTransition) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *TriggerTransition) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *TriggerTransition) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5329,7 +5329,7 @@ type CreateFdwStmt struct {
 	Options     *List
 }
 
-func (n *CreateFdwStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateFdwStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateFdwStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5382,7 +5382,7 @@ type AlterFdwStmt struct {
 	Options     *List
 }
 
-func (n *AlterFdwStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterFdwStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterFdwStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5438,7 +5438,7 @@ type CreateForeignServerStmt struct {
 	Options     *List
 }
 
-func (n *CreateForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateForeignServerStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5478,7 +5478,7 @@ type AlterForeignServerStmt struct {
 	HasVersion bool
 }
 
-func (n *AlterForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterForeignServerStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterForeignServerStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5517,7 +5517,7 @@ type CreateForeignTableStmt struct {
 	Options    *List
 }
 
-func (n *CreateForeignTableStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateForeignTableStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateForeignTableStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5566,7 +5566,7 @@ type CreateUserMappingStmt struct {
 	Options     *List
 }
 
-func (n *CreateUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateUserMappingStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5619,7 +5619,7 @@ type AlterUserMappingStmt struct {
 	Options    *List
 }
 
-func (n *AlterUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterUserMappingStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5672,7 +5672,7 @@ type DropUserMappingStmt struct {
 	MissingOk  bool
 }
 
-func (n *DropUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DropUserMappingStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DropUserMappingStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5711,7 +5711,7 @@ type CreateExtensionStmt struct {
 	Options     *List
 }
 
-func (n *CreateExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateExtensionStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5749,7 +5749,7 @@ type AlterExtensionStmt struct {
 	Options *List
 }
 
-func (n *AlterExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterExtensionStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterExtensionStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5793,7 +5793,7 @@ type AlterExtensionContentsStmt struct {
 }
 
 func (n *AlterExtensionContentsStmt) Restore(ctx *format.RestoreCtx) error {
-	return restorePGNode(ctx, n)
+	return restoreNode(ctx, n)
 }
 
 func (n *AlterExtensionContentsStmt) Accept(v Visitor) (Node, bool) {
@@ -5828,7 +5828,7 @@ type DropTableSpaceStmt struct {
 	MissingOk      bool
 }
 
-func (n *DropTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DropTableSpaceStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DropTableSpaceStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5853,7 +5853,7 @@ type CreateAmStmt struct {
 	Amtype      byte
 }
 
-func (n *CreateAmStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateAmStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateAmStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5896,7 +5896,7 @@ type CreatePolicyStmt struct {
 	WithCheck  Node
 }
 
-func (n *CreatePolicyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreatePolicyStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreatePolicyStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -5971,7 +5971,7 @@ type AlterPolicyStmt struct {
 	WithCheck  Node
 }
 
-func (n *AlterPolicyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterPolicyStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterPolicyStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6045,7 +6045,7 @@ type CreatePublicationStmt struct {
 	ForAllTables bool
 }
 
-func (n *CreatePublicationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreatePublicationStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreatePublicationStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6100,7 +6100,7 @@ type AlterPublicationStmt struct {
 	Action       DefElemAction
 }
 
-func (n *AlterPublicationStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterPublicationStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterPublicationStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6154,7 +6154,7 @@ type PublicationObjSpec struct {
 	Location   ParseLoc
 }
 
-func (n *PublicationObjSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *PublicationObjSpec) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *PublicationObjSpec) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6193,7 +6193,7 @@ type PublicationTable struct {
 	Columns     *List
 }
 
-func (n *PublicationTable) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *PublicationTable) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *PublicationTable) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6257,7 +6257,7 @@ type CreateSubscriptionStmt struct {
 	Options     *List
 }
 
-func (n *CreateSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6312,7 +6312,7 @@ type AlterSubscriptionStmt struct {
 	Options     *List
 }
 
-func (n *AlterSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6365,7 +6365,7 @@ type DropSubscriptionStmt struct {
 	Behavior  DropBehavior
 }
 
-func (n *DropSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *DropSubscriptionStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *DropSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6392,7 +6392,7 @@ type AlterObjectDependsStmt struct {
 	Remove     bool
 }
 
-func (n *AlterObjectDependsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterObjectDependsStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterObjectDependsStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6450,7 +6450,7 @@ type AlterOperatorStmt struct {
 	Options  *List
 }
 
-func (n *AlterOperatorStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterOperatorStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterOperatorStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6502,7 +6502,7 @@ type AlterTypeStmt struct {
 	Options  *List
 }
 
-func (n *AlterTypeStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterTypeStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterTypeStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6555,7 +6555,7 @@ type AlterDefaultPrivilegesStmt struct {
 }
 
 func (n *AlterDefaultPrivilegesStmt) Restore(ctx *format.RestoreCtx) error {
-	return restorePGNode(ctx, n)
+	return restoreNode(ctx, n)
 }
 
 func (n *AlterDefaultPrivilegesStmt) Accept(v Visitor) (Node, bool) {
@@ -6608,7 +6608,7 @@ type AlterTSDictionaryStmt struct {
 	Options  *List
 }
 
-func (n *AlterTSDictionaryStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterTSDictionaryStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterTSDictionaryStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6665,9 +6665,7 @@ type AlterTSConfigurationStmt struct {
 	MissingOk bool
 }
 
-func (n *AlterTSConfigurationStmt) Restore(ctx *format.RestoreCtx) error {
-	return restorePGNode(ctx, n)
-}
+func (n *AlterTSConfigurationStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterTSConfigurationStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6737,7 +6735,7 @@ type CreateStatsStmt struct {
 	IfNotExists bool
 }
 
-func (n *CreateStatsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateStatsStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateStatsStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6817,7 +6815,7 @@ type StatsElem struct {
 	Expr Node
 }
 
-func (n *StatsElem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *StatsElem) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *StatsElem) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6852,7 +6850,7 @@ type AlterStatsStmt struct {
 	Stxstattarget int
 }
 
-func (n *AlterStatsStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterStatsStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterStatsStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6894,7 +6892,7 @@ type CreateOpClassStmt struct {
 	IsDefault    bool
 }
 
-func (n *CreateOpClassStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateOpClassStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateOpClassStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -6964,7 +6962,7 @@ type CreateOpClassItem struct {
 	Storedtype  *types.FieldType
 }
 
-func (n *CreateOpClassItem) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateOpClassItem) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateOpClassItem) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7030,7 +7028,7 @@ type CreateOpFamilyStmt struct {
 	Amname       string
 }
 
-func (n *CreateOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateOpFamilyStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7070,7 +7068,7 @@ type AlterOpFamilyStmt struct {
 	Items        *List
 }
 
-func (n *AlterOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *AlterOpFamilyStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *AlterOpFamilyStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7125,7 +7123,7 @@ type CreateCastStmt struct {
 	Inout      bool
 }
 
-func (n *CreateCastStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateCastStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateCastStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7166,7 +7164,7 @@ type CreateTransformStmt struct {
 	Tosql    *ObjectWithArgs
 }
 
-func (n *CreateTransformStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateTransformStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateTransformStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7221,7 +7219,7 @@ type CreateConversionStmt struct {
 	Def             bool
 }
 
-func (n *CreateConversionStmt) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *CreateConversionStmt) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *CreateConversionStmt) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7274,7 +7272,7 @@ type SQLValueFunction struct {
 	Location ParseLoc
 }
 
-func (n *SQLValueFunction) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *SQLValueFunction) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *SQLValueFunction) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7300,7 +7298,7 @@ type SetToDefault struct {
 	Location  ParseLoc
 }
 
-func (n *SetToDefault) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *SetToDefault) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *SetToDefault) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7336,7 +7334,7 @@ type XmlExpr struct {
 	Location  ParseLoc
 }
 
-func (n *XmlExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *XmlExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *XmlExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7405,7 +7403,7 @@ type XmlSerialize struct {
 	Location  ParseLoc
 }
 
-func (n *XmlSerialize) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *XmlSerialize) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *XmlSerialize) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7444,7 +7442,7 @@ type RangeTableFunc struct {
 	Location   ParseLoc
 }
 
-func (n *RangeTableFunc) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RangeTableFunc) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7535,7 +7533,7 @@ type RangeTableFuncCol struct {
 	Location      ParseLoc
 }
 
-func (n *RangeTableFuncCol) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *RangeTableFuncCol) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *RangeTableFuncCol) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7584,7 +7582,7 @@ type JsonFormat struct {
 	Location   ParseLoc
 }
 
-func (n *JsonFormat) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonFormat) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonFormat) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7609,7 +7607,7 @@ type JsonReturning struct {
 	Typmod       int32
 }
 
-func (n *JsonReturning) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonReturning) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonReturning) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7648,7 +7646,7 @@ type JsonValueExpr struct {
 	FormatClause  *JsonFormat
 }
 
-func (n *JsonValueExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonValueExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonValueExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7706,7 +7704,7 @@ type JsonOutput struct {
 	Returning *JsonReturning
 }
 
-func (n *JsonOutput) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonOutput) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonOutput) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7744,7 +7742,7 @@ type JsonArgument struct {
 	Name string
 }
 
-func (n *JsonArgument) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonArgument) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonArgument) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7790,7 +7788,7 @@ type JsonBehavior struct {
 	Location ParseLoc
 }
 
-func (n *JsonBehavior) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonBehavior) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonBehavior) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7845,7 +7843,7 @@ type JsonFuncExpr struct {
 	Location    ParseLoc
 }
 
-func (n *JsonFuncExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonFuncExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7951,7 +7949,7 @@ type JsonTablePathSpec struct {
 	Location     ParseLoc
 }
 
-func (n *JsonTablePathSpec) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonTablePathSpec) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonTablePathSpec) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -7996,7 +7994,7 @@ type JsonTableColumn struct {
 	Location     ParseLoc
 }
 
-func (n *JsonTableColumn) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonTableColumn) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8096,7 +8094,7 @@ type JsonTable struct {
 	Location    ParseLoc
 }
 
-func (n *JsonTable) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonTable) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonTable) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8204,7 +8202,7 @@ type JsonKeyValue struct {
 	Value *JsonValueExpr
 }
 
-func (n *JsonKeyValue) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonKeyValue) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonKeyValue) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8254,7 +8252,7 @@ type JsonParseExpr struct {
 	Location   ParseLoc
 }
 
-func (n *JsonParseExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonParseExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonParseExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8307,7 +8305,7 @@ type JsonScalarExpr struct {
 	Location ParseLoc
 }
 
-func (n *JsonScalarExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonScalarExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonScalarExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8356,7 +8354,7 @@ type JsonSerializeExpr struct {
 	Location ParseLoc
 }
 
-func (n *JsonSerializeExpr) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonSerializeExpr) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonSerializeExpr) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8411,7 +8409,7 @@ type JsonObjectConstructor struct {
 	Location     ParseLoc
 }
 
-func (n *JsonObjectConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonObjectConstructor) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonObjectConstructor) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8465,7 +8463,7 @@ type JsonArrayConstructor struct {
 	Location     ParseLoc
 }
 
-func (n *JsonArrayConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonArrayConstructor) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonArrayConstructor) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8520,9 +8518,7 @@ type JsonArrayQueryConstructor struct {
 	Location     ParseLoc
 }
 
-func (n *JsonArrayQueryConstructor) Restore(ctx *format.RestoreCtx) error {
-	return restorePGNode(ctx, n)
-}
+func (n *JsonArrayQueryConstructor) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonArrayQueryConstructor) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8587,7 +8583,7 @@ type JsonAggConstructor struct {
 	Location   ParseLoc
 }
 
-func (n *JsonAggConstructor) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonAggConstructor) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonAggConstructor) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8665,7 +8661,7 @@ type JsonObjectAgg struct {
 	UniqueKeys   bool
 }
 
-func (n *JsonObjectAgg) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonObjectAgg) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonObjectAgg) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8718,7 +8714,7 @@ type JsonArrayAgg struct {
 	AbsentOnNull bool
 }
 
-func (n *JsonArrayAgg) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonArrayAgg) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonArrayAgg) Accept(v Visitor) (Node, bool) {
 	if n == nil {
@@ -8775,7 +8771,7 @@ type JsonIsPredicate struct {
 	Location     ParseLoc
 }
 
-func (n *JsonIsPredicate) Restore(ctx *format.RestoreCtx) error { return restorePGNode(ctx, n) }
+func (n *JsonIsPredicate) Restore(ctx *format.RestoreCtx) error { return restoreNode(ctx, n) }
 
 func (n *JsonIsPredicate) Accept(v Visitor) (Node, bool) {
 	if n == nil {

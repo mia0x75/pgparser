@@ -45,7 +45,7 @@ PGPARSER_TESTDATA=1 go test ./tests -run TestParseTestdataSQL -v
 
 - 遵循标准 Go 风格（`gofmt`、`go vet`）。
 - 新增语法时同步补充 `tests/` 中的解析器黑盒单测；包内测试应与 parser 源码同目录。PostgreSQL 官方语料门禁也位于 `tests/`。
-- PostgreSQL 独有的 AST 字段或节点请放在 `ast/pg_ext.go` / `ast/pg_nodes_generated.go`，不要删除或改写既有字段。
+- PostgreSQL 独有的 AST 字段或节点请放在 `ast/` 中职责对应的文件；生成节点位于 `ast/nodes_generated.go`，不要删除或改写既有字段。
 - 新增依赖前请先开 issue 讨论。
 
 ## 许可证

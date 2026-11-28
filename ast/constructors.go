@@ -78,7 +78,7 @@ type ArrayExpr struct {
 // Restore implements Node interface.
 func (n *ArrayExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ARRAY[")

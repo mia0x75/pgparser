@@ -39,7 +39,7 @@ type VacuumStmt struct {
 // Restore implements Node interface.
 func (n *VacuumStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("VACUUM")
@@ -94,7 +94,7 @@ type ReindexStmt struct {
 // Restore implements Node interface.
 func (n *ReindexStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("REINDEX")
@@ -147,7 +147,7 @@ type ClusterStmt struct {
 // Restore implements Node interface.
 func (n *ClusterStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CLUSTER")
@@ -215,7 +215,7 @@ type RefreshMatViewStmt struct {
 // Restore implements Node interface.
 func (n *RefreshMatViewStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("REFRESH MATERIALIZED VIEW ")
@@ -265,7 +265,7 @@ type CheckpointStmt struct{ stmtNode }
 // Restore implements Node interface.
 func (n *CheckpointStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CHECKPOINT")
@@ -300,7 +300,7 @@ type DiscardStmt struct {
 // Restore implements Node interface.
 func (n *DiscardStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DISCARD ")
@@ -336,7 +336,7 @@ type LoadStmt struct {
 // Restore implements Node interface.
 func (n *LoadStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("LOAD ")
@@ -375,7 +375,7 @@ type SecurityLabelStmt struct {
 // Restore implements Node interface.
 func (n *SecurityLabelStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("SECURITY LABEL")
@@ -426,7 +426,7 @@ type ImportForeignSchemaStmt struct {
 // Restore implements Node interface.
 func (n *ImportForeignSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("IMPORT FOREIGN SCHEMA ")
@@ -503,7 +503,7 @@ type ReassignOwnedStmt struct {
 // Restore implements Node interface.
 func (n *ReassignOwnedStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("REASSIGN OWNED BY ")
@@ -542,7 +542,7 @@ type DropOwnedStmt struct {
 // Restore implements Node interface.
 func (n *DropOwnedStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP OWNED BY ")
@@ -584,7 +584,7 @@ type FetchCursorStmt struct {
 // Restore implements Node interface.
 func (n *FetchCursorStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.IsMove {
@@ -649,7 +649,7 @@ type CloseCursorStmt struct {
 // Restore implements Node interface.
 func (n *CloseCursorStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CLOSE ")
@@ -689,7 +689,7 @@ type ListenStmt struct {
 // Restore implements Node interface.
 func (n *ListenStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("LISTEN ")
@@ -726,7 +726,7 @@ type NotifyStmt struct {
 // Restore implements Node interface.
 func (n *NotifyStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("NOTIFY ")
@@ -767,7 +767,7 @@ type UnlistenStmt struct {
 // Restore implements Node interface.
 func (n *UnlistenStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("UNLISTEN ")
@@ -818,7 +818,7 @@ type CopyStmt struct {
 // Restore implements Node interface.
 func (n *CopyStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if (n.Table == nil) == (n.Query == nil) {

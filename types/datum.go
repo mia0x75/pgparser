@@ -55,8 +55,8 @@ func (d *Datum) Copy() *Datum {
 	}
 	switch ret.Kind() {
 	case KindDecimal:
-		d := *d.GetPgDecimal()
-		ret.SetPgDecimal(&d)
+		d := *d.GetDecimal()
+		ret.SetDecimal(&d)
 	case KindTime:
 		ret.SetPgTime(d.GetPgTime())
 	}
@@ -197,16 +197,22 @@ func (d *Datum) SetPgBit(b BinaryLiteral) {
 	d.b = b
 }
 
-// GetPgDecimal exposes the stored pointer; use Copy before modifying a shared datum.
-func (d *Datum) GetPgDecimal() *PgDecimal {
-	return d.x.(*PgDecimal)
+// GetDecimal exposes the stored pointer; use Copy before modifying a shared datum.
+func (d *Datum) GetDecimal() *Decimal {
+	return d.x.(*Decimal)
 }
 
-// SetPgDecimal retains the pointer, so subsequent changes to b are visible through the datum.
-func (d *Datum) SetPgDecimal(b *PgDecimal) {
+// SetDecimal retains the pointer, so subsequent changes to b are visible through the datum.
+func (d *Datum) SetDecimal(b *Decimal) {
 	d.k = KindDecimal
 	d.x = b
 }
+
+// GetPgDecimal is kept for source compatibility.
+func (d *Datum) GetPgDecimal() *PgDecimal { return d.GetDecimal() }
+
+// SetPgDecimal is kept for source compatibility.
+func (d *Datum) SetPgDecimal(b *PgDecimal) { d.SetDecimal(b) }
 
 // GetPgDuration gets Duration value
 func (d *Datum) GetPgDuration() Duration {
@@ -287,7 +293,7 @@ func (d *Datum) GetValue() any {
 	case KindBytes:
 		return d.GetBytes()
 	case KindDecimal:
-		return d.GetPgDecimal()
+		return d.GetDecimal()
 	case KindDuration:
 		return d.GetPgDuration()
 	case KindEnum:
@@ -330,8 +336,8 @@ func (d *Datum) SetValue(val any) {
 		d.SetString(x)
 	case []byte:
 		d.SetBytes(x)
-	case *PgDecimal:
-		d.SetPgDecimal(x)
+	case *Decimal:
+		d.SetDecimal(x)
 	case Duration:
 		d.SetPgDuration(x)
 	case Enum:
@@ -373,7 +379,7 @@ func (d *Datum) ToString() (string, error) {
 	case KindDuration:
 		return d.GetPgDuration().String(), nil
 	case KindDecimal:
-		return d.GetPgDecimal().String(), nil
+		return d.GetDecimal().String(), nil
 	case KindEnum:
 		return d.GetPgEnum().String(), nil
 	case KindSet:
@@ -440,9 +446,9 @@ func NewTimeDatum(t Time) (d Datum) {
 	return d
 }
 
-// NewDecimalDatum creates a new Datum form a PgDecimal value.
-func NewDecimalDatum(dec *PgDecimal) (d Datum) {
-	d.SetPgDecimal(dec)
+// NewDecimalDatum creates a new Datum form a Decimal value.
+func NewDecimalDatum(dec *Decimal) (d Datum) {
+	d.SetDecimal(dec)
 	return d
 }
 

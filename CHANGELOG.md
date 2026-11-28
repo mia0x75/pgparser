@@ -7,7 +7,7 @@
 ### Changed
 
 - 解析器重写为基于 goyacc 的单一 `parser.y`，移除 ANTLR 运行时与生成代码。
-- AST 以 PostgreSQL 语义为准，独有节点与字段集中在 `ast/pg_ext.go`、`ast/pg_nodes_generated.go`。
+- AST 以 PostgreSQL 语义为准，独有节点按职责分布在 `ast/` 中，生成节点位于 `ast/nodes_generated.go`。
 - 许可证调整为 MIT 与 Anti-996 双协议。
 
 ### Added

@@ -142,7 +142,7 @@ func (n *WindowSpec) reconcileDialectFields(
 // Restore implements Node interface.
 func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Name.Present() {
@@ -337,7 +337,7 @@ func (n *PartitionByClause) syncDialectItems() bool {
 // Restore implements Node interface.
 func (n *PartitionByClause) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("PARTITION BY ")
@@ -410,7 +410,7 @@ func (n *PartitionItem) WindowPartitionItemCore() *pkast.BaseWindowPartitionItem
 
 func (n *PartitionItem) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n == nil || n.Expr == nil {

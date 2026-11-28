@@ -57,22 +57,32 @@ func TestDatum(t *testing.T) {
 func TestDatumDecimalCopy(t *testing.T) {
 	dec := NewDecFromStringForTest("1.25")
 	d := NewDecimalDatum(dec)
-	if d.Kind() != KindDecimal || d.GetPgDecimal() != dec {
+	if d.Kind() != KindDecimal || d.GetDecimal() != dec {
 		t.Fatal("decimal datum did not retain its kind and value")
 	}
 	copied := d.Copy()
-	if err := copied.GetPgDecimal().FromString([]byte("9")); err != nil {
+	if err := copied.GetDecimal().FromString([]byte("9")); err != nil {
 		t.Fatal(err)
 	}
-	if got := d.GetPgDecimal().String(); got != "1.25" {
+	if got := d.GetDecimal().String(); got != "1.25" {
 		t.Fatalf("copy changed the original decimal to %q", got)
 	}
 	sum, err := ComputePlus(d, d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := sum.GetPgDecimal().String(); got != "2.50" {
+	if got := sum.GetDecimal().String(); got != "2.50" {
 		t.Fatalf("got decimal sum %q, want 2.50", got)
+	}
+}
+
+func TestPgDecimalCompatibilityAlias(t *testing.T) {
+	oldName := new(PgDecimal)
+	newName := oldName
+	d := new(Datum)
+	d.SetPgDecimal(oldName)
+	if d.GetPgDecimal() != oldName || d.GetDecimal() != newName {
+		t.Fatal("PgDecimal compatibility API did not preserve pointer identity")
 	}
 }
 

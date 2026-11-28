@@ -35,7 +35,7 @@ func (n *GroupItem) GroupItemCore() *pkast.BaseGroupItem {
 // Restore writes the grouped expression or its grouping set.
 func (n *GroupItem) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -197,7 +197,7 @@ func (n *GroupByClause) GroupByClauseCore() *pkast.BaseGroupByClause {
 // Restore writes the GROUP BY clause and its modifiers.
 func (n *GroupByClause) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {

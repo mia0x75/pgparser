@@ -325,7 +325,7 @@ func simpleLowerIdent(s string) bool {
 // Restore implements Node interface.
 func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	keywordForm := n.KeywordForm && len(n.Args) == 2
@@ -479,7 +479,7 @@ type FuncCastExpr struct {
 // Restore implements Node interface.
 func (n *FuncCastExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	switch n.FunctionType {
@@ -633,7 +633,7 @@ type AggregateFuncExpr struct {
 // Restore implements Node interface.
 func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	writeFuncName(ctx, n.FnNameParts, n.F)
@@ -808,7 +808,7 @@ type WindowFuncExpr struct {
 // Restore implements Node interface.
 func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	writeFuncName(ctx, n.FnNameParts, n.F)

@@ -2,7 +2,10 @@ package opcode
 
 import (
 	"bytes"
+	"strings"
 	"testing"
+
+	"github.com/mia0x75/pgparser/format"
 )
 
 func TestT(t *testing.T) {
@@ -23,14 +26,18 @@ func TestT(t *testing.T) {
 		buf.Reset()
 	}
 
-	// Test invalid opcode
-	defer func() {
-		_ = recover()
-	}()
-
-	op = 0
-	s := op.String()
-	if len(s) > 0 {
-		t.Fail()
+	const invalid Op = 0
+	if got := invalid.String(); got != "Op(0)" {
+		t.Fatalf("unknown opcode String() = %q", got)
+	}
+	buf.Reset()
+	invalid.Format(&buf)
+	if got := buf.String(); got != "Op(0)" {
+		t.Fatalf("unknown opcode Format() = %q", got)
+	}
+	var restored strings.Builder
+	err := invalid.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &restored))
+	if err == nil {
+		t.Fatal("unknown opcode Restore() succeeded")
 	}
 }

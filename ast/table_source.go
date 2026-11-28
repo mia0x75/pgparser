@@ -27,7 +27,7 @@ func (n *TableSource) TableSourceCore() *pkast.BaseTableSource {
 
 func (n *TableSource) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {

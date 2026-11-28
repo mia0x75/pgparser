@@ -583,7 +583,7 @@ func DefaultTypeForValue(value any, tp *FieldType) {
 		}
 		tp.Decimal = x.Fsp
 		SetBinChsClnFlag(tp)
-	case *PgDecimal:
+	case *Decimal:
 		tp.Tp = postgres.TypeNewDecimal
 		tp.Flen = len(x.ToString())
 		tp.Decimal = int(x.digitsFrac)

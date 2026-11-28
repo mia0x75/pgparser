@@ -14,7 +14,7 @@ type CallStmt struct {
 // Restore implements Node interface.
 func (n *CallStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CALL ")

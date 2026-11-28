@@ -146,7 +146,7 @@ type CreateSchemaStmt struct {
 // Restore implements Node interface.
 func (n *CreateSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE SCHEMA ")
@@ -204,7 +204,7 @@ type CreateDatabaseStmt struct {
 // Restore implements Node interface.
 func (n *CreateDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if !n.Name.Present() {
@@ -263,7 +263,7 @@ type AlterDatabaseStmt struct {
 // Restore implements Node interface.
 func (n *AlterDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if !n.Name.Present() {
@@ -342,7 +342,7 @@ type CommentStmt struct {
 // Restore implements Node interface.
 func (n *CommentStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("COMMENT ON ")
@@ -447,7 +447,7 @@ type DropDatabaseStmt struct {
 // Restore implements Node interface.
 func (n *DropDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP DATABASE ")
@@ -495,7 +495,7 @@ type IndexColName struct {
 // Restore implements Node interface.
 func (n *IndexColName) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Column != nil && n.Expr != nil {
@@ -608,7 +608,7 @@ type ReferenceDef struct {
 // Restore implements Node interface.
 func (n *ReferenceDef) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Table == nil {
@@ -749,7 +749,7 @@ type OnDeleteOpt struct {
 // Restore implements Node interface.
 func (n *OnDeleteOpt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.ReferOpt != ReferOptionNoOption && n.ReferOpt.String() == "" {
@@ -818,7 +818,7 @@ type OnUpdateOpt struct {
 // Restore implements Node interface.
 func (n *OnUpdateOpt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.ReferOpt != ReferOptionNoOption && n.ReferOpt.String() == "" {
@@ -912,7 +912,7 @@ type ColumnOption struct {
 // Restore implements Node interface.
 func (n *ColumnOption) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	switch n.Tp {
@@ -1085,7 +1085,7 @@ type IndexOption struct {
 // Restore implements Node interface.
 func (n *IndexOption) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	hasPrevOption := false
@@ -1196,7 +1196,7 @@ type Constraint struct {
 // Restore implements Node interface.
 func (n *Constraint) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Tp != ConstraintCheck && !n.IndexName.Present() && len(n.Keys) == 0 {
@@ -1348,7 +1348,7 @@ type ColumnDef struct {
 // Restore implements Node interface.
 func (n *ColumnDef) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 	if n.Name == nil || n.Name.Name == "" {
 		return errors.New("column definition has no name")
@@ -1464,7 +1464,7 @@ type CreateTableStmt struct {
 // Restore implements Node interface.
 func (n *CreateTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if len(n.LikeClauses) > 0 || n.Execute != "" {
@@ -1702,7 +1702,7 @@ type DropTableStmt struct {
 // Restore implements Node interface.
 func (n *DropTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.IsView {
@@ -1768,7 +1768,7 @@ type DropFunctionStmt struct {
 // Restore implements Node interface.
 func (n *DropFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP FUNCTION ")
@@ -1832,7 +1832,7 @@ type DropProcedureStmt struct {
 // Restore implements Node interface.
 func (n *DropProcedureStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP PROCEDURE ")
@@ -1951,7 +1951,7 @@ type DropTriggerStmt struct {
 // Restore implements Node interface.
 func (n *DropTriggerStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP TRIGGER ")
@@ -2009,7 +2009,7 @@ type RenameTableStmt struct {
 // Restore implements Node interface.
 func (n *RenameTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("RENAME TABLE ")
@@ -2072,7 +2072,7 @@ type TableToTable struct {
 // Restore implements Node interface.
 func (n *TableToTable) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.OldTable.Restore(ctx); err != nil {
@@ -2133,7 +2133,7 @@ type CreateViewStmt struct {
 // Restore implements Node interface.
 func (n *CreateViewStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE ")
@@ -2242,7 +2242,7 @@ type CreateIndexStmt struct {
 // Restore implements Node interface.
 func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE ")
@@ -2395,7 +2395,7 @@ type DropIndexStmt struct {
 // Restore implements Node interface.
 func (n *DropIndexStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP INDEX ")
@@ -2632,7 +2632,7 @@ type ColumnPosition struct {
 // Restore implements Node interface.
 func (n *ColumnPosition) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	switch n.Tp {
@@ -2742,7 +2742,7 @@ const (
 	AlterTableSetOn
 	AlterTableForeignOptions
 
-	// TODO: Add more actions
+	// Unlisted actions remain unsupported until their AST representation is complete.
 )
 
 // LockType is the type for AlterTableSpec.
@@ -2812,7 +2812,7 @@ type PartitionBoundSpec struct {
 // Restore implements Node interface.
 func (n *PartitionBoundSpec) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	switch n.BoundType {
@@ -2969,7 +2969,7 @@ type AlterTableSpec struct {
 // Restore implements Node interface.
 func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	column := "COLUMN"
@@ -3362,7 +3362,7 @@ type AlterTableStmt struct {
 // Restore implements Node interface.
 func (n *AlterTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Table == nil || len(n.Specs) == 0 {
@@ -3455,7 +3455,7 @@ type TruncateTableStmt struct {
 // Restore implements Node interface.
 func (n *TruncateTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("TRUNCATE ")

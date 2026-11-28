@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/mia0x75/pgparser/format"
 )
@@ -31,17 +32,22 @@ func (user *UserIdentity) Restore(ctx *format.RestoreCtx) error {
 
 // String converts UserIdentity to the format user@host.
 func (user *UserIdentity) String() string {
-	// TODO: Escape username and hostname.
 	if user == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s@%s", user.Username, user.Hostname)
+	return fmt.Sprintf("%s@%s", escapeIdentityPart(user.Username), escapeIdentityPart(user.Hostname))
 }
 
 // AuthIdentityString returns matched identity in user@host format
 func (user *UserIdentity) AuthIdentityString() string {
-	// TODO: Escape username and hostname.
-	return fmt.Sprintf("%s@%s", user.AuthUsername, user.AuthHostname)
+	if user == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s@%s", escapeIdentityPart(user.AuthUsername), escapeIdentityPart(user.AuthHostname))
+}
+
+func escapeIdentityPart(value string) string {
+	return strings.NewReplacer("\\", "\\\\", "@", "\\@").Replace(value)
 }
 
 type RoleIdentity struct {
@@ -60,6 +66,8 @@ func (role *RoleIdentity) Restore(ctx *format.RestoreCtx) error {
 
 // String converts UserIdentity to the format user@host.
 func (role *RoleIdentity) String() string {
-	// TODO: Escape username and hostname.
-	return fmt.Sprintf("%s@%s", role.Username, role.Hostname)
+	if role == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s@%s", escapeIdentityPart(role.Username), escapeIdentityPart(role.Hostname))
 }

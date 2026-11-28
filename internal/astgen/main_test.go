@@ -95,6 +95,47 @@ func TestVisitFieldNilAndValueContracts(t *testing.T) {
 	}
 }
 
+func TestHasNodeChildren(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		src  string
+		want bool
+	}{
+		{name: "node field", src: "struct { Child Node }", want: true},
+		{name: "node slice", src: "struct { Children []*Child }", want: true},
+		{name: "scalar only", src: "struct { Name string }"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			expr, err := parser.ParseExpr(tc.src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			structure := expr.(*ast.StructType)
+			if got := hasNodeChildren(structure, map[string]bool{"Child": true}); got != tc.want {
+				t.Fatalf("hasNodeChildren() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestValidateEmbeddedFieldRejectsNodeChildren(t *testing.T) {
+	embeddedExpr, err := parser.ParseExpr("struct { Child Node }")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outerExpr, err := parser.ParseExpr("struct { Embedded }")
+	if err != nil {
+		t.Fatal(err)
+	}
+	field := outerExpr.(*ast.StructType).Fields.List[0]
+	err = validateEmbeddedField(field, "Outer", token.NewFileSet(), map[string]*ast.StructType{
+		"Embedded": embeddedExpr.(*ast.StructType),
+	}, map[string]bool{})
+	if err == nil || !strings.Contains(err.Error(), "unsupported child-bearing embedded field Embedded in Outer") {
+		t.Fatalf("validateEmbeddedField() error = %v", err)
+	}
+}
+
 func TestAcceptPrefixValidatesReplacementBeforeSkip(t *testing.T) {
 	prefix := acceptPrefix("Child")
 	assertions := []string{

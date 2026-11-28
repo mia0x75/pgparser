@@ -23,7 +23,7 @@ type ServerOption struct {
 // Restore implements Node interface.
 func (n *ServerOption) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteName(n.Name)
@@ -67,7 +67,7 @@ type CreateServerStmt struct {
 // Restore implements Node interface.
 func (n *CreateServerStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("CREATE SERVER ")
@@ -136,7 +136,7 @@ type AlterServerStmt struct {
 // Restore implements Node interface.
 func (n *AlterServerStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ALTER SERVER ")
@@ -197,7 +197,7 @@ type DropServerStmt struct {
 // Restore implements Node interface.
 func (n *DropServerStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DROP SERVER ")

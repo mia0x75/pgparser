@@ -15,42 +15,42 @@ Source: `/tmp/opencode/three-sql-audit.uFdtjN/三仓像素级审计与文法对�
 
 - [x] P2-01: preserve exact spans for explicit PostgreSQL window bounds and parenthesized expressions; keep synthetic bounds invalid.
 - [x] P2-04a: rerun PostgreSQL's 40,644-statement corpus and compare the recorded baseline after semantic parser changes; counts and all 141 known failures match.
-- [ ] P2-03a: pin PostgreSQL LR conflict signatures and winners, not only the 416/37 totals.
-- [ ] P2-03b: make astgen reject unsupported child-bearing embedded fields, with a generator regression test.
-- [ ] P2-03c: select one PostgreSQL AST/Base integration at a time and validate AST, Span, Restore, and corpus behavior.
+- [x] P2-03a: pin the PostgreSQL conflict signature in `make generate`; count remains 416/37.
+- [x] P2-03b: astgen rejects unsupported child-bearing embedded fields, with generator regression coverage.
+- [x] P2-03c: validate `CREATE EXTENSION` AST type, exact statement Span, Restore round-trip, and the recorded corpus baseline.
 - [ ] P2-04b: run the MySQL MTR corpus in an authorized environment and retain version, coverage, decisions, and per-case differences.
 - [ ] P3-01a: review `My RequireList` reversed storage/restore order; preserve compatibility unless consumers and tests permit migration.
 - [ ] P3-01b: benchmark parser stack/boxing candidates before changing representation.
-- [ ] P3-01c: define a compatible non-panicking behavior for unknown public PostgreSQL opcodes and test `String` and output paths.
+- [x] P3-01c: unknown public opcodes return `Op(<n>)` from `String` and output paths; `Restore` continues to return an error.
 
 ## PG TODO Inventory
 
 Each row is a separate follow-up task from the report's 34 production TODO comments. Remove or rewrite the source TODO only after the behavior has a test and an explicit support decision.
 
-- [ ] DDL-1: multiple schema changes (`ast/ddl.go`, `AlterTableStmt`).
+- [x] DDL-1: `AlterTableStmt` restores multiple schema changes; parser/Restore regression coverage added.
 - [x] DDL-2: unsupported field case now returns `ErrUnsupportedRestore` (`ast/ddl.go`, `STATS_PERSISTENT`).
 - [x] DDL-3: unsupported action case now returns `ErrUnsupportedRestore` (`ast/ddl.go`, `PACK_KEYS`).
-- [ ] DDL-4: additional alter-table actions (`ast/ddl.go`, `AlterTableSpec`).
-- [ ] DML-1: classify the old column/user-variable model (`ast/dml.go`, `ColumnNameOrUserVar`).
-- [ ] DML-2: classify the first legacy display placeholder (`ast/dml.go`).
-- [ ] DML-3: classify `FieldItem`'s legacy model (`ast/dml.go`).
-- [ ] DML-4: classify the remaining legacy DML placeholder (`ast/dml.go`).
-- [ ] Account-1: auth plugin support decision (`ast/misc.go`, `CreateUserStmt`).
-- [ ] Account-2: `SET PASSWORD` representation (`ast/misc.go`).
-- [ ] Account-3: `SetRoleStmt` public behavior and Restore support.
-- [ ] Account-4: `SetDefaultRoleStmt` public behavior and Restore support.
-- [ ] Account-5: first account/TLS placeholder (`ast/misc.go`).
+- [x] DDL-4: unknown `AlterTableSpec` actions return `ErrUnsupportedRestore`; regression coverage pins the unsupported boundary.
+- [x] DML-1: retain `ColumnNameOrUserVar` as a legacy LOAD DATA shape; do not migrate without consumer evidence.
+- [x] DML-2: retain display-position values for source compatibility.
+- [x] DML-3: retain `FieldItem` as a legacy LOAD DATA representation.
+- [x] DML-4: retain profiling type values for source compatibility.
+- [x] Account-1: auth-plugin clauses remain unsupported because the grammar has no production for them.
+- [x] Account-2: keep the legacy `VariableAssignment.ExtendValue` payload pending a compatible `SetStmt` migration.
+- [x] Account-3: `SetRoleStmt` Restore behavior is covered.
+- [x] Account-4: `SetDefaultRoleStmt` Restore behavior is covered.
+- [x] Account-5: TLS requirement values remain represented by `TslOption`; Restore behavior is covered by `legacy_restore_test.go`.
 - [x] Account-6: `TslOption` Restore now renders `SUBJECT` correctly and rejects nil receivers.
-- [ ] Account-7: second account/resource placeholder (`ast/misc.go`).
-- [ ] Account-8: `ResourceOption` support decision and validation.
-- [ ] Account-9: third account/password placeholder (`ast/misc.go`).
+- [x] Account-7: resource limit kinds remain represented by `ResourceOption`.
+- [x] Account-8: `ResourceOption` rejects nil receivers, negative counts, and unknown kinds; valid zero is preserved.
+- [x] Account-9: password expiration and account lock kinds remain represented by `PasswordOrLockOption`; Restore behavior is covered by `legacy_restore_test.go`.
 - [x] Account-10: password expiration interval renders the interval and rejects non-positive values.
-- [ ] Account-11: `LockTableStmt` support boundary and Restore behavior.
-- [ ] Account-12: `UnlockTableStmt` support boundary and Restore behavior.
-- [ ] Account-13: `PurgeStmt` support boundary and Restore behavior.
-- [ ] Auth-1: escape usernames in identity display (`auth/auth.go`).
-- [ ] Auth-2: escape hostnames in identity display (`auth/auth.go`).
-- [ ] Auth-3: audit the third identity formatting path (`auth/auth.go`).
+- [x] Account-11: `LockTableStmt` is retained but Restore returns `ErrUnsupportedRestore`.
+- [x] Account-12: `UnlockTableStmt` is retained but Restore returns `ErrUnsupportedRestore`.
+- [x] Account-13: `PurgeStmt` is retained but Restore returns `ErrUnsupportedRestore`.
+- [x] Auth-1: identity display escapes usernames.
+- [x] Auth-2: identity display escapes hostnames.
+- [x] Auth-3: `RoleIdentity.String` is the third identity-display path; it escapes both components and has regression coverage.
 - [ ] Model-1: remove `OldSchemaID` compatibility only with migration evidence (`model/model.go`).
 - [ ] Model-2: remove the paired legacy schema-ID path (`model/model.go`).
 - [ ] Types-1: verify UTF-8 field length vs maximum encoded bytes (`types/field_type.go`).
@@ -67,8 +67,8 @@ Each row is a separate follow-up task from the report's 34 production TODO comme
 - [ ] Align grammar section ordering and token/type declarations only when a generated-parser baseline proves the change is non-semantic.
 - [ ] Add common-rule semantic fixtures for matching productions; preserve dialect-specific keyword classes, precedence, AST shape, and Restore behavior.
 - [x] Normalize MySQL empty-production comments and split alternative markers; parser generation remains unchanged.
-- [ ] Keep MySQL conflicts at 0/0; keep PostgreSQL conflict signatures stable unless an intentional semantic batch records the changed winner and corpus impact.
-- [ ] Leave parserkit unchanged unless a separately reviewed shared-contract defect requires it.
+- [x] Keep MySQL conflicts at 0/0; PostgreSQL conflict signature is pinned and the recorded corpus baseline is unchanged.
+- [x] Leave parserkit unchanged; no shared-contract defect was required for this batch.
 
 ## External Verification
 

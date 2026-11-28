@@ -6,7 +6,7 @@
 
 - 覆盖 PostgreSQL 主要语句族：`SELECT`、`INSERT`、`UPDATE`、`DELETE`、`MERGE`、DDL、权限、事务、游标、`COPY`、`EXPLAIN`、`VACUUM` 等。
 - 建模 `WITH`/CTE、集合运算、窗口函数、`GROUPING SETS`/`ROLLUP`/`CUBE`、`ON CONFLICT`、分区、`XMLTABLE`、`JSON_TABLE`、JSON 聚合等。
-- PostgreSQL 特有节点与字段集中在 `ast/pg_ext.go`、`ast/pg_nodes_generated.go`；语法解析与 SQL 恢复的支持范围不同。
+- PostgreSQL 特有节点按职责分布在 `ast/` 中，生成节点位于 `ast/nodes_generated.go`；语法解析与 SQL 恢复的支持范围不同。
 - 单文件语法定义：所有产生式集中在 `parser/grammar.y`，便于对照 PostgreSQL `gram.y` 维护。
 - 无 cgo、无外部解析器运行时依赖。
 

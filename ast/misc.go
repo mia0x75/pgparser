@@ -90,7 +90,7 @@ type AuthOption struct {
 	HashString   string
 	// Password indicates PostgreSQL PASSWORD syntax instead of IDENTIFIED BY.
 	Password bool
-	// TODO: support auth_plugin
+	// Auth plugin clauses remain outside the parser's supported CREATE USER syntax.
 }
 
 // Restore implements Node interface.
@@ -116,7 +116,7 @@ type ExplainForStmt struct {
 // Restore implements Node interface.
 func (n *ExplainForStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("EXPLAIN ")
@@ -163,7 +163,7 @@ type ExplainStmt struct {
 // Restore implements Node interface.
 func (n *ExplainStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if showStmt, ok := n.Stmt.(*ShowStmt); ok {
@@ -253,7 +253,7 @@ type PrepareStmt struct {
 // Restore implements Node interface.
 func (n *PrepareStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("PREPARE ")
@@ -331,7 +331,7 @@ type DeallocateStmt struct {
 // Restore implements Node interface.
 func (n *DeallocateStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("DEALLOCATE PREPARE ")
@@ -383,7 +383,7 @@ type ExecuteStmt struct {
 // Restore implements Node interface.
 func (n *ExecuteStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("EXECUTE ")
@@ -459,7 +459,7 @@ type BeginStmt struct {
 // Restore implements Node interface.
 func (n *BeginStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("START TRANSACTION")
@@ -513,7 +513,7 @@ type BinlogStmt struct {
 // Restore implements Node interface.
 func (n *BinlogStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("BINLOG ")
@@ -548,7 +548,7 @@ type CommitStmt struct {
 // Restore implements Node interface.
 func (n *CommitStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("COMMIT")
@@ -586,7 +586,7 @@ type RollbackStmt struct {
 // Restore implements Node interface.
 func (n *RollbackStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("ROLLBACK")
@@ -626,7 +626,7 @@ type SavepointStmt struct {
 // Restore implements Node interface.
 func (n *SavepointStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("SAVEPOINT ")
@@ -663,7 +663,7 @@ type ReleaseSavepointStmt struct {
 // Restore implements Node interface.
 func (n *ReleaseSavepointStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("RELEASE SAVEPOINT ")
@@ -706,7 +706,7 @@ type XAStmt struct {
 // Restore implements Node interface.
 func (n *XAStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("XA ")
@@ -751,7 +751,7 @@ type UseStmt struct {
 // Restore implements Node interface.
 func (n *UseStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("USE ")
@@ -795,14 +795,14 @@ type VariableAssignment struct {
 	// ExtendValue is a way to store extended info.
 	// VariableAssignment should be able to store information for SetCharset/SetPWD Stmt.
 	// For SetCharsetStmt, Value is charset, ExtendValue is collation.
-	// TODO: Use SetStmt to implement set password statement.
+	// ExtendValue preserves the legacy SET PASSWORD payload until a compatible SetStmt migration exists.
 	ExtendValue ValueExpr
 }
 
 // Restore implements Node interface.
 func (n *VariableAssignment) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.IsSystem {
@@ -882,7 +882,7 @@ type FlushStmt struct {
 // Restore implements Node interface.
 func (n *FlushStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("FLUSH ")
@@ -948,7 +948,7 @@ type KillStmt struct {
 // Restore implements Node interface.
 func (n *KillStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("KILL")
@@ -988,7 +988,7 @@ type SetStmt struct {
 // Restore implements Node interface.
 func (n *SetStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("SET ")
@@ -1060,7 +1060,7 @@ type SetPwdStmt struct {
 // Restore implements Node interface.
 func (n *SetPwdStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("SET PASSWORD")
@@ -1111,7 +1111,7 @@ const (
 	SetRoleRegular
 )
 
-// SetRoleStmt TODO:
+// SetRoleStmt restores SET ROLE statements retained by the compatibility grammar.
 type SetRoleStmt struct {
 	stmtNode
 
@@ -1122,7 +1122,7 @@ type SetRoleStmt struct {
 // Restore implements Node interface.
 func (n *SetRoleStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("SET ROLE")
@@ -1168,7 +1168,7 @@ func (n *SetRoleStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// SetDefaultRoleStmt TODO:
+// SetDefaultRoleStmt restores SET DEFAULT ROLE statements retained by the compatibility grammar.
 type SetDefaultRoleStmt struct {
 	stmtNode
 
@@ -1180,7 +1180,7 @@ type SetDefaultRoleStmt struct {
 // Restore implements Node interface.
 func (n *SetDefaultRoleStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("SET DEFAULT ROLE")
@@ -1276,7 +1276,7 @@ func (n *UserSpec) SecurityString() string {
 	return n.User.String()
 }
 
-// TODO:
+// TLS requirement kinds used by TslOption.
 const (
 	TslNone = iota
 	Ssl
@@ -1286,7 +1286,7 @@ const (
 	Subject
 )
 
-// TslOption TODO:
+// TslOption represents a TLS requirement on an account.
 type TslOption struct {
 	Type  int
 	Value string
@@ -1319,7 +1319,7 @@ func (t *TslOption) Restore(ctx *format.RestoreCtx) error {
 	return ctx.Err()
 }
 
-// TODO:
+// Per-account resource limit kinds used by ResourceOption.
 const (
 	MaxQueriesPerHour = iota + 1
 	MaxUpdatesPerHour
@@ -1327,7 +1327,7 @@ const (
 	MaxUserConnections
 )
 
-// ResourceOption TODO:
+// ResourceOption represents a per-account resource limit.
 type ResourceOption struct {
 	Type  int
 	Count int64
@@ -1335,6 +1335,12 @@ type ResourceOption struct {
 
 // Restore implements Node interface.
 func (r *ResourceOption) Restore(ctx *format.RestoreCtx) error {
+	if r == nil {
+		return fmt.Errorf("restore resource option: nil option")
+	}
+	if r.Count < 0 {
+		return fmt.Errorf("resource limit must not be negative")
+	}
 	switch r.Type {
 	case MaxQueriesPerHour:
 		ctx.WriteKeyword("MAX_QUERIES_PER_HOUR ")
@@ -1351,7 +1357,7 @@ func (r *ResourceOption) Restore(ctx *format.RestoreCtx) error {
 	return ctx.Err()
 }
 
-// TODO:
+// Password expiration and account lock kinds used by PasswordOrLockOption.
 const (
 	PasswordExpire = iota + 1
 	PasswordExpireDefault
@@ -1361,7 +1367,7 @@ const (
 	Unlock
 )
 
-// PasswordOrLockOption TODO:
+// PasswordOrLockOption represents a password expiration or account lock option.
 type PasswordOrLockOption struct {
 	Type  int
 	Count int64
@@ -1413,7 +1419,7 @@ type CreateUserStmt struct {
 // Restore implements Node interface.
 func (n *CreateUserStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Role != nil {
@@ -1531,7 +1537,7 @@ type AlterUserStmt struct {
 // Restore implements Node interface.
 func (n *AlterUserStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Role != nil {
@@ -1619,7 +1625,7 @@ type DropUserStmt struct {
 // Restore implements Node interface.
 func (n *DropUserStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.IsDropRole {
@@ -1673,7 +1679,7 @@ type DoStmt struct {
 // Restore implements Node interface.
 func (n *DoStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if len(n.Exprs) == 0 {
@@ -1734,7 +1740,7 @@ type PrivElem struct {
 // Restore implements Node interface.
 func (n *PrivElem) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Name != "" {
@@ -1982,7 +1988,7 @@ type RevokeStmt struct {
 // Restore implements Node interface.
 func (n *RevokeStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("REVOKE ")
@@ -2101,7 +2107,7 @@ type RevokeRoleStmt struct {
 // Restore implements Node interface.
 func (n *RevokeRoleStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Roles == nil || n.Users == nil {
@@ -2225,7 +2231,7 @@ type GrantStmt struct {
 // Restore implements Node interface.
 func (n *GrantStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("GRANT ")
@@ -2395,7 +2401,7 @@ func (n *GrantRoleStmt) Accept(v Visitor) (Node, bool) {
 // Restore implements Node interface.
 func (n *GrantRoleStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if n.Roles == nil || n.Users == nil {
@@ -2450,7 +2456,7 @@ func (n *GrantRoleStmt) SecureText() string {
 	return text
 }
 
-// LockTableStmt TODO:
+// LockTableStmt is retained for compatibility but cannot be restored without its table list.
 type LockTableStmt struct {
 	stmtNode
 }
@@ -2458,10 +2464,10 @@ type LockTableStmt struct {
 // Restore implements Node interface.
 func (n *LockTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
-	return ctx.Err()
+	return fmt.Errorf("%w: LOCK TABLES", ErrUnsupportedRestore)
 }
 
 // Accept implements Node Accept interface.
@@ -2483,7 +2489,7 @@ func (n *LockTableStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// UnlockTableStmt TODO:
+// UnlockTableStmt is retained for compatibility but has no modeled table targets.
 type UnlockTableStmt struct {
 	stmtNode
 }
@@ -2491,10 +2497,10 @@ type UnlockTableStmt struct {
 // Restore implements Node interface.
 func (n *UnlockTableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
-	return ctx.Err()
+	return fmt.Errorf("%w: UNLOCK TABLES", ErrUnsupportedRestore)
 }
 
 // Accept implements Node Accept interface.
@@ -2516,7 +2522,7 @@ func (n *UnlockTableStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// PurgeStmt TODO:
+// PurgeStmt is retained for compatibility but its statement payload is not modeled.
 type PurgeStmt struct {
 	stmtNode
 }
@@ -2524,10 +2530,10 @@ type PurgeStmt struct {
 // Restore implements Node interface.
 func (n *PurgeStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
-	return errors.New("Not implemented")
+	return fmt.Errorf("%w: PURGE", ErrUnsupportedRestore)
 }
 
 // Accept implements Node Accept interface.
@@ -2591,7 +2597,7 @@ type TableOptimizerHint struct {
 // Restore implements Node interface.
 func (n *TableOptimizerHint) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword(n.HintName.String())

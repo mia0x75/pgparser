@@ -61,7 +61,7 @@ func (n *TableName) TableRefCore() *pkast.BaseTableRef {
 // Restore implements Node interface.
 func (n *TableName) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := restoreQualifiedName(ctx, n.Name); err != nil {
@@ -185,7 +185,7 @@ type DeleteTableList struct {
 // Restore implements Node interface.
 func (n *DeleteTableList) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	for i, t := range n.Tables {
@@ -243,7 +243,7 @@ type TableSample struct {
 // Restore implements Node interface.
 func (n *TableSample) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("TABLESAMPLE ")
@@ -316,7 +316,7 @@ type TableFunction struct {
 // Restore implements Node interface.
 func (n *TableFunction) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := n.Expr.Restore(ctx); err != nil {
@@ -453,7 +453,7 @@ type SelectStmt struct {
 // Restore implements Node interface.
 func (n *SelectStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 	if n.Fields == nil {
 		return fmt.Errorf("SELECT has no target list")
@@ -799,7 +799,7 @@ type ValuesStmt struct {
 // Restore implements Node interface.
 func (n *ValuesStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("VALUES ")
@@ -858,7 +858,7 @@ type TableStmt struct {
 // Restore implements Node interface.
 func (n *TableStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("TABLE ")
@@ -892,7 +892,7 @@ func (n *TableStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// ColumnNameOrUserVar TODO
+// ColumnNameOrUserVar preserves the legacy LOAD DATA field and user-variable shape.
 type ColumnNameOrUserVar struct {
 	ColumnName *ColumnName
 	UserVar    *VariableExpr
@@ -918,7 +918,7 @@ type LoadDataStmt struct {
 // Restore implements Node interface.
 func (n *LoadDataStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("LOAD DATA ")
@@ -1024,14 +1024,14 @@ func (n *LoadDataStmt) Accept(v Visitor) (Node, bool) {
 	return v.Leave(n)
 }
 
-// TODO:
+// Legacy LOAD DATA display-position values retained for source compatibility.
 const (
 	Terminated = iota
 	Enclosed
 	Escaped
 )
 
-// FieldItem TODO:
+// FieldItem preserves the legacy LOAD DATA field-item representation.
 type FieldItem struct {
 	Type  int
 	Value string
@@ -1116,7 +1116,7 @@ type SelectIntoStatement struct {
 // Restore implements Node interface.
 func (n *SelectIntoStatement) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	switch n.Tp {
@@ -1209,7 +1209,7 @@ type OnConflictClause struct {
 // Restore implements Node interface.
 func (n *OnConflictClause) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword(" ON CONFLICT")
@@ -1310,7 +1310,7 @@ func (n *OnConflictClause) Accept(v Visitor) (Node, bool) {
 // Restore implements Node interface.
 func (n *InsertStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -1539,7 +1539,7 @@ type MergeStmt struct {
 // Restore implements Node interface.
 func (n *MergeStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("MERGE INTO ")
@@ -1638,7 +1638,7 @@ type MergeWhenClause struct {
 // Restore implements Node interface.
 func (n *MergeWhenClause) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	ctx.WriteKeyword("WHEN ")
@@ -1755,7 +1755,7 @@ type DeleteStmt struct {
 // Restore implements Node interface.
 func (n *DeleteStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -1981,7 +1981,7 @@ type UpdateStmt struct {
 // Restore implements Node interface.
 func (n *UpdateStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -2224,7 +2224,7 @@ const (
 	ShowOpenTables
 )
 
-// TODO:
+// Profiling type values retained for source compatibility.
 const (
 	ProfileTypeInvalid = iota
 	ProfileTypeCPU
@@ -2265,7 +2265,7 @@ type ShowStmt struct {
 // Restore implements Node interface.
 func (n *ShowStmt) Restore(ctx *format.RestoreCtx) error {
 	if n == nil {
-		return restorePGNode(ctx, n)
+		return restoreNode(ctx, n)
 	}
 
 	restoreOptFull := func() {
