@@ -366,11 +366,6 @@ func objectWithArgsNames(l *ast.List) []*ast.TableName {
 	return names
 }
 
-// tableNamesFromObjectWithArgs returns the names of an object with args list.
-func tableNamesFromObjectWithArgs(l *ast.List) []*ast.TableName {
-	return objectWithArgsNames(l)
-}
-
 // firstName returns the first name of a name list.
 func firstName(l *ast.List) string {
 	if l == nil {

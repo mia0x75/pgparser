@@ -671,6 +671,8 @@ import (
 	NumericOnlyList
 %type <node>
 	Statement
+	StatementNoLegacy
+	TransactionStmtLegacy
 	SelectStmt
 	SimpleSelect
 	SelectClause
@@ -796,7 +798,6 @@ import (
 	TypeFuncNameKeyword
 	ReservedKeyword
 %type <list>
-	OptNameList
 	NameList
 	AnyName
 	QualifiedName
@@ -1405,9 +1406,10 @@ import (
 %type <node>
 	FunctionWithArgTypes
 %type <list>
-	AggregateWithArgTypesList
+	AggregateDropList
 %type <node>
 	AggregateWithArgTypes
+	AggregateDrop
 %type <list>
 	OperatorWithArgTypesList
 	OperArgTypes
@@ -1745,8 +1747,8 @@ import (
 %nonassoc  '<' '>' '=' LESS_EQUALS GREATER_EQUALS NOT_EQUALS
 %nonassoc  BETWEEN IN_P LIKE ILIKE SIMILAR NOT_LA
 %nonassoc  ESCAPE
-%nonassoc  UNBOUNDED
-%nonassoc  IDENT PARTITION RANGE ROWS GROUPS PRECEDING FOLLOWING CUBE ROLLUP
+%nonassoc  UNBOUNDED NESTED
+%nonassoc  IDENT IF_P PARTITION RANGE ROWS GROUPS PRECEDING FOLLOWING CUBE ROLLUP
 %nonassoc  SET KEYS OBJECT_P SCALAR VALUE_P WITH WITHOUT PATH
 %left      Op OPERATOR
 %left      '+' '-'
@@ -1784,6 +1786,12 @@ StatementList:
 	;
 
 Statement:
+	StatementNoLegacy
+	| TransactionStmtLegacy
+	;
+
+// BEGIN/END transaction aliases cannot occur inside BEGIN ATOMIC bodies.
+StatementNoLegacy:
 	SelectStmt
 	| InsertStmt
 	| UpdateStmt
@@ -2025,21 +2033,6 @@ OptOnConflict:
 		$$ = &ast.OnConflictClause{
 			UpdateList:  $6,
 			UpdateWhere: $7,
-		}
-		}
-	| ON CONFLICT '(' IndexParams ')' DO NOTHING
-		{
-		$$ = &ast.OnConflictClause{
-			IndexCols: indexElemColNames($4),
-			DoNothing: true,
-		}
-		}
-	| ON CONFLICT '(' IndexParams ')' DO UPDATE SET AssignmentList WhereClauseOpt
-		{
-		$$ = &ast.OnConflictClause{
-			IndexCols:   indexElemColNames($4),
-			UpdateList:  $9,
-			UpdateWhere: $10,
 		}
 		}
 	| ON CONFLICT ON CONSTRAINT Name DO NOTHING
@@ -3087,7 +3080,7 @@ ColConstraintElem:
 		{
 		$$ = &ast.ColumnOption{Tp: ast.ColumnOptionDefaultValue, Expr: $2}
 		}
-	| REFERENCES QualifiedName OptColumnList KeyMatch KeyActions ConstraintAttributeSpec
+	| REFERENCES QualifiedName OptColumnList KeyMatch KeyActions
 		{
 		$$ = &ast.ColumnOption{
 			Tp:    ast.ColumnOptionReference,
@@ -5056,22 +5049,6 @@ DropStmt:
 		{
 		$$ = dropObjectStmt(int($2), syntaxTableNames(yylex, $3), false, int($4))
 		}
-	/* DROP INDEX */
-	| DROP INDEX CONCURRENTLY IF_P EXISTS Name
-		{
-		$$ = &ast.DropIndexStmt{
-			IndexName:    syntaxName(syntaxIdent(yylex, $6, yyS[yypt].span)),
-			Concurrently: true,
-			IfExists:     true,
-		}
-		}
-	| DROP INDEX CONCURRENTLY Name
-		{
-		$$ = &ast.DropIndexStmt{
-			IndexName:    syntaxName(syntaxIdent(yylex, $4, yyS[yypt].span)),
-			Concurrently: true,
-		}
-		}
 	/* DROP TYPE / DROP DOMAIN */
 	| DROP TYPE_P AnyNameList OptDropBehavior
 		{
@@ -5138,57 +5115,6 @@ DropStmt:
 		$$ = &ast.DropStmt{
 			Objects:    tableNamesFromNameList($5),
 			RemoveType: int(ast.OBJECT_EXTENSION),
-			Behavior:   int($6),
-			Missing_ok: true,
-		}
-		}
-	/* DROP FUNCTION / PROCEDURE / ROUTINE / AGGREGATE */
-	| DROP FUNCTION AnyNameList OptDropBehavior
-		{
-		$$ = dropObjectStmt(int(ast.OBJECT_FUNCTION), tableNamesFromNameList($3), false, int($4))
-		}
-	| DROP FUNCTION IF_P EXISTS AnyNameList OptDropBehavior
-		{
-		$$ = dropObjectStmt(int(ast.OBJECT_FUNCTION), tableNamesFromNameList($5), true, int($6))
-		}
-	| DROP PROCEDURE AnyNameList OptDropBehavior
-		{
-		$$ = dropObjectStmt(int(ast.OBJECT_PROCEDURE), tableNamesFromNameList($3), false, int($4))
-		}
-	| DROP PROCEDURE IF_P EXISTS AnyNameList OptDropBehavior
-		{
-		$$ = dropObjectStmt(int(ast.OBJECT_PROCEDURE), tableNamesFromNameList($5), true, int($6))
-		}
-	| DROP ROUTINE AnyNameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($3),
-			RemoveType: int(ast.OBJECT_ROUTINE),
-			Behavior:   int($4),
-		}
-		}
-	| DROP ROUTINE IF_P EXISTS AnyNameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($5),
-			RemoveType: int(ast.OBJECT_ROUTINE),
-			Behavior:   int($6),
-			Missing_ok: true,
-		}
-		}
-	| DROP AGGREGATE AnyNameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($3),
-			RemoveType: int(ast.OBJECT_AGGREGATE),
-			Behavior:   int($4),
-		}
-		}
-	| DROP AGGREGATE IF_P EXISTS AnyNameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($5),
-			RemoveType: int(ast.OBJECT_AGGREGATE),
 			Behavior:   int($6),
 			Missing_ok: true,
 		}
@@ -5289,41 +5215,25 @@ DropStmt:
 			Missing_ok: true,
 		}
 		}
-	| DROP SUBSCRIPTION NameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($3),
-			RemoveType: int(ast.OBJECT_SUBSCRIPTION),
-			Behavior:   int($4),
-		}
-		}
-	| DROP SUBSCRIPTION IF_P EXISTS NameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($5),
-			RemoveType: int(ast.OBJECT_SUBSCRIPTION),
-			Behavior:   int($6),
-			Missing_ok: true,
-		}
-		}
 	/* DROP INDEX CONCURRENTLY */
-	| DROP INDEX CONCURRENTLY AnyNameList OptDropBehavior
+	| DROP INDEX CONCURRENTLY OptIfExists AnyNameList OptDropBehavior
 		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($4),
-			RemoveType: int(ast.OBJECT_INDEX),
-			Behavior:   int($5),
-			Concurrent: true,
-		}
-		}
-	| DROP INDEX CONCURRENTLY IF_P EXISTS AnyNameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($6),
-			RemoveType: int(ast.OBJECT_INDEX),
-			Behavior:   int($7),
-			Missing_ok: true,
-			Concurrent: true,
+		objects := tableNamesFromNameList($5)
+		// Preserve the single unqualified index AST when no behavior was written.
+		if len(objects) == 1 && len(objects[0].Name.Parts) == 1 && !yyS[yypt].span.Valid() {
+			$$ = &ast.DropIndexStmt{
+				IndexName:    indexNameFromList(yylex, $5.Items[0].(*ast.List)),
+				Concurrently: true,
+				IfExists:     $4,
+			}
+		} else {
+			$$ = &ast.DropStmt{
+				Objects:    objects,
+				RemoveType: int(ast.OBJECT_INDEX),
+				Behavior:   int($6),
+				Missing_ok: $4,
+				Concurrent: true,
+			}
 		}
 		}
 	/* DROP FOREIGN DATA WRAPPER / DROP SERVER */
@@ -5342,15 +5252,6 @@ DropStmt:
 			RemoveType: int(ast.OBJECT_FDW),
 			Behavior:   int($8),
 			Missing_ok: true,
-		}
-		}
-	/* DROP OWNED BY */
-	| DROP OWNED BY NameList OptDropBehavior
-		{
-		$$ = &ast.DropStmt{
-			Objects:    tableNamesFromNameList($4),
-			RemoveType: int(ast.OBJECT_ROLE),
-			Behavior:   int($5),
 		}
 		}
 	;
@@ -6020,7 +5921,7 @@ RoutineBodyStmtList:
 	;
 
 RoutineBodyStmt:
-	Statement
+	StatementNoLegacy
 		{
 		$$ = $1
 		}
@@ -6218,15 +6119,6 @@ TransactionStmt:
 		{
 		$$ = &ast.RollbackStmt{}
 		}
-	| BEGIN_P OptTransaction TransactionModeListOrEmpty
-		{
-		isolation, readOnly, deferrable := transactionModes($3)
-		$$ = &ast.BeginStmt{
-			IsolationLevel: isolation,
-			ReadOnly:       readOnly,
-			Deferrable:     deferrable,
-		}
-		}
 	| START TRANSACTION TransactionModeListOrEmpty
 		{
 		isolation, readOnly, deferrable := transactionModes($3)
@@ -6261,10 +6153,6 @@ TransactionStmt:
 		{
 		$$ = &ast.CommitStmt{}
 		}
-	| END_P OptTransaction OptTransactionChain
-		{
-		$$ = &ast.CommitStmt{}
-		}
 	| ROLLBACK OptTransaction OptTransactionChain
 		{
 		$$ = &ast.RollbackStmt{}
@@ -6288,6 +6176,22 @@ TransactionStmt:
 	| RELEASE ColId
 		{
 		$$ = &ast.ReleaseSavepointStmt{Name: $2}
+		}
+	;
+
+TransactionStmtLegacy:
+	BEGIN_P OptTransaction TransactionModeListOrEmpty
+		{
+		isolation, readOnly, deferrable := transactionModes($3)
+		$$ = &ast.BeginStmt{
+			IsolationLevel: isolation,
+			ReadOnly:       readOnly,
+			Deferrable:     deferrable,
+		}
+		}
+	| END_P OptTransaction OptTransactionChain
+		{
+		$$ = &ast.CommitStmt{}
 		}
 	;
 
@@ -8953,16 +8857,15 @@ WithList:
 	;
 
 WithClauseItem:
-	Name OptNameList AS OptMaterialized '(' PreparableStmt ')' OptSearchClause OptCycleClause
+	Name AS OptMaterialized '(' PreparableStmt ')' OptSearchClause OptCycleClause
 		{
 		cte := &ast.CommonTableExpression{BaseCommonTableExpression: pkast.BaseCommonTableExpression{
-			Name:    syntaxIdent(yylex, $1, yyS[yypt-8].span),
-			Columns: syntaxIdents(yylex, $2),
-			Query:   $6.(ast.StmtNode),
+			Name:  syntaxIdent(yylex, $1, yyS[yypt-7].span),
+			Query: $5.(ast.StmtNode),
 		}}
-		cte.Materialized = ast.CTEMaterialize($4)
-		cte.Search = cteSearchClause($8)
-		cte.Cycle = cteCycleClause($9)
+		cte.Materialized = ast.CTEMaterialize($3)
+		cte.Search = cteSearchClause($7)
+		cte.Cycle = cteCycleClause($8)
 		$$ = cte
 		}
 	| Name '(' NameList ')' AS OptMaterialized '(' PreparableStmt ')' OptSearchClause OptCycleClause
@@ -10932,14 +10835,10 @@ FuncExprCommonSubexpr:
 		{
 		$$ = makeSQLValueFunction(ast.SVFOP_CURRENT_SCHEMA, -1, yylex)
 		}
-	| CAST '(' AExpr AS Typename ')'
-		{
-		$$ = makeTypeCast($3, $5)
-		}
 	| CAST '(' AExpr AS Typename OptCollate ')'
 		{
 		cast := makeTypeCast($3, $5)
-		if c, ok := cast.(*ast.FuncCastExpr); ok {
+		if c, ok := cast.(*ast.FuncCastExpr); ok && $6 != nil {
 			c.Collate = collationName($6)
 		}
 		$$ = cast
@@ -11376,11 +11275,6 @@ SubstrList:
 	| AExpr SIMILAR AExpr ESCAPE AExpr
 		{
 		$$ = []ast.ExprNode{$1, $3, $5}
-		}
-	| ExpressionList
-		{
-		/* comma-separated form: substring(x, 1, 3) */
-		$$ = $1
 		}
 	;
 
@@ -11998,11 +11892,11 @@ FunctionName:
 	;
 
 ColumnRef:
-	ColId
+	ColId %prec UMINUS
 		{
 		$$ = columnRef(syntaxName(syntaxIdent(yylex, $1, yyS[yypt].span)), yyVAL.span)
 		}
-	| ColId Indirection
+	| ColId Indirection %prec UMINUS
 		{
 		$$ = columnRefWithIndirection(yylex, syntaxIdent(yylex, $1, yyS[yypt-1].span), $2, yyVAL.span)
 		}
@@ -12052,11 +11946,11 @@ OptSliceBound:
 	;
 
 OptIndirection:
-	Indirection
+	Indirection %prec UMINUS
 		{
 		$$ = $1
 		}
-	| /* EMPTY */
+	| /* EMPTY */ %prec UMINUS
 		{
 		$$ = nil
 		}
@@ -12236,17 +12130,6 @@ AnyName:
 		}
 	;
 
-OptNameList:
-	NameList
-		{
-		$$ = $1
-		}
-	| /* EMPTY */
-		{
-		$$ = nil
-		}
-	;
-
 NameList:
 	Name
 		{
@@ -12276,12 +12159,12 @@ ExpressionList:
 // Type names
 // Type Name (Typename) rules
 Typename:
-	SimpleTypename OptArrayBounds
+	SimpleTypename OptArrayBounds %prec UMINUS
 		{
 		$$ = $1
 		$$.PGArrayBounds = arrayBounds($2)
 		}
-	| SETOF SimpleTypename OptArrayBounds
+	| SETOF SimpleTypename OptArrayBounds %prec UMINUS
 		{
 		$$ = $2
 		$$.PGArrayBounds = arrayBounds($3)
@@ -12298,12 +12181,12 @@ Typename:
 		$$.PGArrayBounds = []int64{$5}
 		$$.PGSetOf = true
 		}
-	| SimpleTypename ARRAY
+	| SimpleTypename ARRAY %prec UMINUS
 		{
 		$$ = $1
 		$$.PGArrayBounds = []int64{-1}
 		}
-	| SETOF SimpleTypename ARRAY
+	| SETOF SimpleTypename ARRAY %prec UMINUS
 		{
 		$$ = $2
 		$$.PGArrayBounds = []int64{-1}
@@ -14336,14 +14219,6 @@ FetchArgs:
 			Name:      $4,
 		}
 		}
-	| SignedIconst FORWARD OptFromIn CursorName
-		{
-		$$ = &ast.FetchCursorStmt{
-			Direction: "FORWARD",
-			Count:     $1,
-			Name:      $4,
-		}
-		}
 	| BACKWARD OptFromIn CursorName
 		{
 		$$ = &ast.FetchCursorStmt{
@@ -14357,14 +14232,6 @@ FetchArgs:
 		$$ = &ast.FetchCursorStmt{
 			Direction: "BACKWARD",
 			Count:     $2,
-			Name:      $4,
-		}
-		}
-	| SignedIconst BACKWARD OptFromIn CursorName
-		{
-		$$ = &ast.FetchCursorStmt{
-			Direction: "BACKWARD",
-			Count:     $1,
 			Name:      $4,
 		}
 		}
@@ -14716,17 +14583,17 @@ RemoveFuncStmt:
 		}
 	| DROP ROUTINE FunctionWithArgTypesList OptDropBehavior
 		{
-		$$ = dropRoutineStmt(false, $3)
+		$$ = dropRoutineStmt(false, $3, int($4))
 		}
 	| DROP ROUTINE IF_P EXISTS FunctionWithArgTypesList OptDropBehavior
 		{
-		$$ = dropRoutineStmt(true, $5)
+		$$ = dropRoutineStmt(true, $5, int($6))
 		}
 	;
 
 // DROP AGGREGATE
 RemoveAggrStmt:
-	DROP AGGREGATE AggregateWithArgTypesList OptDropBehavior
+	DROP AGGREGATE AggregateDropList OptDropBehavior
 		{
 		$$ = &ast.DropStmt{
 			RemoveType: int(ast.OBJECT_AGGREGATE),
@@ -14735,7 +14602,7 @@ RemoveAggrStmt:
 			Missing_ok: false,
 		}
 		}
-	| DROP AGGREGATE IF_P EXISTS AggregateWithArgTypesList OptDropBehavior
+	| DROP AGGREGATE IF_P EXISTS AggregateDropList OptDropBehavior
 		{
 		$$ = &ast.DropStmt{
 			RemoveType: int(ast.OBJECT_AGGREGATE),
@@ -14844,12 +14711,24 @@ AggregateWithArgTypes:
 		}
 	;
 
-AggregateWithArgTypesList:
+AggregateDrop:
 	AggregateWithArgTypes
+	| ColId
+		{
+		$$ = makeList(&ast.String{Str: $1})
+		}
+	| ColId Indirection
+		{
+		$$ = checkFuncName(prependList(&ast.String{Str: $1}, $2))
+		}
+	;
+
+AggregateDropList:
+	AggregateDrop
 		{
 		$$ = makeList($1)
 		}
-	| AggregateWithArgTypesList ',' AggregateWithArgTypes
+	| AggregateDropList ',' AggregateDrop
 		{
 		$$ = appendList($1, $3)
 		}
@@ -17844,7 +17723,7 @@ OptIfExists:
 		{
 		$$ = true
 		}
-	| /* EMPTY */
+	| /* EMPTY */ %prec UNBOUNDED
 		{
 		$$ = false
 		}
@@ -18581,7 +18460,7 @@ ColNameKeyword:
 	| TIMESTAMP
 	| TREAT
 	| TRIM
-	| VALUES
+	| VALUES %prec UMINUS
 	| VARCHAR
 	| XMLATTRIBUTES
 	| XMLCONCAT

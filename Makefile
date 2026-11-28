@@ -1,6 +1,4 @@
 GOYACC ?= go run golang.org/x/tools/cmd/goyacc@v0.52.0
-GRAMMAR_CONFLICTS := conflicts: 417 shift/reduce, 24 reduce/reduce
-GRAMMAR_CONFLICT_SIGNATURE := 4e843fb2dea7217d2a9c5184de650f3c287746fa2693a583bde34a4cc07d30c3
 
 .PHONY: all build generate generate-check test testdata vet race lint fmt help
 
@@ -22,12 +20,9 @@ generate:
 		echo 'Failed to generate grammar conflict table.'; exit 1; \
 	fi; \
 	cat "$$output"; \
-	if [ "$$(grep '^conflicts:' "$$output" || true)" != "$(GRAMMAR_CONFLICTS)" ]; then \
-		echo 'Grammar conflict baseline changed; review the grammar before updating it.'; exit 1; \
-	fi; \
-	signature=$$(grep 'conflict (' "$$tables" | sha256sum | cut -d ' ' -f 1); \
-	if [ "$$signature" != "$(GRAMMAR_CONFLICT_SIGNATURE)" ]; then \
-		echo "Grammar conflict signature changed: $$signature"; exit 1; \
+	if ! grep -Fxq '0 shift/reduce, 0 reduce/reduce conflicts reported' "$$tables" || \
+		grep -q 'never reduced' "$$output"; then \
+		echo 'Grammar must have no conflicts or unreduced rules.'; exit 1; \
 	fi
 	go run github.com/mia0x75/parserkit/cmd/yaccspan parser/parser_generated.go
 	go run ./internal/astgen parser

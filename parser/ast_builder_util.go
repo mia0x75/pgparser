@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	pkast "github.com/mia0x75/parserkit/ast"
+	"github.com/mia0x75/parserkit/loc"
 
 	"github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/format"
@@ -698,7 +699,7 @@ func doLanguage(l *ast.List) string {
 
 // dropFunctionStmt returns the drop function statement of a function list.
 func dropFunctionStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
-	names := objectWithArgsNames(l)
+	names, args := routineDropTargets(l)
 	if len(names) == 0 {
 		return &ast.DropFunctionStmt{IfExists: ifExists}
 	}
@@ -706,14 +707,14 @@ func dropFunctionStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
 		IfExists:  ifExists,
 		Name:      names[0],
 		Names:     names,
-		Arguments: routineArguments(l),
+		Arguments: args,
 		Behavior:  ast.DropBehavior(behavior),
 	}
 }
 
 // dropProcedureStmt returns the drop procedure statement of a function list.
 func dropProcedureStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
-	names := objectWithArgsNames(l)
+	names, args := routineDropTargets(l)
 	if len(names) == 0 {
 		return &ast.DropProcedureStmt{IfExists: ifExists}
 	}
@@ -721,13 +722,15 @@ func dropProcedureStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
 		IfExists:  ifExists,
 		Name:      names[0],
 		Names:     names,
-		Arguments: routineArguments(l),
+		Arguments: args,
 		Behavior:  ast.DropBehavior(behavior),
 	}
 }
 
-func routineArguments(l *ast.List) []*ast.List {
+func routineDropTargets(l *ast.List) ([]*ast.TableName, []*ast.List) {
+	names := objectWithArgsNames(l)
 	args := make([]*ast.List, 0, len(l.Items))
+	specified := false
 	for _, item := range l.Items {
 		obj, ok := item.(*ast.ObjectWithArgs)
 		if !ok {
@@ -735,6 +738,7 @@ func routineArguments(l *ast.List) []*ast.List {
 		}
 		var signature *ast.List
 		if !obj.ArgsUnspecified {
+			specified = true
 			signature = obj.Objargs
 			if signature == nil {
 				signature = &ast.List{}
@@ -742,7 +746,14 @@ func routineArguments(l *ast.List) []*ast.List {
 		}
 		args = append(args, signature)
 	}
-	return args
+	if !specified {
+		// The unsigned DROP path used synthetic names and no argument slice.
+		for _, name := range names {
+			name.SetSpan(loc.InvalidSpan())
+		}
+		return names, nil
+	}
+	return names, args
 }
 
 // serverOptions returns the server options of a generic option list.
@@ -864,11 +875,13 @@ func exprIntValue(e ast.ExprNode) int64 {
 }
 
 // dropRoutineStmt returns the drop routine statement of a function list.
-func dropRoutineStmt(ifExists bool, l *ast.List) ast.Node {
+func dropRoutineStmt(ifExists bool, l *ast.List, behavior int) ast.Node {
+	names, _ := routineDropTargets(l)
 	return &ast.DropStmt{
 		RemoveType: int(ast.OBJECT_ROUTINE),
-		Objects:    tableNamesFromObjectWithArgs(l),
+		Objects:    names,
 		Missing_ok: ifExists,
+		Behavior:   behavior,
 	}
 }
 
