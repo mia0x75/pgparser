@@ -10118,9 +10118,8 @@ ColId:
 	;
 
 ColLabel:
-	IDENT { $$ = $1 }
-	| UnReservedKeyword { $$ = $1 }
-	| ColNameKeyword { $$ = $1 }
+	// Factor shared identifier classes to avoid duplicate token reductions.
+	ColId { $$ = $1 }
 	| TypeFuncNameKeyword { $$ = $1 }
 	| ReservedKeyword { $$ = $1 }
 	;

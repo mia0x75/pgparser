@@ -1,6 +1,6 @@
-GOYACC ?= go tool goyacc
-GRAMMAR_CONFLICTS := conflicts: 416 shift/reduce, 37 reduce/reduce
-GRAMMAR_CONFLICT_SIGNATURE := 2b3cfaf2c3f5d0b11c49f6be364e1e69d3431d056f13eb34be7afe2dfec19335
+GOYACC ?= go run golang.org/x/tools/cmd/goyacc@v0.52.0
+GRAMMAR_CONFLICTS := conflicts: 417 shift/reduce, 24 reduce/reduce
+GRAMMAR_CONFLICT_SIGNATURE := 4e843fb2dea7217d2a9c5184de650f3c287746fa2693a583bde34a4cc07d30c3
 
 .PHONY: all build generate generate-check test testdata vet race lint fmt help
 

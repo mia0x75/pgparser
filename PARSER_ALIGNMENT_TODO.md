@@ -15,7 +15,7 @@ Source: `/tmp/opencode/three-sql-audit.uFdtjN/三仓像素级审计与文法对�
 
 - [x] P2-01: preserve exact spans for explicit PostgreSQL window bounds and parenthesized expressions; keep synthetic bounds invalid.
 - [x] P2-04a: rerun PostgreSQL's 40,644-statement corpus and compare the recorded baseline after semantic parser changes; counts and all 141 known failures match.
-- [x] P2-03a: pin the PostgreSQL conflict signature in `make generate`; count remains 416/37.
+- [x] P2-03a: pin the PostgreSQL conflict signature in `make generate`; current baseline is 417/24 after factoring duplicate `ColId`/`ColLabel` token reductions. The sole added shift/reduce is in the same dotted-name state and retains shift preference.
 - [x] P2-03b: astgen rejects unsupported child-bearing embedded fields, with generator regression coverage.
 - [x] P2-03c: validate `CREATE EXTENSION` AST type, exact statement Span, Restore round-trip, and the recorded corpus baseline.
 - [x] P2-04b: run the extracted MySQL/MariaDB MTR SQL corpus with `cmd/mtrcheck`; retain source revisions, coverage and per-case results. This is an offline parser check, not `mysql-test-run.pl`.
@@ -67,7 +67,8 @@ Each row is a separate follow-up task from the report's 34 production TODO comme
 - [x] Assess grammar section ordering and token/type declarations; no reorder was made because this task has no generated-parser baseline proving non-semantic output.
 - [x] Add a matching common SELECT semantic fixture in both parser repositories; dialect-specific AST and Restore behavior remain local.
 - [x] Normalize MySQL empty-production comments and split alternative markers; parser generation remains unchanged.
-- [x] Keep MySQL conflicts at 0/0; PostgreSQL conflict signature is pinned and the recorded corpus baseline is unchanged.
+- [x] Keep MySQL conflicts at 0/0; PostgreSQL conflict signature is pinned. Left-factor the shared identifier classes in `ColLabel`, reducing reduce/reduce conflicts from 37 to 24; the parser corpus must remain unchanged.
+- [x] Pin both repositories to `golang.org/x/tools/cmd/goyacc@v0.52.0` so grammar generation uses the same reproducible parser-generator version.
 - [x] Leave parserkit unchanged; no shared-contract defect was required for this batch.
 
 ## External Verification
