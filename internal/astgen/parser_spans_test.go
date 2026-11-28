@@ -14,7 +14,7 @@ func TestInjectParserSpans(t *testing.T) {
 package parser
 
 // semantic carries grammar values.
-type semantic struct { node Node }
+type semantic struct { node Node; bound *FrameBound }
 
 func reduce(yynt int) {
 switch yynt {
@@ -28,6 +28,8 @@ case 2:
     }
 case 3:
     yyVAL.str = "name"
+case 4:
+    yyVAL.bound = makeBound()
 }
 }
 `
@@ -48,6 +50,7 @@ case 3:
 	for _, call := range []string{
 		"setSyntaxSpan(yyVAL.node, yyVAL.span)",
 		"setSyntaxSpan(yyVAL.list, yyVAL.span)",
+		"setSyntaxSpan(yyVAL.bound, yyVAL.span)",
 	} {
 		if strings.Count(string(first), call) != 1 {
 			t.Fatalf("missing or duplicate call %s", call)

@@ -10,7 +10,7 @@ import (
 	"slices"
 )
 
-var spanTargets = []string{"node", "expr", "list"}
+var spanTargets = []string{"node", "expr", "list", "bound"}
 
 func generateParserSpans() error {
 	const path = "parser/parser_generated.go"

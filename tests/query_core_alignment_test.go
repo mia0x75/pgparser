@@ -1,10 +1,12 @@
 package parser_test
 
 import (
+	"strings"
 	"testing"
 
 	pkast "github.com/mia0x75/parserkit/ast"
 	"github.com/mia0x75/parserkit/lex"
+	"github.com/mia0x75/parserkit/loc"
 	dialectast "github.com/mia0x75/pgparser/ast"
 	"github.com/mia0x75/pgparser/parser"
 )
@@ -294,6 +296,51 @@ func TestWindowCoreChangesSurviveVisitor(t *testing.T) {
 	got = updated.(*dialectast.WindowSpec)
 	if got.OrderBy != replacement || got.WindowSpecCore().OrderBy != replacement {
 		t.Fatalf("outer window update was lost: outer=%p shared=%p want=%p", got.OrderBy, got.WindowSpecCore().OrderBy, replacement)
+	}
+}
+
+func TestExplicitWindowBoundAndParenthesesSpans(t *testing.T) {
+	const windowSQL = `SELECT sum(v) OVER (ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)`
+	windowStmt := mustParseOne(t, windowSQL).(*dialectast.SelectStmt)
+	windowFunc := windowStmt.Fields.Items[0].Expr.(*dialectast.WindowFuncExpr)
+	frame := windowFunc.Spec.Frame
+	if frame == nil || frame.Extent.Start == nil || frame.Extent.End == nil {
+		t.Fatalf("window frame = %#v", frame)
+	}
+	startSpan := frame.Extent.Start.Span()
+	start := loc.ByteOffset(strings.Index(windowSQL, "2 PRECEDING"))
+	wantStart := loc.Span{Start: start, End: start + loc.ByteOffset(len("2 PRECEDING"))}
+	if startSpan != wantStart {
+		t.Errorf("explicit frame bound span = %v, want %v", startSpan, wantStart)
+	}
+	endStart := loc.ByteOffset(strings.Index(windowSQL, "CURRENT ROW"))
+	wantEnd := loc.Span{Start: endStart, End: endStart + loc.ByteOffset(len("CURRENT ROW"))}
+	if frame.Extent.End.Span() != wantEnd {
+		t.Errorf("explicit CURRENT ROW span = %v, want %v", frame.Extent.End.Span(), wantEnd)
+	}
+
+	const shorthandSQL = `SELECT sum(v) OVER (ROWS 2 PRECEDING)`
+	shorthand := mustParseOne(t, shorthandSQL).(*dialectast.SelectStmt)
+	shorthandFrame := shorthand.Fields.Items[0].Expr.(*dialectast.WindowFuncExpr).Spec.Frame
+	if shorthandFrame.Extent.End.Span().Valid() {
+		t.Errorf("synthesized CURRENT ROW span = %v, want invalid", shorthandFrame.Extent.End.Span())
+	}
+
+	const exprSQL = `SELECT (ARRAY[1,2])[1]`
+	exprStmt := mustParseOne(t, exprSQL).(*dialectast.SelectStmt)
+	indirection, ok := exprStmt.Fields.Items[0].Expr.(*dialectast.A_Indirection)
+	if !ok {
+		t.Fatalf("expression = %T, want *A_Indirection", exprStmt.Fields.Items[0].Expr)
+	}
+	paren, ok := indirection.Arg.(*dialectast.ParenthesesExpr)
+	if !ok {
+		t.Fatalf("indirection argument = %T, want *ParenthesesExpr", indirection.Arg)
+	}
+	parenStart := loc.ByteOffset(strings.Index(exprSQL, "(ARRAY"))
+	parenEnd := loc.ByteOffset(strings.Index(exprSQL, ")[1]")) + 1
+	wantParen := loc.Span{Start: parenStart, End: parenEnd}
+	if paren.Span() != wantParen {
+		t.Errorf("parentheses span = %v, want %v", paren.Span(), wantParen)
 	}
 }
 

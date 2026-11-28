@@ -28450,7 +28450,9 @@ yydefault:
 	case 1396:
 		yyDollar = yyS[yypt-4 : yypt+1]
 		{
-			yyVAL.expr = withIndirection(&ast.ParenthesesExpr{Expr: yyDollar[2].expr}, yyDollar[4].list)
+			paren := &ast.ParenthesesExpr{Expr: yyDollar[2].expr}
+			paren.SetSpan(loc.Cover(yyS[yypt-3].span, yyS[yypt-1].span))
+			yyVAL.expr = withIndirection(paren, yyDollar[4].list)
 		}
 		setSyntaxSpan(yyVAL.expr, yyVAL.span)
 	case 1397:
@@ -28717,26 +28719,31 @@ yydefault:
 		{
 			yyVAL.bound = &ast.FrameBound{Type: ast.Preceding, Unbounded: true}
 		}
+		setSyntaxSpan(yyVAL.bound, yyVAL.span)
 	case 1435:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.bound = &ast.FrameBound{Type: ast.Following, Unbounded: true}
 		}
+		setSyntaxSpan(yyVAL.bound, yyVAL.span)
 	case 1436:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.bound = &ast.FrameBound{Type: ast.CurrentRow}
 		}
+		setSyntaxSpan(yyVAL.bound, yyVAL.span)
 	case 1437:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.bound = &ast.FrameBound{Type: ast.Preceding, Expr: yyDollar[1].expr}
 		}
+		setSyntaxSpan(yyVAL.bound, yyVAL.span)
 	case 1438:
 		yyDollar = yyS[yypt-2 : yypt+1]
 		{
 			yyVAL.bound = &ast.FrameBound{Type: ast.Following, Expr: yyDollar[1].expr}
 		}
+		setSyntaxSpan(yyVAL.bound, yyVAL.span)
 	case 1439:
 		yyDollar = yyS[yypt-3 : yypt+1]
 		{

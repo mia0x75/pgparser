@@ -8786,7 +8786,9 @@ CExpr:
 		}
 	| '(' AExpr ')' OptIndirection
 		{
-			$$ = withIndirection(&ast.ParenthesesExpr{Expr: $2}, $4)
+			paren := &ast.ParenthesesExpr{Expr: $2}
+			paren.SetSpan(loc.Cover(yyS[yypt-3].span, yyS[yypt-1].span))
+			$$ = withIndirection(paren, $4)
 		}
 	| FuncExpr { $$ = $1 }
 	| SelectWithParens %prec UMINUS

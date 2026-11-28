@@ -1294,6 +1294,9 @@ type TslOption struct {
 
 // Restore implements Node interface.
 func (t *TslOption) Restore(ctx *format.RestoreCtx) error {
+	if t == nil {
+		return fmt.Errorf("restore TLS option: nil option")
+	}
 	switch t.Type {
 	case TslNone:
 		ctx.WriteKeyword("NONE")
@@ -1308,7 +1311,7 @@ func (t *TslOption) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteKeyword("ISSUER ")
 		ctx.WriteString(t.Value)
 	case Subject:
-		ctx.WriteKeyword("CIPHER")
+		ctx.WriteKeyword("SUBJECT ")
 		ctx.WriteString(t.Value)
 	default:
 		return errors.Errorf("Unsupported TslOption.Type %d", t.Type)
@@ -1366,6 +1369,9 @@ type PasswordOrLockOption struct {
 
 // Restore implements Node interface.
 func (p *PasswordOrLockOption) Restore(ctx *format.RestoreCtx) error {
+	if p == nil {
+		return fmt.Errorf("restore password or lock option: nil option")
+	}
 	switch p.Type {
 	case PasswordExpire:
 		ctx.WriteKeyword("PASSWORD EXPIRE")
@@ -1374,8 +1380,11 @@ func (p *PasswordOrLockOption) Restore(ctx *format.RestoreCtx) error {
 	case PasswordExpireNever:
 		ctx.WriteKeyword("PASSWORD EXPIRE NEVER")
 	case PasswordExpireInterval:
-		ctx.WriteKeyword("PASSWORD EXPIRE NEVER")
-		ctx.WritePlainf(" %d", p.Count)
+		if p.Count <= 0 {
+			return fmt.Errorf("password expiration interval must be positive")
+		}
+		ctx.WriteKeyword("PASSWORD EXPIRE INTERVAL ")
+		ctx.WritePlainf("%d", p.Count)
 		ctx.WriteKeyword(" DAY")
 	case Lock:
 		ctx.WriteKeyword("ACCOUNT LOCK")
