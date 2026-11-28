@@ -28,6 +28,10 @@ type CreateTablespaceStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE TABLESPACE ")
 	ctx.WriteIdent(n.Name)
 	if n.Owner != nil {
@@ -50,9 +54,18 @@ func (n *CreateTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateTablespaceStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateTablespaceStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateTablespaceStmt)
 	if n.Owner != nil {
@@ -86,6 +99,10 @@ type AlterTablespaceStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ALTER TABLESPACE ")
 	ctx.WriteIdent(n.Name)
 	if n.Action != "" {
@@ -106,9 +123,18 @@ func (n *AlterTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *AlterTablespaceStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AlterTablespaceStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AlterTablespaceStmt)
 	if n.Options != nil {
@@ -131,6 +157,10 @@ type DropTablespaceStmt struct {
 
 // Restore implements Node interface.
 func (n *DropTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP TABLESPACE ")
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
@@ -141,9 +171,18 @@ func (n *DropTablespaceStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropTablespaceStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropTablespaceStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(newNode.(*DropTablespaceStmt))
 }

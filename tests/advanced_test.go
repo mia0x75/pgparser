@@ -112,21 +112,18 @@ func TestParseSQLFunctionWrapperShapes(t *testing.T) {
 }
 
 func TestParseSQLGenericUtilityStatementsAST(t *testing.T) {
-	for _, tc := range []struct {
-		sql  string
-		kind string
-	}{
-		{`CREATE EXTENSION IF NOT EXISTS hstore;`, "CREATE"},
+	for _, sql := range []string{
+		`CREATE EXTENSION IF NOT EXISTS hstore;`,
 	} {
-		st, ok := mustParseOne(t, tc.sql).(*ast.GenericStmt)
+		st, ok := mustParseOne(t, sql).(*ast.CreateExtensionStmt)
 		if !ok {
-			t.Fatalf("%q: expected GenericStmt, got %T", tc.sql, mustParseOne(t, tc.sql))
+			t.Fatalf("%q: expected CreateExtensionStmt, got %T", sql, mustParseOne(t, sql))
 		}
-		if st.Kind != tc.kind {
-			t.Errorf("%q: kind = %q, want %q", tc.sql, st.Kind, tc.kind)
+		if st.Extname != "hstore" || !st.IfNotExists {
+			t.Errorf("%q: extension = %#v", sql, st)
 		}
-		if st.Raw == "" {
-			t.Errorf("%q: empty raw statement", tc.sql)
+		if got := compactSQL(restoreNode(t, st)); got != `CREATE EXTENSION IF NOT EXISTS "hstore"` {
+			t.Errorf("%q: restore = %q", sql, got)
 		}
 	}
 }

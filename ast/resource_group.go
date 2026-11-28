@@ -28,6 +28,10 @@ type ResourceGroupVCPU struct {
 
 // Restore implements Node interface.
 func (n *ResourceGroupVCPU) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.From == n.To {
 		ctx.WritePlainf("%d", n.From)
 	} else {
@@ -38,9 +42,18 @@ func (n *ResourceGroupVCPU) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *ResourceGroupVCPU) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ResourceGroupVCPU)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ResourceGroupVCPU)
 	return v.Leave(n)
@@ -85,6 +98,10 @@ type CreateResourceGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE RESOURCE GROUP ")
 	ctx.WriteName(n.Name)
 	ctx.WriteKeyword(" TYPE = ")
@@ -104,9 +121,18 @@ func (n *CreateResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateResourceGroupStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateResourceGroupStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateResourceGroupStmt)
 	for i, vcpu := range n.VCPU {
@@ -131,6 +157,10 @@ type AlterResourceGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ALTER RESOURCE GROUP ")
 	ctx.WriteName(n.Name)
 	if len(n.VCPU) > 0 {
@@ -144,9 +174,18 @@ func (n *AlterResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *AlterResourceGroupStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AlterResourceGroupStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AlterResourceGroupStmt)
 	for i, vcpu := range n.VCPU {
@@ -169,6 +208,10 @@ type DropResourceGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *DropResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP RESOURCE GROUP ")
 	ctx.WriteName(n.Name)
 	if n.Force {
@@ -179,9 +222,18 @@ func (n *DropResourceGroupStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropResourceGroupStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropResourceGroupStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropResourceGroupStmt)
 	return v.Leave(n)

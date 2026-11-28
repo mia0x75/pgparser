@@ -42,13 +42,109 @@ func (n *WindowSpec) syncSharedCore() {
 	if n == nil {
 		return
 	}
-	n.BaseWindowSpec.PartitionBy = n.PartitionBy
-	n.BaseWindowSpec.OrderBy = n.OrderBy
-	n.BaseWindowSpec.Frame = n.Frame
+	if n.PartitionBy == nil {
+		n.BaseWindowSpec.PartitionBy = nil
+	} else {
+		n.BaseWindowSpec.PartitionBy = n.PartitionBy
+	}
+	if n.OrderBy == nil {
+		n.BaseWindowSpec.OrderBy = nil
+	} else {
+		n.BaseWindowSpec.OrderBy = n.OrderBy
+	}
+	if n.Frame == nil {
+		n.BaseWindowSpec.Frame = nil
+	} else {
+		n.BaseWindowSpec.Frame = n.Frame
+	}
+}
+
+func (n *WindowSpec) syncDialectFields() bool {
+	if n.BaseWindowSpec.PartitionBy != nil {
+		clause, ok := n.BaseWindowSpec.PartitionBy.(*PartitionByClause)
+		if !ok || clause == nil {
+			return false
+		}
+		n.PartitionBy = clause
+	} else if n.PartitionBy != nil {
+		n.BaseWindowSpec.PartitionBy = n.PartitionBy
+	}
+	if n.BaseWindowSpec.OrderBy != nil {
+		clause, ok := n.BaseWindowSpec.OrderBy.(*OrderByClause)
+		if !ok || clause == nil {
+			return false
+		}
+		n.OrderBy = clause
+	} else if n.OrderBy != nil {
+		n.BaseWindowSpec.OrderBy = n.OrderBy
+	}
+	if n.BaseWindowSpec.Frame != nil {
+		clause, ok := n.BaseWindowSpec.Frame.(*FrameClause)
+		if !ok || clause == nil {
+			return false
+		}
+		n.Frame = clause
+	} else if n.Frame != nil {
+		n.BaseWindowSpec.Frame = n.Frame
+	}
+	return true
+}
+
+func (n *WindowSpec) reconcileDialectFields(
+	beforePartition *PartitionByClause,
+	beforePartitionCore pkast.WindowPartitionClauseNode,
+	beforeOrder *OrderByClause,
+	beforeOrderCore pkast.OrderByClauseNode,
+	beforeFrame *FrameClause,
+	beforeFrameCore pkast.WindowFrameClauseNode,
+) bool {
+	switch {
+	case n.PartitionBy != beforePartition && n.BaseWindowSpec.PartitionBy == beforePartitionCore:
+		n.BaseWindowSpec.PartitionBy = n.PartitionBy
+	case n.PartitionBy == beforePartition && n.BaseWindowSpec.PartitionBy != beforePartitionCore:
+		partition, ok := n.BaseWindowSpec.PartitionBy.(*PartitionByClause)
+		if !ok || partition == nil {
+			return false
+		}
+		n.PartitionBy = partition
+	case n.PartitionBy != nil && n.BaseWindowSpec.PartitionBy != n.PartitionBy:
+		return false
+	}
+
+	switch {
+	case n.OrderBy != beforeOrder && n.BaseWindowSpec.OrderBy == beforeOrderCore:
+		n.BaseWindowSpec.OrderBy = n.OrderBy
+	case n.OrderBy == beforeOrder && n.BaseWindowSpec.OrderBy != beforeOrderCore:
+		order, ok := n.BaseWindowSpec.OrderBy.(*OrderByClause)
+		if !ok || order == nil {
+			return false
+		}
+		n.OrderBy = order
+	case n.OrderBy != nil && n.BaseWindowSpec.OrderBy != n.OrderBy:
+		return false
+	}
+
+	switch {
+	case n.Frame != beforeFrame && n.BaseWindowSpec.Frame == beforeFrameCore:
+		n.BaseWindowSpec.Frame = n.Frame
+	case n.Frame == beforeFrame && n.BaseWindowSpec.Frame != beforeFrameCore:
+		frame, ok := n.BaseWindowSpec.Frame.(*FrameClause)
+		if !ok || frame == nil {
+			return false
+		}
+		n.Frame = frame
+	case n.Frame != nil && n.BaseWindowSpec.Frame != n.Frame:
+		return false
+	}
+	return true
 }
 
 // Restore implements Node interface.
 func (n *WindowSpec) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Name.Present() {
 		ctx.WriteIdent(n.Name)
 		if n.OnlyAlias {
@@ -123,17 +219,38 @@ func (n *WindowSpec) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *WindowSpec) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		spec, ok := newNode.(*WindowSpec)
-		if !ok || spec == nil {
-			return newNode, false
-		}
-		spec.syncSharedCore()
-		return v.Leave(spec)
+	if n == nil {
+		return nil, false
 	}
-	n = newNode.(*WindowSpec)
-	n.syncSharedCore()
+	if !n.syncDialectFields() {
+		return n, false
+	}
+	beforePartition := n.PartitionBy
+	beforePartitionCore := n.BaseWindowSpec.PartitionBy
+	beforeOrder := n.OrderBy
+	beforeOrderCore := n.BaseWindowSpec.OrderBy
+	beforeFrame := n.Frame
+	beforeFrameCore := n.BaseWindowSpec.Frame
+	newNode, skipChildren := v.Enter(n)
+	spec, ok := newNode.(*WindowSpec)
+	if !ok || spec == nil {
+		return newNode, false
+	}
+	n = spec
+	if !n.reconcileDialectFields(
+		beforePartition,
+		beforePartitionCore,
+		beforeOrder,
+		beforeOrderCore,
+		beforeFrame,
+		beforeFrameCore,
+	) {
+		return n, false
+	}
+	if skipChildren {
+		n.syncSharedCore()
+		return v.Leave(n)
+	}
 	if n.PartitionBy != nil {
 		node, ok := n.PartitionBy.Accept(v)
 		if !ok {
@@ -197,8 +314,32 @@ func (n *PartitionByClause) syncSharedCore() {
 	}
 }
 
+func (n *PartitionByClause) syncDialectItems() bool {
+	if len(n.BaseWindowPartitionClause.Items) == 0 {
+		return true
+	}
+	if len(n.Items) != len(n.BaseWindowPartitionClause.Items) {
+		n.Items = make([]*OrderItem, len(n.BaseWindowPartitionClause.Items))
+	}
+	for i, item := range n.BaseWindowPartitionClause.Items {
+		shared, ok := item.(*PartitionItem)
+		if !ok || shared == nil {
+			return false
+		}
+		if n.Items[i] == nil {
+			n.Items[i] = &OrderItem{}
+		}
+		n.Items[i].Expr = shared.Expr
+	}
+	return true
+}
+
 // Restore implements Node interface.
 func (n *PartitionByClause) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("PARTITION BY ")
 	for i, v := range n.Items {
 		if i != 0 {
@@ -228,16 +369,18 @@ func (n *PartitionByClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		clause, ok := newNode.(*PartitionByClause)
-		if !ok || clause == nil {
-			return newNode, false
-		}
-		clause.syncSharedCore()
-		return v.Leave(clause)
+	clause, ok := newNode.(*PartitionByClause)
+	if !ok || clause == nil {
+		return newNode, false
 	}
-	n = newNode.(*PartitionByClause)
-	n.syncSharedCore()
+	n = clause
+	if !n.syncDialectItems() {
+		return n, false
+	}
+	if skipChildren {
+		n.syncSharedCore()
+		return v.Leave(n)
+	}
 	for i, val := range n.Items {
 		node, ok := val.Accept(v)
 		if !ok {
@@ -266,6 +409,10 @@ func (n *PartitionItem) WindowPartitionItemCore() *pkast.BaseWindowPartitionItem
 }
 
 func (n *PartitionItem) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n == nil || n.Expr == nil {
 		return errors.New("restore partition item: missing expression")
 	}
@@ -396,9 +543,18 @@ func (n *FrameClause) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *FrameClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*FrameClause)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*FrameClause)
 	if n.Extent.Start != nil {
@@ -523,9 +679,18 @@ func (n *FrameBound) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *FrameBound) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*FrameBound)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*FrameBound)
 	if n.Expr != nil {

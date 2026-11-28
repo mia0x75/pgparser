@@ -11,6 +11,10 @@ type AnalyzeTableStmt struct {
 }
 
 func (n *AnalyzeTableStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ANALYZE")
 	if err := restoreUtilityOptions(ctx, n.Options); err != nil {
 		return err
@@ -23,7 +27,17 @@ func (n *AnalyzeTableStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *AnalyzeTableStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	updated, skip := v.Enter(n)
+
+	enteredNode, enteredOK := updated.(*AnalyzeTableStmt)
+	if !enteredOK || enteredNode == nil {
+		return updated, false
+	}
+	n = enteredNode
 	if skip {
 		return v.Leave(updated)
 	}

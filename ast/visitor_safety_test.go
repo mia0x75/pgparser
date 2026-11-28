@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"strings"
 	"testing"
 
 	pkast "github.com/mia0x75/parserkit/ast"
@@ -14,6 +15,7 @@ type misbehavingVisitor struct {
 	stop      bool
 	enterNil  bool
 	enterType pkast.Node
+	leaves    int
 }
 
 func (v *misbehavingVisitor) Enter(n Node) (Node, bool) {
@@ -28,6 +30,7 @@ func (v *misbehavingVisitor) Enter(n Node) (Node, bool) {
 }
 
 func (v *misbehavingVisitor) Leave(n Node) (Node, bool) {
+	v.leaves++
 	if v.stop {
 		return n, false
 	}
@@ -43,10 +46,12 @@ func TestVisitorSafetyGuards(t *testing.T) {
 	}{
 		{"nil receiver", (*List)(nil), &misbehavingVisitor{}, false},
 		{"typed-nil List entry", &List{Items: []Node{(*RoleSpec)(nil)}}, &misbehavingVisitor{}, false},
-		{"nil List entry skipped", &List{Items: []Node{nil, &RoleSpec{}}}, &misbehavingVisitor{}, true},
+		{"nil List entry", &List{Items: []Node{nil, &RoleSpec{}}}, &misbehavingVisitor{}, false},
 		{"Enter returns nil", &DefElem{}, &misbehavingVisitor{enterNil: true}, false},
 		{"Enter wrong type", &DefElem{}, &misbehavingVisitor{enterType: &List{}}, false},
 		{"Enter typed-nil", &DefElem{}, &misbehavingVisitor{enterType: (*RoleSpec)(nil)}, false},
+		{"Enter wrong type while skipping", &DefElem{}, &misbehavingVisitor{enterType: &List{}, skip: true}, false},
+		{"handwritten Enter wrong type while skipping", &TableName{}, &misbehavingVisitor{enterType: &List{}, skip: true}, false},
 		{"child stops", &DefElem{Arg: &String{}}, &misbehavingVisitor{stop: true}, false},
 	}
 	for _, tc := range cases {
@@ -60,6 +65,9 @@ func TestVisitorSafetyGuards(t *testing.T) {
 			_, ok = tc.node.Accept(tc.vis)
 			if ok != tc.want {
 				t.Fatalf("Accept = %v, want %v", ok, tc.want)
+			}
+			if strings.Contains(tc.name, "wrong type while skipping") && tc.vis.leaves != 0 {
+				t.Fatalf("Leave called %d times for an invalid replacement", tc.vis.leaves)
 			}
 		})
 	}

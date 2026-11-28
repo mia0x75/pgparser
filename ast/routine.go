@@ -21,6 +21,10 @@ type CreateFunctionStmt struct {
 }
 
 func (n *CreateFunctionStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Name == nil {
 		return fmt.Errorf("routine has no name")
 	}
@@ -68,7 +72,17 @@ func (n *CreateFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *CreateFunctionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	updated, skip := v.Enter(n)
+
+	enteredNode, enteredOK := updated.(*CreateFunctionStmt)
+	if !enteredOK || enteredNode == nil {
+		return updated, false
+	}
+	n = enteredNode
 	if skip {
 		return v.Leave(updated)
 	}
@@ -122,6 +136,10 @@ type AlterFunctionStmt struct {
 }
 
 func (n *AlterFunctionStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Func == nil {
 		return fmt.Errorf("ALTER routine has no signature")
 	}
@@ -138,7 +156,17 @@ func (n *AlterFunctionStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *AlterFunctionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	updated, skip := v.Enter(n)
+
+	enteredNode, enteredOK := updated.(*AlterFunctionStmt)
+	if !enteredOK || enteredNode == nil {
+		return updated, false
+	}
+	n = enteredNode
 	if skip {
 		return v.Leave(updated)
 	}
@@ -280,6 +308,10 @@ type ReturnStmt struct {
 }
 
 func (n *ReturnStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Expr == nil {
 		return fmt.Errorf("RETURN has no expression")
 	}
@@ -288,7 +320,17 @@ func (n *ReturnStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *ReturnStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	updated, skip := v.Enter(n)
+
+	enteredNode, enteredOK := updated.(*ReturnStmt)
+	if !enteredOK || enteredNode == nil {
+		return updated, false
+	}
+	n = enteredNode
 	if skip {
 		return v.Leave(updated)
 	}

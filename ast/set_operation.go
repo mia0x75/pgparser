@@ -55,6 +55,10 @@ func (n *SetOprStmt) SetOperationCore() *pkast.BaseSetOperation {
 
 // Restore writes the operands, the operator and the tail of the set operation.
 func (n *SetOprStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -190,6 +194,10 @@ func (n *QueryTailStmt) QueryTailStmtCore() *pkast.BaseQueryTailStmt {
 
 // Restore writes the query, its parentheses and its tail.
 func (n *QueryTailStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}

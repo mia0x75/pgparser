@@ -13,6 +13,10 @@ type DataType struct {
 }
 
 func (n *DataType) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Type == nil {
 		return fmt.Errorf("data type is missing")
 	}
@@ -20,6 +24,10 @@ func (n *DataType) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *DataType) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	updated, _ := v.Enter(n)
 	return v.Leave(updated)
 }

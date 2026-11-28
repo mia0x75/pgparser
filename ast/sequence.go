@@ -23,6 +23,10 @@ type CreateSequenceStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateSequenceStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE ")
 	if n.Temporary {
 		ctx.WriteKeyword("TEMPORARY ")
@@ -39,9 +43,18 @@ func (n *CreateSequenceStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateSequenceStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateSequenceStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateSequenceStmt)
 	node, ok := n.Name.Accept(v)
@@ -69,6 +82,10 @@ type DropSequenceStmt struct {
 
 // Restore implements Node interface.
 func (n *DropSequenceStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP SEQUENCE ")
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
@@ -86,9 +103,18 @@ func (n *DropSequenceStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropSequenceStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropSequenceStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropSequenceStmt)
 	for i, name := range n.Names {

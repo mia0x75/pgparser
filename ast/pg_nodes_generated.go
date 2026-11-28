@@ -92,28 +92,23 @@ func (n *List) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*List)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	for i0 := range n.Items {
-		if n.Items[i0] != nil {
-			if !nodePresent(n.Items[i0]) {
-				return n, false
-			}
-			updated, ok := n.Items[i0].Accept(v)
-			if !ok || !nodePresent(updated) {
-				return n, false
-			}
-			n.Items[i0] = updated
+		if !nodePresent(n.Items[i0]) {
+			return n, false
 		}
+		updated, ok := n.Items[i0].Accept(v)
+		if !ok || !nodePresent(updated) {
+			return n, false
+		}
+		n.Items[i0] = updated
 	}
 	return v.Leave(n)
 }
@@ -130,17 +125,14 @@ func (n *String) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*String)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -156,17 +148,14 @@ func (n *Integer) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*Integer)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -182,17 +171,14 @@ func (n *Float) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*Float)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -208,17 +194,14 @@ func (n *Boolean) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*Boolean)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -234,17 +217,14 @@ func (n *BitString) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*BitString)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -271,27 +251,24 @@ func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -301,11 +278,11 @@ func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.TableElts.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.TableElts = replacement
@@ -315,11 +292,11 @@ func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.InhRelations.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.InhRelations = replacement
@@ -339,41 +316,39 @@ func (n *CreateStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Partspec.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*PartitionSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Partspec = replacement
 	}
 	for i0 := range n.Constraints {
-		if n.Constraints[i0] != nil {
-			if !nodePresent(n.Constraints[i0]) {
-				return n, false
-			}
-			updated, ok := n.Constraints[i0].Accept(v)
-			if !ok {
-				return n, false
-			}
-			replacement, ok := updated.(*ColumnOption)
-			if !ok || !nodePresent(replacement) {
-				return n, false
-			}
-			n.Constraints[i0] = replacement
+		if !nodePresent(n.Constraints[i0]) {
+			return n, false
 		}
+		updated, ok := n.Constraints[i0].Accept(v)
+		if !ok || !nodePresent(updated) {
+			return n, false
+		}
+		replacement, ok := updated.(*ColumnOption)
+		if !ok {
+			return n, false
+		}
+		n.Constraints[i0] = replacement
 	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -398,27 +373,24 @@ func (n *ViewStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*ViewStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.View != nil {
 		if !nodePresent(n.View) {
 			return n, false
 		}
 		updated, ok := n.View.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.View = replacement
@@ -428,11 +400,11 @@ func (n *ViewStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Aliases.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Aliases = replacement
@@ -452,11 +424,11 @@ func (n *ViewStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -499,27 +471,24 @@ func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*IndexStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -529,11 +498,11 @@ func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.IndexParams.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.IndexParams = replacement
@@ -543,11 +512,11 @@ func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.IndexIncludingParams.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.IndexIncludingParams = replacement
@@ -557,11 +526,11 @@ func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -581,11 +550,11 @@ func (n *IndexStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ExcludeOpNames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ExcludeOpNames = replacement
@@ -609,32 +578,27 @@ func (n *DropStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DropStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	for i0 := range n.Objects {
-		if n.Objects[i0] != nil {
-			if !nodePresent(n.Objects[i0]) {
-				return n, false
-			}
-			updated, ok := n.Objects[i0].Accept(v)
-			if !ok {
-				return n, false
-			}
-			replacement, ok := updated.(*TableName)
-			if !ok || !nodePresent(replacement) {
-				return n, false
-			}
-			n.Objects[i0] = replacement
+		if !nodePresent(n.Objects[i0]) {
+			return n, false
 		}
+		updated, ok := n.Objects[i0].Accept(v)
+		if !ok || !nodePresent(updated) {
+			return n, false
+		}
+		replacement, ok := updated.(*TableName)
+		if !ok {
+			return n, false
+		}
+		n.Objects[i0] = replacement
 	}
 	return v.Leave(n)
 }
@@ -657,27 +621,24 @@ func (n *AlterTableCmd) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterTableCmd)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Newowner != nil {
 		if !nodePresent(n.Newowner) {
 			return n, false
 		}
 		updated, ok := n.Newowner.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RoleSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Newowner = replacement
@@ -711,27 +672,24 @@ func (n *AlterTableMoveAllStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterTableMoveAllStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Roles != nil {
 		if !nodePresent(n.Roles) {
 			return n, false
 		}
 		updated, ok := n.Roles.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Roles = replacement
@@ -757,27 +715,24 @@ func (n *RangeVar) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RangeVar)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Alias != nil {
 		if !nodePresent(n.Alias) {
 			return n, false
 		}
 		updated, ok := n.Alias.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*Alias)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Alias = replacement
@@ -798,27 +753,24 @@ func (n *Alias) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*Alias)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Colnames != nil {
 		if !nodePresent(n.Colnames) {
 			return n, false
 		}
 		updated, ok := n.Colnames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Colnames = replacement
@@ -845,27 +797,24 @@ func (n *IntoClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*IntoClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Rel != nil {
 		if !nodePresent(n.Rel) {
 			return n, false
 		}
 		updated, ok := n.Rel.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Rel = replacement
@@ -875,11 +824,11 @@ func (n *IntoClause) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ColNames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ColNames = replacement
@@ -889,11 +838,11 @@ func (n *IntoClause) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -924,27 +873,24 @@ func (n *ColumnRef) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*ColumnRef)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Fields != nil {
 		if !nodePresent(n.Fields) {
 			return n, false
 		}
 		updated, ok := n.Fields.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Fields = replacement
@@ -967,27 +913,24 @@ func (n *ResTarget) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*ResTarget)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Indirection != nil {
 		if !nodePresent(n.Indirection) {
 			return n, false
 		}
 		updated, ok := n.Indirection.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Indirection = replacement
@@ -1019,17 +962,14 @@ func (n *MultiAssignRef) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*MultiAssignRef)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Source != nil {
 		if !nodePresent(n.Source) {
 			return n, false
@@ -1059,27 +999,24 @@ func (n *A_Expr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*A_Expr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Name != nil {
 		if !nodePresent(n.Name) {
 			return n, false
 		}
 		updated, ok := n.Name.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Name = replacement
@@ -1121,17 +1058,14 @@ func (n *A_Const) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*A_Const)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Val != nil {
 		if !nodePresent(n.Val) {
 			return n, false
@@ -1159,17 +1093,14 @@ func (n *TypeCast) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*TypeCast)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Arg != nil {
 		if !nodePresent(n.Arg) {
 			return n, false
@@ -1205,27 +1136,24 @@ func (n *FuncCall) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*FuncCall)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Funcname != nil {
 		if !nodePresent(n.Funcname) {
 			return n, false
 		}
 		updated, ok := n.Funcname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Funcname = replacement
@@ -1235,11 +1163,11 @@ func (n *FuncCall) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -1249,11 +1177,11 @@ func (n *FuncCall) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.AggOrder.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.AggOrder = replacement
@@ -1296,17 +1224,14 @@ func (n *NamedArgExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*NamedArgExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Arg != nil {
 		if !nodePresent(n.Arg) {
 			return n, false
@@ -1339,27 +1264,24 @@ func (n *TypeName) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*TypeName)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Names != nil {
 		if !nodePresent(n.Names) {
 			return n, false
 		}
 		updated, ok := n.Names.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Names = replacement
@@ -1369,11 +1291,11 @@ func (n *TypeName) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Typmods.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Typmods = replacement
@@ -1383,11 +1305,11 @@ func (n *TypeName) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ArrayBounds.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ArrayBounds = replacement
@@ -1411,17 +1333,14 @@ func (n *SortBy) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*SortBy)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Node != nil {
 		if !nodePresent(n.Node) {
 			return n, false
@@ -1437,11 +1356,11 @@ func (n *SortBy) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.UseOp.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.UseOp = replacement
@@ -1473,27 +1392,24 @@ func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CommonTableExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Aliascolnames != nil {
 		if !nodePresent(n.Aliascolnames) {
 			return n, false
 		}
 		updated, ok := n.Aliascolnames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Aliascolnames = replacement
@@ -1533,11 +1449,11 @@ func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Ctecolnames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Ctecolnames = replacement
@@ -1547,11 +1463,11 @@ func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Ctecoltypes.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Ctecoltypes = replacement
@@ -1561,11 +1477,11 @@ func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Ctecoltypmods.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Ctecoltypmods = replacement
@@ -1575,11 +1491,11 @@ func (n *CommonTableExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Ctecolcollations.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Ctecolcollations = replacement
@@ -1602,27 +1518,24 @@ func (n *CTESearchClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CTESearchClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.SearchColList != nil {
 		if !nodePresent(n.SearchColList) {
 			return n, false
 		}
 		updated, ok := n.SearchColList.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.SearchColList = replacement
@@ -1651,27 +1564,24 @@ func (n *CTECycleClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CTECycleClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.CycleColList != nil {
 		if !nodePresent(n.CycleColList) {
 			return n, false
 		}
 		updated, ok := n.CycleColList.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.CycleColList = replacement
@@ -1713,17 +1623,14 @@ func (n *RoleSpec) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RoleSpec)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -1741,17 +1648,14 @@ func (n *CollateClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CollateClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Arg != nil {
 		if !nodePresent(n.Arg) {
 			return n, false
@@ -1767,11 +1671,11 @@ func (n *CollateClause) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Collname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Collname = replacement
@@ -1793,27 +1697,24 @@ func (n *PartitionSpec) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*PartitionSpec)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.PartParams != nil {
 		if !nodePresent(n.PartParams) {
 			return n, false
 		}
 		updated, ok := n.PartParams.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.PartParams = replacement
@@ -1837,17 +1738,14 @@ func (n *PartitionElem) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*PartitionElem)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -1863,11 +1761,11 @@ func (n *PartitionElem) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Collation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Collation = replacement
@@ -1877,11 +1775,11 @@ func (n *PartitionElem) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Opclass.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opclass = replacement
@@ -1903,27 +1801,24 @@ func (n *PartitionCmd) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*PartitionCmd)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Name != nil {
 		if !nodePresent(n.Name) {
 			return n, false
 		}
 		updated, ok := n.Name.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Name = replacement
@@ -1933,11 +1828,11 @@ func (n *PartitionCmd) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Bound.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*PartitionBoundSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Bound = replacement
@@ -1960,27 +1855,24 @@ func (n *InferClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*InferClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.IndexElems != nil {
 		if !nodePresent(n.IndexElems) {
 			return n, false
 		}
 		updated, ok := n.IndexElems.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.IndexElems = replacement
@@ -2014,17 +1906,14 @@ func (n *DefElem) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DefElem)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Arg != nil {
 		if !nodePresent(n.Arg) {
 			return n, false
@@ -2052,27 +1941,24 @@ func (n *LockingClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*LockingClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.LockedRels != nil {
 		if !nodePresent(n.LockedRels) {
 			return n, false
 		}
 		updated, ok := n.LockedRels.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.LockedRels = replacement
@@ -2091,17 +1977,14 @@ func (n *A_Star) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*A_Star)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -2119,17 +2002,14 @@ func (n *A_Indices) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*A_Indices)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Lidx != nil {
 		if !nodePresent(n.Lidx) {
 			return n, false
@@ -2166,17 +2046,14 @@ func (n *A_Indirection) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*A_Indirection)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Arg != nil {
 		if !nodePresent(n.Arg) {
 			return n, false
@@ -2192,11 +2069,11 @@ func (n *A_Indirection) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Indirection.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Indirection = replacement
@@ -2223,27 +2100,24 @@ func (n *WindowDef) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*WindowDef)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.PartitionClause != nil {
 		if !nodePresent(n.PartitionClause) {
 			return n, false
 		}
 		updated, ok := n.PartitionClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.PartitionClause = replacement
@@ -2253,11 +2127,11 @@ func (n *WindowDef) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OrderClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OrderClause = replacement
@@ -2305,17 +2179,14 @@ func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JoinExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Larg != nil {
 		if !nodePresent(n.Larg) {
 			return n, false
@@ -2341,11 +2212,11 @@ func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.UsingClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.UsingClause = replacement
@@ -2355,11 +2226,11 @@ func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.JoinUsing.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*Alias)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.JoinUsing = replacement
@@ -2379,11 +2250,11 @@ func (n *JoinExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Alias.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*Alias)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Alias = replacement
@@ -2404,27 +2275,24 @@ func (n *FromExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*FromExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Fromlist != nil {
 		if !nodePresent(n.Fromlist) {
 			return n, false
 		}
 		updated, ok := n.Fromlist.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Fromlist = replacement
@@ -2461,17 +2329,14 @@ func (n *IndexElem) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*IndexElem)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -2487,11 +2352,11 @@ func (n *IndexElem) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Collation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Collation = replacement
@@ -2501,11 +2366,11 @@ func (n *IndexElem) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Opclass.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opclass = replacement
@@ -2515,11 +2380,11 @@ func (n *IndexElem) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Opclassopts.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opclassopts = replacement
@@ -2540,17 +2405,14 @@ func (n *ParamRef) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*ParamRef)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -2568,17 +2430,14 @@ func (n *CurrentOfExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CurrentOfExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -2599,17 +2458,14 @@ func (n *SubLink) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*SubLink)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Testexpr != nil {
 		if !nodePresent(n.Testexpr) {
 			return n, false
@@ -2625,11 +2481,11 @@ func (n *SubLink) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OperName.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OperName = replacement
@@ -2661,27 +2517,24 @@ func (n *BoolExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*BoolExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Args != nil {
 		if !nodePresent(n.Args) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -2706,17 +2559,14 @@ func (n *NullTest) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*NullTest)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Arg != nil {
 		if !nodePresent(n.Arg) {
 			return n, false
@@ -2746,17 +2596,14 @@ func (n *BooleanTest) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*BooleanTest)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Arg != nil {
 		if !nodePresent(n.Arg) {
 			return n, false
@@ -2784,17 +2631,14 @@ func (n *RangeSubselect) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RangeSubselect)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Subquery != nil {
 		if !nodePresent(n.Subquery) {
 			return n, false
@@ -2810,11 +2654,11 @@ func (n *RangeSubselect) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Alias.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*Alias)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Alias = replacement
@@ -2839,27 +2683,24 @@ func (n *RangeFunction) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RangeFunction)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Functions != nil {
 		if !nodePresent(n.Functions) {
 			return n, false
 		}
 		updated, ok := n.Functions.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Functions = replacement
@@ -2869,11 +2710,11 @@ func (n *RangeFunction) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Alias.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*Alias)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Alias = replacement
@@ -2883,11 +2724,11 @@ func (n *RangeFunction) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Coldeflist.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Coldeflist = replacement
@@ -2911,17 +2752,14 @@ func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RangeTableSample)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
@@ -2937,11 +2775,11 @@ func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Method.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Method = replacement
@@ -2951,11 +2789,11 @@ func (n *RangeTableSample) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -2989,27 +2827,24 @@ func (n *TableLikeClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*TableLikeClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -3019,11 +2854,11 @@ func (n *TableLikeClause) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Columns.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Columns = replacement
@@ -3033,11 +2868,11 @@ func (n *TableLikeClause) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.AncillaryData.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.AncillaryData = replacement
@@ -3059,17 +2894,14 @@ func (n *CaseWhen) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CaseWhen)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -3108,27 +2940,24 @@ func (n *CoalesceExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CoalesceExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Args != nil {
 		if !nodePresent(n.Args) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -3152,27 +2981,24 @@ func (n *MinMaxExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*MinMaxExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Args != nil {
 		if !nodePresent(n.Args) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -3201,27 +3027,24 @@ func (n *NullIfExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*NullIfExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Args != nil {
 		if !nodePresent(n.Args) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -3242,27 +3065,24 @@ func (n *A_ArrayExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*A_ArrayExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Elements != nil {
 		if !nodePresent(n.Elements) {
 			return n, false
 		}
 		updated, ok := n.Elements.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Elements = replacement
@@ -3285,27 +3105,24 @@ func (n *GroupingFunc) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*GroupingFunc)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Args != nil {
 		if !nodePresent(n.Args) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -3315,11 +3132,11 @@ func (n *GroupingFunc) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Refs.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Refs = replacement
@@ -3355,27 +3172,24 @@ func (n *WindowClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*WindowClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.PartitionClause != nil {
 		if !nodePresent(n.PartitionClause) {
 			return n, false
 		}
 		updated, ok := n.PartitionClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.PartitionClause = replacement
@@ -3385,11 +3199,11 @@ func (n *WindowClause) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OrderClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OrderClause = replacement
@@ -3419,11 +3233,11 @@ func (n *WindowClause) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.RunCondition.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.RunCondition = replacement
@@ -3447,27 +3261,24 @@ func (n *TruncateStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*TruncateStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relations != nil {
 		if !nodePresent(n.Relations) {
 			return n, false
 		}
 		updated, ok := n.Relations.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relations = replacement
@@ -3491,27 +3302,24 @@ func (n *CreateSeqStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateSeqStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Sequence != nil {
 		if !nodePresent(n.Sequence) {
 			return n, false
 		}
 		updated, ok := n.Sequence.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Sequence = replacement
@@ -3521,11 +3329,11 @@ func (n *CreateSeqStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -3548,27 +3356,24 @@ func (n *AlterSeqStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterSeqStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Sequence != nil {
 		if !nodePresent(n.Sequence) {
 			return n, false
 		}
 		updated, ok := n.Sequence.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Sequence = replacement
@@ -3578,11 +3383,11 @@ func (n *AlterSeqStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -3605,17 +3410,14 @@ func (n *FunctionParameter) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*FunctionParameter)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Defexpr != nil {
 		if !nodePresent(n.Defexpr) {
 			return n, false
@@ -3644,27 +3446,24 @@ func (n *CreateEnumStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateEnumStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.TypeName != nil {
 		if !nodePresent(n.TypeName) {
 			return n, false
 		}
 		updated, ok := n.TypeName.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.TypeName = replacement
@@ -3674,11 +3473,11 @@ func (n *CreateEnumStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Vals.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Vals = replacement
@@ -3703,27 +3502,24 @@ func (n *AlterEnumStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterEnumStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Typname != nil {
 		if !nodePresent(n.Typname) {
 			return n, false
 		}
 		updated, ok := n.Typname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Typname = replacement
@@ -3746,27 +3542,24 @@ func (n *CreateDomainStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateDomainStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Domainname != nil {
 		if !nodePresent(n.Domainname) {
 			return n, false
 		}
 		updated, ok := n.Domainname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Domainname = replacement
@@ -3776,30 +3569,28 @@ func (n *CreateDomainStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.CollClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*CollateClause)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.CollClause = replacement
 	}
 	for i0 := range n.Constraints {
-		if n.Constraints[i0] != nil {
-			if !nodePresent(n.Constraints[i0]) {
-				return n, false
-			}
-			updated, ok := n.Constraints[i0].Accept(v)
-			if !ok {
-				return n, false
-			}
-			replacement, ok := updated.(*ColumnOption)
-			if !ok || !nodePresent(replacement) {
-				return n, false
-			}
-			n.Constraints[i0] = replacement
+		if !nodePresent(n.Constraints[i0]) {
+			return n, false
 		}
+		updated, ok := n.Constraints[i0].Accept(v)
+		if !ok || !nodePresent(updated) {
+			return n, false
+		}
+		replacement, ok := updated.(*ColumnOption)
+		if !ok {
+			return n, false
+		}
+		n.Constraints[i0] = replacement
 	}
 	return v.Leave(n)
 }
@@ -3821,27 +3612,24 @@ func (n *AlterDomainStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterDomainStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Typname != nil {
 		if !nodePresent(n.Typname) {
 			return n, false
 		}
 		updated, ok := n.Typname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Typname = replacement
@@ -3885,27 +3673,24 @@ func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateTrigStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -3915,11 +3700,11 @@ func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Funcname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Funcname = replacement
@@ -3929,11 +3714,11 @@ func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -3943,11 +3728,11 @@ func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Columns.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Columns = replacement
@@ -3967,11 +3752,11 @@ func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.TransitionRels.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.TransitionRels = replacement
@@ -3981,11 +3766,11 @@ func (n *CreateTrigStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Constrrel.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RangeVar)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Constrrel = replacement
@@ -4008,27 +3793,24 @@ func (n *AccessPriv) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AccessPriv)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Cols != nil {
 		if !nodePresent(n.Cols) {
 			return n, false
 		}
 		updated, ok := n.Cols.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Cols = replacement
@@ -4052,17 +3834,14 @@ func (n *CreateTableAsStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateTableAsStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Query != nil {
 		if !nodePresent(n.Query) {
 			return n, false
@@ -4078,11 +3857,11 @@ func (n *CreateTableAsStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Into.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*IntoClause)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Into = replacement
@@ -4104,27 +3883,24 @@ func (n *VacuumRelation) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*VacuumRelation)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -4134,11 +3910,11 @@ func (n *VacuumRelation) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.VaCols.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.VaCols = replacement
@@ -4163,27 +3939,24 @@ func (n *TransactionStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*TransactionStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -4207,27 +3980,24 @@ func (n *LockStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*LockStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relations != nil {
 		if !nodePresent(n.Relations) {
 			return n, false
 		}
 		updated, ok := n.Relations.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relations = replacement
@@ -4254,17 +4024,14 @@ func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*SetOperationStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Larg != nil {
 		if !nodePresent(n.Larg) {
 			return n, false
@@ -4290,11 +4057,11 @@ func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ColTypes.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ColTypes = replacement
@@ -4304,11 +4071,11 @@ func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ColTypmods.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ColTypmods = replacement
@@ -4318,11 +4085,11 @@ func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ColCollations.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ColCollations = replacement
@@ -4332,11 +4099,11 @@ func (n *SetOperationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.GroupClauses.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.GroupClauses = replacement
@@ -4360,17 +4127,14 @@ func (n *SortGroupClause) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*SortGroupClause)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -4393,27 +4157,24 @@ func (n *RenameStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RenameStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -4447,27 +4208,24 @@ func (n *AlterObjectSchemaStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterObjectSchemaStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -4500,27 +4258,24 @@ func (n *AlterOwnerStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterOwnerStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -4540,11 +4295,11 @@ func (n *AlterOwnerStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Newowner.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RoleSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Newowner = replacement
@@ -4565,17 +4320,14 @@ func (n *CheckPointStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CheckPointStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -4591,17 +4343,14 @@ func (n *ClosePortalStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*ClosePortalStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -4618,32 +4367,27 @@ func (n *ConstraintsSetStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*ConstraintsSetStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	for i0 := range n.Constraints {
-		if n.Constraints[i0] != nil {
-			if !nodePresent(n.Constraints[i0]) {
-				return n, false
-			}
-			updated, ok := n.Constraints[i0].Accept(v)
-			if !ok {
-				return n, false
-			}
-			replacement, ok := updated.(*ColumnOption)
-			if !ok || !nodePresent(replacement) {
-				return n, false
-			}
-			n.Constraints[i0] = replacement
+		if !nodePresent(n.Constraints[i0]) {
+			return n, false
 		}
+		updated, ok := n.Constraints[i0].Accept(v)
+		if !ok || !nodePresent(updated) {
+			return n, false
+		}
+		replacement, ok := updated.(*ColumnOption)
+		if !ok {
+			return n, false
+		}
+		n.Constraints[i0] = replacement
 	}
 	return v.Leave(n)
 }
@@ -4663,27 +4407,24 @@ func (n *VariableSetStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*VariableSetStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Args != nil {
 		if !nodePresent(n.Args) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -4703,17 +4444,14 @@ func (n *VariableShowStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*VariableShowStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -4735,17 +4473,14 @@ func (n *SecLabelStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*SecLabelStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Object != nil {
 		if !nodePresent(n.Object) {
 			return n, false
@@ -4773,27 +4508,24 @@ func (n *CreateRoleStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateRoleStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -4815,27 +4547,24 @@ func (n *AlterRoleStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterRoleStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Role != nil {
 		if !nodePresent(n.Role) {
 			return n, false
 		}
 		updated, ok := n.Role.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RoleSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Role = replacement
@@ -4845,11 +4574,11 @@ func (n *AlterRoleStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -4871,27 +4600,24 @@ func (n *AlterRoleSetStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterRoleSetStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Role != nil {
 		if !nodePresent(n.Role) {
 			return n, false
 		}
 		updated, ok := n.Role.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RoleSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Role = replacement
@@ -4922,27 +4648,24 @@ func (n *DropRoleStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DropRoleStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Roles != nil {
 		if !nodePresent(n.Roles) {
 			return n, false
 		}
 		updated, ok := n.Roles.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Roles = replacement
@@ -4963,27 +4686,24 @@ func (n *CreatedbStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreatedbStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5004,17 +4724,14 @@ func (n *AlterDatabaseSetStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterDatabaseSetStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Setstmt != nil {
 		if !nodePresent(n.Setstmt) {
 			return n, false
@@ -5042,27 +4759,24 @@ func (n *DropdbStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DropdbStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5082,17 +4796,14 @@ func (n *AlterSystemStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterSystemStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Setstmt != nil {
 		if !nodePresent(n.Setstmt) {
 			return n, false
@@ -5118,27 +4829,24 @@ func (n *AlterCollationStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterCollationStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Collname != nil {
 		if !nodePresent(n.Collname) {
 			return n, false
 		}
 		updated, ok := n.Collname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Collname = replacement
@@ -5164,27 +4872,24 @@ func (n *DefineStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DefineStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Defnames != nil {
 		if !nodePresent(n.Defnames) {
 			return n, false
 		}
 		updated, ok := n.Defnames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Defnames = replacement
@@ -5194,11 +4899,11 @@ func (n *DefineStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -5208,11 +4913,11 @@ func (n *DefineStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Definition.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Definition = replacement
@@ -5233,27 +4938,24 @@ func (n *CompositeTypeStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CompositeTypeStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Typevar != nil {
 		if !nodePresent(n.Typevar) {
 			return n, false
 		}
 		updated, ok := n.Typevar.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RangeVar)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Typevar = replacement
@@ -5263,11 +4965,11 @@ func (n *CompositeTypeStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Coldeflist.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Coldeflist = replacement
@@ -5288,27 +4990,24 @@ func (n *CreateRangeStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateRangeStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.TypeName != nil {
 		if !nodePresent(n.TypeName) {
 			return n, false
 		}
 		updated, ok := n.TypeName.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.TypeName = replacement
@@ -5318,11 +5017,11 @@ func (n *CreateRangeStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Params.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Params = replacement
@@ -5344,27 +5043,24 @@ func (n *ObjectWithArgs) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*ObjectWithArgs)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Objname != nil {
 		if !nodePresent(n.Objname) {
 			return n, false
 		}
 		updated, ok := n.Objname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Objname = replacement
@@ -5374,11 +5070,11 @@ func (n *ObjectWithArgs) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Objargs.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Objargs = replacement
@@ -5401,27 +5097,24 @@ func (n *CreateEventTrigStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateEventTrigStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Whenclause != nil {
 		if !nodePresent(n.Whenclause) {
 			return n, false
 		}
 		updated, ok := n.Whenclause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Whenclause = replacement
@@ -5431,11 +5124,11 @@ func (n *CreateEventTrigStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Funcname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Funcname = replacement
@@ -5456,17 +5149,14 @@ func (n *AlterEventTrigStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterEventTrigStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -5488,27 +5178,24 @@ func (n *RuleStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RuleStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -5528,11 +5215,11 @@ func (n *RuleStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Actions.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Actions = replacement
@@ -5557,27 +5244,24 @@ func (n *CreatePLangStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreatePLangStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Plhandler != nil {
 		if !nodePresent(n.Plhandler) {
 			return n, false
 		}
 		updated, ok := n.Plhandler.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Plhandler = replacement
@@ -5587,11 +5271,11 @@ func (n *CreatePLangStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Plinline.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Plinline = replacement
@@ -5601,11 +5285,11 @@ func (n *CreatePLangStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Plvalidator.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Plvalidator = replacement
@@ -5627,17 +5311,14 @@ func (n *TriggerTransition) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*TriggerTransition)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -5655,27 +5336,24 @@ func (n *CreateFdwStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateFdwStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.FuncOptions != nil {
 		if !nodePresent(n.FuncOptions) {
 			return n, false
 		}
 		updated, ok := n.FuncOptions.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FuncOptions = replacement
@@ -5685,11 +5363,11 @@ func (n *CreateFdwStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5711,27 +5389,24 @@ func (n *AlterFdwStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterFdwStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.FuncOptions != nil {
 		if !nodePresent(n.FuncOptions) {
 			return n, false
 		}
 		updated, ok := n.FuncOptions.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FuncOptions = replacement
@@ -5741,11 +5416,11 @@ func (n *AlterFdwStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5770,27 +5445,24 @@ func (n *CreateForeignServerStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateForeignServerStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5813,27 +5485,24 @@ func (n *AlterForeignServerStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterForeignServerStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5855,27 +5524,33 @@ func (n *CreateForeignTableStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateForeignTableStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
+	updated, ok := (&n.Base).Accept(v)
+	if !ok || !nodePresent(updated) {
+		return n, false
+	}
+	replacement, ok := updated.(*CreateStmt)
+	if !ok || replacement == nil {
+		return n, false
+	}
+	n.Base = *replacement
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5898,27 +5573,24 @@ func (n *CreateUserMappingStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateUserMappingStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.User != nil {
 		if !nodePresent(n.User) {
 			return n, false
 		}
 		updated, ok := n.User.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RoleSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.User = replacement
@@ -5928,11 +5600,11 @@ func (n *CreateUserMappingStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -5954,27 +5626,24 @@ func (n *AlterUserMappingStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterUserMappingStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.User != nil {
 		if !nodePresent(n.User) {
 			return n, false
 		}
 		updated, ok := n.User.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RoleSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.User = replacement
@@ -5984,11 +5653,11 @@ func (n *AlterUserMappingStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6010,27 +5679,24 @@ func (n *DropUserMappingStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DropUserMappingStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.User != nil {
 		if !nodePresent(n.User) {
 			return n, false
 		}
 		updated, ok := n.User.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RoleSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.User = replacement
@@ -6052,27 +5718,24 @@ func (n *CreateExtensionStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateExtensionStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6093,27 +5756,24 @@ func (n *AlterExtensionStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterExtensionStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6141,17 +5801,14 @@ func (n *AlterExtensionContentsStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterExtensionContentsStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Object != nil {
 		if !nodePresent(n.Object) {
 			return n, false
@@ -6178,17 +5835,14 @@ func (n *DropTableSpaceStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DropTableSpaceStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -6206,27 +5860,24 @@ func (n *CreateAmStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateAmStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.HandlerName != nil {
 		if !nodePresent(n.HandlerName) {
 			return n, false
 		}
 		updated, ok := n.HandlerName.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.HandlerName = replacement
@@ -6252,27 +5903,24 @@ func (n *CreatePolicyStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreatePolicyStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Table != nil {
 		if !nodePresent(n.Table) {
 			return n, false
 		}
 		updated, ok := n.Table.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RangeVar)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Table = replacement
@@ -6282,11 +5930,11 @@ func (n *CreatePolicyStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Roles.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Roles = replacement
@@ -6330,27 +5978,24 @@ func (n *AlterPolicyStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterPolicyStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Table != nil {
 		if !nodePresent(n.Table) {
 			return n, false
 		}
 		updated, ok := n.Table.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*RangeVar)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Table = replacement
@@ -6360,11 +6005,11 @@ func (n *AlterPolicyStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Roles.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Roles = replacement
@@ -6407,27 +6052,24 @@ func (n *CreatePublicationStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreatePublicationStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6437,11 +6079,11 @@ func (n *CreatePublicationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Pubobjects.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Pubobjects = replacement
@@ -6465,27 +6107,24 @@ func (n *AlterPublicationStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterPublicationStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6495,11 +6134,11 @@ func (n *AlterPublicationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Pubobjects.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Pubobjects = replacement
@@ -6522,27 +6161,24 @@ func (n *PublicationObjSpec) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*PublicationObjSpec)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Pubtable != nil {
 		if !nodePresent(n.Pubtable) {
 			return n, false
 		}
 		updated, ok := n.Pubtable.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*PublicationTable)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Pubtable = replacement
@@ -6564,27 +6200,24 @@ func (n *PublicationTable) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*PublicationTable)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -6604,11 +6237,11 @@ func (n *PublicationTable) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Columns.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Columns = replacement
@@ -6631,27 +6264,24 @@ func (n *CreateSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateSubscriptionStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Publication != nil {
 		if !nodePresent(n.Publication) {
 			return n, false
 		}
 		updated, ok := n.Publication.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Publication = replacement
@@ -6661,11 +6291,11 @@ func (n *CreateSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6689,27 +6319,24 @@ func (n *AlterSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterSubscriptionStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Publication != nil {
 		if !nodePresent(n.Publication) {
 			return n, false
 		}
 		updated, ok := n.Publication.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Publication = replacement
@@ -6719,11 +6346,11 @@ func (n *AlterSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6745,17 +6372,14 @@ func (n *DropSubscriptionStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*DropSubscriptionStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -6775,27 +6399,24 @@ func (n *AlterObjectDependsStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterObjectDependsStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Relation != nil {
 		if !nodePresent(n.Relation) {
 			return n, false
 		}
 		updated, ok := n.Relation.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relation = replacement
@@ -6836,27 +6457,24 @@ func (n *AlterOperatorStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterOperatorStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Opername != nil {
 		if !nodePresent(n.Opername) {
 			return n, false
 		}
 		updated, ok := n.Opername.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*ObjectWithArgs)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opername = replacement
@@ -6866,11 +6484,11 @@ func (n *AlterOperatorStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6891,27 +6509,24 @@ func (n *AlterTypeStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterTypeStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.TypeName != nil {
 		if !nodePresent(n.TypeName) {
 			return n, false
 		}
 		updated, ok := n.TypeName.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*TableName)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.TypeName = replacement
@@ -6921,11 +6536,11 @@ func (n *AlterTypeStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6948,27 +6563,24 @@ func (n *AlterDefaultPrivilegesStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterDefaultPrivilegesStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Options != nil {
 		if !nodePresent(n.Options) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -6978,11 +6590,11 @@ func (n *AlterDefaultPrivilegesStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Action.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*GrantStmt)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Action = replacement
@@ -7003,27 +6615,24 @@ func (n *AlterTSDictionaryStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterTSDictionaryStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Dictname != nil {
 		if !nodePresent(n.Dictname) {
 			return n, false
 		}
 		updated, ok := n.Dictname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Dictname = replacement
@@ -7033,11 +6642,11 @@ func (n *AlterTSDictionaryStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Options.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Options = replacement
@@ -7065,27 +6674,24 @@ func (n *AlterTSConfigurationStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterTSConfigurationStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Cfgname != nil {
 		if !nodePresent(n.Cfgname) {
 			return n, false
 		}
 		updated, ok := n.Cfgname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Cfgname = replacement
@@ -7095,11 +6701,11 @@ func (n *AlterTSConfigurationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Tokentype.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Tokentype = replacement
@@ -7109,11 +6715,11 @@ func (n *AlterTSConfigurationStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Dicts.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Dicts = replacement
@@ -7138,27 +6744,24 @@ func (n *CreateStatsStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateStatsStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Defnames != nil {
 		if !nodePresent(n.Defnames) {
 			return n, false
 		}
 		updated, ok := n.Defnames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Defnames = replacement
@@ -7168,11 +6771,11 @@ func (n *CreateStatsStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.StatTypes.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.StatTypes = replacement
@@ -7182,11 +6785,11 @@ func (n *CreateStatsStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Exprs.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Exprs = replacement
@@ -7196,11 +6799,11 @@ func (n *CreateStatsStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Relations.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Relations = replacement
@@ -7221,17 +6824,14 @@ func (n *StatsElem) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*StatsElem)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -7259,27 +6859,24 @@ func (n *AlterStatsStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterStatsStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Defnames != nil {
 		if !nodePresent(n.Defnames) {
 			return n, false
 		}
 		updated, ok := n.Defnames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Defnames = replacement
@@ -7304,27 +6901,24 @@ func (n *CreateOpClassStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateOpClassStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Opclassname != nil {
 		if !nodePresent(n.Opclassname) {
 			return n, false
 		}
 		updated, ok := n.Opclassname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opclassname = replacement
@@ -7334,11 +6928,11 @@ func (n *CreateOpClassStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Opfamilyname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opfamilyname = replacement
@@ -7348,11 +6942,11 @@ func (n *CreateOpClassStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Items.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Items = replacement
@@ -7377,27 +6971,24 @@ func (n *CreateOpClassItem) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateOpClassItem)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Name != nil {
 		if !nodePresent(n.Name) {
 			return n, false
 		}
 		updated, ok := n.Name.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*ObjectWithArgs)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Name = replacement
@@ -7407,11 +6998,11 @@ func (n *CreateOpClassItem) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OrderFamily.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OrderFamily = replacement
@@ -7421,11 +7012,11 @@ func (n *CreateOpClassItem) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ClassArgs.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ClassArgs = replacement
@@ -7446,27 +7037,24 @@ func (n *CreateOpFamilyStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateOpFamilyStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Opfamilyname != nil {
 		if !nodePresent(n.Opfamilyname) {
 			return n, false
 		}
 		updated, ok := n.Opfamilyname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opfamilyname = replacement
@@ -7489,27 +7077,24 @@ func (n *AlterOpFamilyStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*AlterOpFamilyStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Opfamilyname != nil {
 		if !nodePresent(n.Opfamilyname) {
 			return n, false
 		}
 		updated, ok := n.Opfamilyname.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Opfamilyname = replacement
@@ -7519,11 +7104,11 @@ func (n *AlterOpFamilyStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Items.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Items = replacement
@@ -7547,27 +7132,24 @@ func (n *CreateCastStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateCastStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Func != nil {
 		if !nodePresent(n.Func) {
 			return n, false
 		}
 		updated, ok := n.Func.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*ObjectWithArgs)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Func = replacement
@@ -7591,27 +7173,24 @@ func (n *CreateTransformStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateTransformStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Fromsql != nil {
 		if !nodePresent(n.Fromsql) {
 			return n, false
 		}
 		updated, ok := n.Fromsql.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*ObjectWithArgs)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Fromsql = replacement
@@ -7621,11 +7200,11 @@ func (n *CreateTransformStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Tosql.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*ObjectWithArgs)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Tosql = replacement
@@ -7649,27 +7228,24 @@ func (n *CreateConversionStmt) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*CreateConversionStmt)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.ConversionName != nil {
 		if !nodePresent(n.ConversionName) {
 			return n, false
 		}
 		updated, ok := n.ConversionName.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ConversionName = replacement
@@ -7679,11 +7255,11 @@ func (n *CreateConversionStmt) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.FuncName.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FuncName = replacement
@@ -7705,17 +7281,14 @@ func (n *SQLValueFunction) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*SQLValueFunction)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -7734,17 +7307,14 @@ func (n *SetToDefault) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*SetToDefault)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -7773,27 +7343,24 @@ func (n *XmlExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*XmlExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.NamedArgs != nil {
 		if !nodePresent(n.NamedArgs) {
 			return n, false
 		}
 		updated, ok := n.NamedArgs.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.NamedArgs = replacement
@@ -7803,11 +7370,11 @@ func (n *XmlExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.ArgNames.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ArgNames = replacement
@@ -7817,11 +7384,11 @@ func (n *XmlExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Args.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Args = replacement
@@ -7845,17 +7412,14 @@ func (n *XmlSerialize) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*XmlSerialize)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -7887,17 +7451,14 @@ func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RangeTableFunc)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Docexpr != nil {
 		if !nodePresent(n.Docexpr) {
 			return n, false
@@ -7923,11 +7484,11 @@ func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Namespaces.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Namespaces = replacement
@@ -7937,11 +7498,11 @@ func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Columns.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Columns = replacement
@@ -7951,11 +7512,11 @@ func (n *RangeTableFunc) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Alias.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*Alias)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Alias = replacement
@@ -7981,17 +7542,14 @@ func (n *RangeTableFuncCol) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*RangeTableFuncCol)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Colexpr != nil {
 		if !nodePresent(n.Colexpr) {
 			return n, false
@@ -8033,17 +7591,14 @@ func (n *JsonFormat) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonFormat)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -8061,27 +7616,24 @@ func (n *JsonReturning) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonReturning)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.FormatClause != nil {
 		if !nodePresent(n.FormatClause) {
 			return n, false
 		}
 		updated, ok := n.FormatClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonFormat)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FormatClause = replacement
@@ -8103,17 +7655,14 @@ func (n *JsonValueExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonValueExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.RawExpr != nil {
 		if !nodePresent(n.RawExpr) {
 			return n, false
@@ -8139,11 +7688,11 @@ func (n *JsonValueExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.FormatClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonFormat)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FormatClause = replacement
@@ -8164,27 +7713,24 @@ func (n *JsonOutput) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonOutput)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Returning != nil {
 		if !nodePresent(n.Returning) {
 			return n, false
 		}
 		updated, ok := n.Returning.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonReturning)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Returning = replacement
@@ -8205,27 +7751,24 @@ func (n *JsonArgument) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonArgument)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Val != nil {
 		if !nodePresent(n.Val) {
 			return n, false
 		}
 		updated, ok := n.Val.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonValueExpr)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Val = replacement
@@ -8254,17 +7797,14 @@ func (n *JsonBehavior) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonBehavior)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -8312,27 +7852,24 @@ func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonFuncExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.ContextItem != nil {
 		if !nodePresent(n.ContextItem) {
 			return n, false
 		}
 		updated, ok := n.ContextItem.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonValueExpr)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ContextItem = replacement
@@ -8352,11 +7889,11 @@ func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Passing.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Passing = replacement
@@ -8366,11 +7903,11 @@ func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -8380,11 +7917,11 @@ func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OnEmpty.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonBehavior)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OnEmpty = replacement
@@ -8394,11 +7931,11 @@ func (n *JsonFuncExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OnError.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonBehavior)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OnError = replacement
@@ -8421,17 +7958,14 @@ func (n *JsonTablePathSpec) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonTablePathSpec)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.String != nil {
 		if !nodePresent(n.String) {
 			return n, false
@@ -8469,27 +8003,24 @@ func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonTableColumn)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Pathspec != nil {
 		if !nodePresent(n.Pathspec) {
 			return n, false
 		}
 		updated, ok := n.Pathspec.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonTablePathSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Pathspec = replacement
@@ -8499,11 +8030,11 @@ func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.FormatClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonFormat)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FormatClause = replacement
@@ -8513,11 +8044,11 @@ func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Columns.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Columns = replacement
@@ -8527,11 +8058,11 @@ func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OnEmpty.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonBehavior)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OnEmpty = replacement
@@ -8541,11 +8072,11 @@ func (n *JsonTableColumn) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OnError.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonBehavior)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OnError = replacement
@@ -8572,27 +8103,24 @@ func (n *JsonTable) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonTable)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.ContextItem != nil {
 		if !nodePresent(n.ContextItem) {
 			return n, false
 		}
 		updated, ok := n.ContextItem.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonValueExpr)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.ContextItem = replacement
@@ -8602,11 +8130,11 @@ func (n *JsonTable) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Pathspec.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonTablePathSpec)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Pathspec = replacement
@@ -8616,11 +8144,11 @@ func (n *JsonTable) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Passing.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Passing = replacement
@@ -8630,11 +8158,11 @@ func (n *JsonTable) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Columns.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Columns = replacement
@@ -8644,11 +8172,11 @@ func (n *JsonTable) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.OnError.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonBehavior)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.OnError = replacement
@@ -8658,11 +8186,11 @@ func (n *JsonTable) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Alias.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*Alias)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Alias = replacement
@@ -8683,17 +8211,14 @@ func (n *JsonKeyValue) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonKeyValue)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Key != nil {
 		if !nodePresent(n.Key) {
 			return n, false
@@ -8709,11 +8234,11 @@ func (n *JsonKeyValue) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Value.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonValueExpr)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Value = replacement
@@ -8736,27 +8261,24 @@ func (n *JsonParseExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonParseExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
 		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonValueExpr)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Expr = replacement
@@ -8766,11 +8288,11 @@ func (n *JsonParseExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -8792,17 +8314,14 @@ func (n *JsonScalarExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonScalarExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -8818,11 +8337,11 @@ func (n *JsonScalarExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -8844,27 +8363,24 @@ func (n *JsonSerializeExpr) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonSerializeExpr)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
 		}
 		updated, ok := n.Expr.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonValueExpr)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Expr = replacement
@@ -8874,11 +8390,11 @@ func (n *JsonSerializeExpr) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -8902,27 +8418,24 @@ func (n *JsonObjectConstructor) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonObjectConstructor)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Exprs != nil {
 		if !nodePresent(n.Exprs) {
 			return n, false
 		}
 		updated, ok := n.Exprs.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Exprs = replacement
@@ -8932,11 +8445,11 @@ func (n *JsonObjectConstructor) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -8959,27 +8472,24 @@ func (n *JsonArrayConstructor) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonArrayConstructor)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Exprs != nil {
 		if !nodePresent(n.Exprs) {
 			return n, false
 		}
 		updated, ok := n.Exprs.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Exprs = replacement
@@ -8989,11 +8499,11 @@ func (n *JsonArrayConstructor) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -9019,17 +8529,14 @@ func (n *JsonArrayQueryConstructor) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonArrayQueryConstructor)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Query != nil {
 		if !nodePresent(n.Query) {
 			return n, false
@@ -9045,11 +8552,11 @@ func (n *JsonArrayQueryConstructor) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -9059,11 +8566,11 @@ func (n *JsonArrayQueryConstructor) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.FormatClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonFormat)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FormatClause = replacement
@@ -9087,27 +8594,24 @@ func (n *JsonAggConstructor) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonAggConstructor)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Output != nil {
 		if !nodePresent(n.Output) {
 			return n, false
 		}
 		updated, ok := n.Output.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonOutput)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Output = replacement
@@ -9127,11 +8631,11 @@ func (n *JsonAggConstructor) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Agg_order.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*List)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Agg_order = replacement
@@ -9141,11 +8645,11 @@ func (n *JsonAggConstructor) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Over.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*WindowDef)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Over = replacement
@@ -9168,27 +8672,24 @@ func (n *JsonObjectAgg) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonObjectAgg)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Constructor != nil {
 		if !nodePresent(n.Constructor) {
 			return n, false
 		}
 		updated, ok := n.Constructor.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonAggConstructor)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Constructor = replacement
@@ -9198,11 +8699,11 @@ func (n *JsonObjectAgg) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonKeyValue)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Arg = replacement
@@ -9224,27 +8725,24 @@ func (n *JsonArrayAgg) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonArrayAgg)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Constructor != nil {
 		if !nodePresent(n.Constructor) {
 			return n, false
 		}
 		updated, ok := n.Constructor.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonAggConstructor)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Constructor = replacement
@@ -9254,11 +8752,11 @@ func (n *JsonArrayAgg) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.Arg.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonValueExpr)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.Arg = replacement
@@ -9284,17 +8782,14 @@ func (n *JsonIsPredicate) Accept(v Visitor) (Node, bool) {
 		return nil, false
 	}
 	node, skip := v.Enter(n)
-	if !nodePresent(node) {
-		return n, false
-	}
-	if skip {
-		return v.Leave(node)
-	}
 	outer, ok := node.(*JsonIsPredicate)
 	if !ok || outer == nil {
 		return node, false
 	}
 	n = outer
+	if skip {
+		return v.Leave(n)
+	}
 	if n.Expr != nil {
 		if !nodePresent(n.Expr) {
 			return n, false
@@ -9310,11 +8805,11 @@ func (n *JsonIsPredicate) Accept(v Visitor) (Node, bool) {
 			return n, false
 		}
 		updated, ok := n.FormatClause.Accept(v)
-		if !ok {
+		if !ok || !nodePresent(updated) {
 			return n, false
 		}
 		replacement, ok := updated.(*JsonFormat)
-		if !ok || !nodePresent(replacement) {
+		if !ok {
 			return n, false
 		}
 		n.FormatClause = replacement

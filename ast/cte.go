@@ -36,6 +36,10 @@ func (n *CommonTableExpression) CTECore() *pkast.BaseCommonTableExpression {
 
 // Restore writes the CTE name, its columns, its body and the recursive options.
 func (n *CommonTableExpression) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -151,6 +155,10 @@ func (n *WithClause) WithClauseCore() *pkast.BaseWithClause {
 
 // Restore writes the WITH clause and every CTE it holds.
 func (n *WithClause) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}

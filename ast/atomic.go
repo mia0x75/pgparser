@@ -12,6 +12,10 @@ type BeginAtomicStmt struct {
 }
 
 func (n *BeginAtomicStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("BEGIN ATOMIC ")
 	if n.List != nil {
 		for _, stmt := range n.List.Items {
@@ -29,7 +33,17 @@ func (n *BeginAtomicStmt) Restore(ctx *format.RestoreCtx) error {
 }
 
 func (n *BeginAtomicStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	updated, skip := v.Enter(n)
+
+	enteredNode, enteredOK := updated.(*BeginAtomicStmt)
+	if !enteredOK || enteredNode == nil {
+		return updated, false
+	}
+	n = enteredNode
 	if skip {
 		return v.Leave(updated)
 	}

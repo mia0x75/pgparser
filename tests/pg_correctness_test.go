@@ -679,6 +679,8 @@ func TestRestoreRejectsInvalidAST(t *testing.T) {
 		{"invalid connection limit", &ast.CreateDatabaseStmt{Name: lex.Ident{Name: "d"}, Options: []*ast.DatabaseOption{{Tp: ast.DatabaseOptionConnectionLimit, Value: "1; SELECT 1"}}}},
 		{"conflicting database actions", &ast.AlterDatabaseStmt{Name: lex.Ident{Name: "d"}, RenameTo: lex.Ident{Name: "renamed"}, Tablespace: lex.Ident{Name: "ts"}}},
 		{"missing routine name", &ast.CreateFunctionStmt{}},
+		{"missing extension name", &ast.CreateExtensionStmt{}},
+		{"invalid extension option", &ast.CreateExtensionStmt{Extname: "demo", Options: &ast.List{Items: []ast.Node{&ast.DefElem{Defname: "schema"}}}}},
 		{"nil routine option", &ast.CreateFunctionStmt{Name: table, Options: []*ast.DefElem{nil}}},
 		{"invalid routine WINDOW", &ast.CreateFunctionStmt{Name: table, Options: []*ast.DefElem{{Defname: "window", Arg: &ast.Integer{Ival: 0}}}}},
 		{"missing trigger target", &ast.CreateTrigStmt{}},
@@ -690,6 +692,62 @@ func TestRestoreRejectsInvalidAST(t *testing.T) {
 			var out strings.Builder
 			if err := tc.node.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &out)); err == nil {
 				t.Fatalf("invalid AST restored without error: %q", out.String())
+			}
+		})
+	}
+}
+
+func TestCreateExtensionRestoreRetainsOptions(t *testing.T) {
+	tests := []struct {
+		name string
+		sql  string
+		want string
+	}{
+		{
+			name: "simple name",
+			sql:  "CREATE EXTENSION demo",
+			want: `CREATE EXTENSION "demo"`,
+		},
+		{
+			name: "if not exists and all options",
+			sql:  `CREATE EXTENSION IF NOT EXISTS "Pkg.Name" WITH SCHEMA public VERSION '1.2' CASCADE`,
+			want: `CREATE EXTENSION IF NOT EXISTS "Pkg.Name" WITH SCHEMA "public" VERSION '1.2' CASCADE`,
+		},
+		{
+			name: "version option only",
+			sql:  "CREATE EXTENSION demo VERSION v1",
+			want: `CREATE EXTENSION "demo" WITH VERSION 'v1'`,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			parsed := mustParseOne(t, tc.sql)
+			stmt, ok := parsed.(*ast.CreateExtensionStmt)
+			if !ok {
+				t.Fatalf("ParseOneStmt returned %T", parsed)
+			}
+			got := restoreString(t, stmt)
+			if got != tc.want {
+				t.Fatalf("Restore = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRestoreRejectsNilReceivers(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		node ast.Node
+	}{
+		{name: "generated node", node: (*ast.CreateExtensionStmt)(nil)},
+		{name: "column definition", node: (*ast.ColumnDef)(nil)},
+		{name: "select statement", node: (*ast.SelectStmt)(nil)},
+		{name: "window specification", node: (*ast.WindowSpec)(nil)},
+		{name: "raw list", node: (*ast.List)(nil)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := tc.node.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &strings.Builder{})); err == nil {
+				t.Fatal("Restore accepted a nil receiver")
 			}
 		})
 	}

@@ -324,6 +324,10 @@ func simpleLowerIdent(s string) bool {
 
 // Restore implements Node interface.
 func (n *FuncCallExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	keywordForm := n.KeywordForm && len(n.Args) == 2
 	if keywordForm {
 		_, keywordForm = n.Args[0].(ValueExpr)
@@ -404,9 +408,18 @@ func (n *FuncCallExpr) Format(w io.Writer) {
 
 // Accept implements Node interface.
 func (n *FuncCallExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*FuncCallExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*FuncCallExpr)
 	if n.OrderBy != nil {
@@ -465,6 +478,10 @@ type FuncCastExpr struct {
 
 // Restore implements Node interface.
 func (n *FuncCastExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	switch n.FunctionType {
 	case CastFunction:
 		ctx.WriteKeyword("CAST")
@@ -516,9 +533,18 @@ func (n *FuncCastExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *FuncCastExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*FuncCastExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*FuncCastExpr)
 	node, ok := n.Expr.Accept(v)
@@ -606,6 +632,10 @@ type AggregateFuncExpr struct {
 
 // Restore implements Node interface.
 func (n *AggregateFuncExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	writeFuncName(ctx, n.FnNameParts, n.F)
 	ctx.WritePlain("(")
 	if n.Distinct {
@@ -681,9 +711,18 @@ func (n *AggregateFuncExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *AggregateFuncExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AggregateFuncExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AggregateFuncExpr)
 	if n.OrderBy != nil {
@@ -768,6 +807,10 @@ type WindowFuncExpr struct {
 
 // Restore implements Node interface.
 func (n *WindowFuncExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	writeFuncName(ctx, n.FnNameParts, n.F)
 	ctx.WritePlain("(")
 	if n.Star {
@@ -852,9 +895,18 @@ func (n *WindowFuncExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *WindowFuncExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*WindowFuncExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*WindowFuncExpr)
 	if n.Filter != nil {

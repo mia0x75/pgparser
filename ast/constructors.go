@@ -77,6 +77,10 @@ type ArrayExpr struct {
 
 // Restore implements Node interface.
 func (n *ArrayExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ARRAY[")
 	for i, e := range n.Elements {
 		if i != 0 {
@@ -104,9 +108,18 @@ func (n *ArrayExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *ArrayExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ArrayExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ArrayExpr)
 	for i, val := range n.Elements {

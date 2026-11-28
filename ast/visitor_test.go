@@ -12,6 +12,32 @@ type replaceVisitor struct {
 	stop   bool
 }
 
+type nodeTypeVisitor struct {
+	tableName   bool
+	columnDef   bool
+	columnName  bool
+	genericStmt bool
+	rawStmt     bool
+}
+
+func (v *nodeTypeVisitor) Enter(n Node) (Node, bool) {
+	switch n.(type) {
+	case *TableName:
+		v.tableName = true
+	case *ColumnDef:
+		v.columnDef = true
+	case *ColumnName:
+		v.columnName = true
+	case *GenericStmt:
+		v.genericStmt = true
+	case *RawStmt:
+		v.rawStmt = true
+	}
+	return n, false
+}
+
+func (*nodeTypeVisitor) Leave(n Node) (Node, bool) { return n, true }
+
 func (v *replaceVisitor) Enter(n Node) (Node, bool) {
 	if _, ok := n.(*LiteralExpr); ok {
 		v.visits++
@@ -44,5 +70,34 @@ func TestGeneratedVisitorChildren(t *testing.T) {
 	v = &replaceVisitor{}
 	if _, ok := g.Accept(v); !ok || v.visits != 2 || g.Sets[1][0].(*LiteralExpr).Value != "2.5" {
 		t.Fatal("nested slice replacement failed")
+	}
+}
+
+func TestCreateForeignTableVisitsEmbeddedCreateStmt(t *testing.T) {
+	table := &TableName{BaseTableRef: pkast.BaseTableRef{
+		Name: pkast.QualifiedName{Parts: []pkast.Ident{{Name: "remote_table"}}},
+	}}
+	column := &ColumnDef{Name: &ColumnName{Name: "id"}}
+	n := &CreateForeignTableStmt{Base: CreateStmt{
+		Relation:  table,
+		TableElts: &List{Items: []Node{column}},
+	}}
+	visitor := &nodeTypeVisitor{}
+	if _, ok := n.Accept(visitor); !ok {
+		t.Fatal("visitor rejected CREATE FOREIGN TABLE")
+	}
+	if !visitor.tableName || !visitor.columnDef || !visitor.columnName {
+		t.Fatalf("embedded CREATE TABLE children were not visited: %#v", visitor)
+	}
+}
+
+func TestRawStmtVisitsNestedStatement(t *testing.T) {
+	n := &RawStmt{SQL: "SELECT 1", Stmt: &GenericStmt{Kind: "SELECT", Raw: "1"}}
+	visitor := &nodeTypeVisitor{}
+	if _, ok := n.Accept(visitor); !ok {
+		t.Fatal("visitor rejected RawStmt")
+	}
+	if !visitor.rawStmt || !visitor.genericStmt {
+		t.Fatalf("RawStmt nested statement was not visited: %#v", visitor)
 	}
 }

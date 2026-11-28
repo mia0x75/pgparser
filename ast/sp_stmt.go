@@ -50,6 +50,10 @@ func (n *BeginEndStmt) SetLabel(label string) { n.Label = label }
 
 // Restore implements Node interface.
 func (n *BeginEndStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Label != "" {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
@@ -76,9 +80,18 @@ func (n *BeginEndStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *BeginEndStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*BeginEndStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*BeginEndStmt)
 	list, ok := acceptStmtList(v, n.List)
@@ -100,6 +113,10 @@ type DeclareStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DECLARE ")
 	for i, name := range n.Names {
 		if i > 0 {
@@ -122,9 +139,18 @@ func (n *DeclareStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DeclareStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DeclareStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DeclareStmt)
 	if n.Default != nil {
@@ -192,6 +218,10 @@ type DeclareConditionStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareConditionStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DECLARE ")
 	ctx.WriteName(n.Name)
 	ctx.WriteKeyword(" CONDITION FOR ")
@@ -200,9 +230,18 @@ func (n *DeclareConditionStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DeclareConditionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DeclareConditionStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DeclareConditionStmt)
 	return v.Leave(n)
@@ -222,6 +261,10 @@ type DeclareCursorStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareCursorStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DECLARE ")
 	ctx.WriteName(n.Name)
 	if n.Binary {
@@ -243,9 +286,18 @@ func (n *DeclareCursorStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DeclareCursorStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DeclareCursorStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DeclareCursorStmt)
 	node, ok := n.Select.Accept(v)
@@ -290,6 +342,10 @@ type DeclareHandlerStmt struct {
 
 // Restore implements Node interface.
 func (n *DeclareHandlerStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DECLARE ")
 	ctx.WriteKeyword(HandlerTypeString(n.Action))
 	ctx.WriteKeyword(" HANDLER FOR ")
@@ -307,9 +363,18 @@ func (n *DeclareHandlerStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DeclareHandlerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DeclareHandlerStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DeclareHandlerStmt)
 	node, ok := n.Stmt.Accept(v)
@@ -336,6 +401,10 @@ type IfStmt struct {
 
 // Restore implements Node interface.
 func (n *IfStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	for i, c := range n.Conditions {
 		if i == 0 {
 			ctx.WriteKeyword("IF ")
@@ -362,9 +431,18 @@ func (n *IfStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *IfStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*IfStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*IfStmt)
 	for _, c := range n.Conditions {
@@ -406,6 +484,10 @@ type CaseStmt struct {
 
 // Restore implements Node interface.
 func (n *CaseStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CASE")
 	if n.Value != nil {
 		ctx.WritePlain(" ")
@@ -435,9 +517,18 @@ func (n *CaseStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CaseStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CaseStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CaseStmt)
 	if n.Value != nil {
@@ -483,6 +574,10 @@ func (n *WhileStmt) SetLabel(label string) { n.Label = label }
 
 // Restore implements Node interface.
 func (n *WhileStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Label != "" {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
@@ -505,9 +600,18 @@ func (n *WhileStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *WhileStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*WhileStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*WhileStmt)
 	node, ok := n.Condition.Accept(v)
@@ -537,6 +641,10 @@ func (n *RepeatStmt) SetLabel(label string) { n.Label = label }
 
 // Restore implements Node interface.
 func (n *RepeatStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Label != "" {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
@@ -559,9 +667,18 @@ func (n *RepeatStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *RepeatStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*RepeatStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*RepeatStmt)
 	list, ok := acceptStmtList(v, n.List)
@@ -590,6 +707,10 @@ func (n *LoopStmt) SetLabel(label string) { n.Label = label }
 
 // Restore implements Node interface.
 func (n *LoopStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Label != "" {
 		ctx.WriteName(n.Label)
 		ctx.WritePlain(": ")
@@ -608,9 +729,18 @@ func (n *LoopStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *LoopStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*LoopStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*LoopStmt)
 	list, ok := acceptStmtList(v, n.List)
@@ -630,6 +760,10 @@ type LeaveStmt struct {
 
 // Restore implements Node interface.
 func (n *LeaveStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("LEAVE ")
 	ctx.WriteName(n.Label)
 	return ctx.Err()
@@ -637,9 +771,18 @@ func (n *LeaveStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *LeaveStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*LeaveStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(newNode)
 }
@@ -653,6 +796,10 @@ type IterateStmt struct {
 
 // Restore implements Node interface.
 func (n *IterateStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ITERATE ")
 	ctx.WriteName(n.Label)
 	return ctx.Err()
@@ -660,9 +807,18 @@ func (n *IterateStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *IterateStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*IterateStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(newNode)
 }
@@ -676,6 +832,10 @@ type OpenStmt struct {
 
 // Restore implements Node interface.
 func (n *OpenStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("OPEN ")
 	ctx.WriteName(n.Name)
 	return ctx.Err()
@@ -683,9 +843,18 @@ func (n *OpenStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *OpenStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*OpenStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(newNode)
 }
@@ -699,6 +868,10 @@ type CloseStmt struct {
 
 // Restore implements Node interface.
 func (n *CloseStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CLOSE ")
 	ctx.WriteName(n.Name)
 	return ctx.Err()
@@ -706,9 +879,18 @@ func (n *CloseStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CloseStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CloseStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(newNode)
 }
@@ -723,6 +905,10 @@ type FetchStmt struct {
 
 // Restore implements Node interface.
 func (n *FetchStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("FETCH ")
 	ctx.WriteName(n.Name)
 	ctx.WriteKeyword(" INTO ")
@@ -741,9 +927,18 @@ func (n *FetchStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *FetchStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*FetchStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(newNode)
 }
@@ -764,6 +959,10 @@ type SignalStmt struct {
 
 // Restore implements Node interface.
 func (n *SignalStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("SIGNAL ")
 	if err := n.Condition.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore SignalStmt.Condition")
@@ -786,9 +985,18 @@ func (n *SignalStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *SignalStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*SignalStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*SignalStmt)
 	for _, item := range n.InfoItems {
@@ -811,6 +1019,10 @@ type ResignalStmt struct {
 
 // Restore implements Node interface.
 func (n *ResignalStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("RESIGNAL")
 	if n.Condition != nil {
 		ctx.WritePlain(" ")
@@ -836,9 +1048,18 @@ func (n *ResignalStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *ResignalStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ResignalStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ResignalStmt)
 	for _, item := range n.InfoItems {

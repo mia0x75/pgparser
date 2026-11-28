@@ -35,6 +35,10 @@ func (n *OrderItem) OrderItemCore() *pkast.BaseOrderItem {
 
 // Restore writes the sorted expression and its modifiers.
 func (n *OrderItem) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -126,6 +130,10 @@ func (n *OrderByClause) OrderByClauseCore() *pkast.BaseOrderByClause {
 
 // Restore writes the ORDER BY clause and its items.
 func (n *OrderByClause) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}

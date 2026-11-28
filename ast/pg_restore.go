@@ -11,13 +11,18 @@ import (
 var ErrUnsupportedRestore = errors.New("SQL restoration is unsupported")
 
 func restorePGNode(ctx *format.RestoreCtx, node Node) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
 	if !nodePresent(node) {
 		return fmt.Errorf("restore PostgreSQL node: nil node")
 	}
+	if ctx == nil {
+		return fmt.Errorf("restore PostgreSQL node: nil restore context")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	switch n := node.(type) {
+	case *CreateExtensionStmt:
+		return restoreCreateExtension(ctx, n)
 	case *String:
 		ctx.WriteString(n.Str)
 	case *Integer:
@@ -359,6 +364,61 @@ func restorePGNode(ctx *format.RestoreCtx, node Node) error {
 		return restoreCTECycle(ctx, n)
 	default:
 		return fmt.Errorf("%w for %T", ErrUnsupportedRestore, node)
+	}
+	return ctx.Err()
+}
+
+func restoreCreateExtension(ctx *format.RestoreCtx, n *CreateExtensionStmt) error {
+	if n == nil || n.Extname == "" {
+		return fmt.Errorf("CREATE EXTENSION has no name")
+	}
+	var items []Node
+	if n.Options != nil {
+		items = n.Options.Items
+	}
+	for i, item := range items {
+		option, ok := item.(*DefElem)
+		if !ok || option == nil || option.Defnamespace != "" || option.Defaction != int(DEFELEM_UNSPEC) {
+			return fmt.Errorf("invalid CREATE EXTENSION option %d", i)
+		}
+		switch option.Defname {
+		case "schema", "new_version":
+			if value, ok := option.Arg.(*String); !ok || value == nil || value.Str == "" {
+				return fmt.Errorf("invalid CREATE EXTENSION %s option", option.Defname)
+			}
+		case "cascade":
+			if value, ok := option.Arg.(*Boolean); !ok || value == nil || !value.Boolval {
+				return fmt.Errorf("invalid CREATE EXTENSION CASCADE option")
+			}
+		default:
+			return fmt.Errorf("%w: CREATE EXTENSION option %q", ErrUnsupportedRestore, option.Defname)
+		}
+	}
+
+	ctx.WriteKeyword("CREATE EXTENSION ")
+	if n.IfNotExists {
+		ctx.WriteKeyword("IF NOT EXISTS ")
+	}
+	ctx.WriteName(n.Extname)
+	if len(items) == 0 {
+		return ctx.Err()
+	}
+	ctx.WriteKeyword(" WITH ")
+	for i, item := range items {
+		if i > 0 {
+			ctx.WritePlain(" ")
+		}
+		option := item.(*DefElem)
+		switch option.Defname {
+		case "schema":
+			ctx.WriteKeyword("SCHEMA ")
+			ctx.WriteName(option.Arg.(*String).Str)
+		case "new_version":
+			ctx.WriteKeyword("VERSION ")
+			ctx.WriteString(option.Arg.(*String).Str)
+		case "cascade":
+			ctx.WriteKeyword("CASCADE")
+		}
 	}
 	return ctx.Err()
 }

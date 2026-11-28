@@ -34480,18 +34480,19 @@ yydefault:
 	case 2256:
 		yyDollar = yyS[yypt-5 : yypt+1]
 		{
-			yyVAL.node = &ast.GenericStmt{
-				Kind: "CREATE",
-				Raw:  "EXTENSION " + yyDollar[3].str,
+			yyVAL.node = &ast.CreateExtensionStmt{
+				Extname: yyDollar[3].str,
+				Options: yyDollar[5].list,
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)
 	case 2257:
 		yyDollar = yyS[yypt-8 : yypt+1]
 		{
-			yyVAL.node = &ast.GenericStmt{
-				Kind: "CREATE",
-				Raw:  "EXTENSION " + yyDollar[6].str,
+			yyVAL.node = &ast.CreateExtensionStmt{
+				Extname:     yyDollar[6].str,
+				IfNotExists: true,
+				Options:     yyDollar[8].list,
 			}
 		}
 		setSyntaxSpan(yyVAL.node, yyVAL.span)

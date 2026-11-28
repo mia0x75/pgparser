@@ -16,6 +16,10 @@ type GenericStmt struct {
 
 // Restore implements Node interface.
 func (n *GenericStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword(n.Kind)
 	if n.Raw != "" {
 		ctx.WritePlain(" ")
@@ -26,11 +30,18 @@ func (n *GenericStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *GenericStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	if n == nil {
+		return nil, false
 	}
-	n = newNode.(*GenericStmt)
+	newNode, skipChildren := v.Enter(n)
+	outer, ok := newNode.(*GenericStmt)
+	if !ok || outer == nil {
+		return newNode, false
+	}
+	n = outer
+	if skipChildren {
+		return v.Leave(n)
+	}
 	return v.Leave(n)
 }
 
@@ -46,16 +57,41 @@ type RawStmt struct {
 
 // Restore implements Node interface.
 func (n *RawStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WritePlain(n.SQL)
 	return ctx.Err()
 }
 
 // Accept implements Node Accept interface.
 func (n *RawStmt) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	if n == nil {
+		return nil, false
 	}
-	n = newNode.(*RawStmt)
+	newNode, skipChildren := v.Enter(n)
+	outer, ok := newNode.(*RawStmt)
+	if !ok || outer == nil {
+		return newNode, false
+	}
+	n = outer
+	if skipChildren {
+		return v.Leave(n)
+	}
+	if n.Stmt != nil {
+		if !nodePresent(n.Stmt) {
+			return n, false
+		}
+		updated, ok := n.Stmt.Accept(v)
+		if !ok || !nodePresent(updated) {
+			return n, false
+		}
+		stmt, ok := updated.(StmtNode)
+		if !ok || !nodePresent(stmt) {
+			return n, false
+		}
+		n.Stmt = stmt
+	}
 	return v.Leave(n)
 }

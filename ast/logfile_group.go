@@ -38,6 +38,10 @@ type LogfileGroupOption struct {
 
 // Restore implements Node interface.
 func (n *LogfileGroupOption) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	switch n.Tp {
 	case LogfileGroupOptionInitialSize:
 		ctx.WriteKeyword("INITIAL_SIZE = ")
@@ -67,9 +71,18 @@ func (n *LogfileGroupOption) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *LogfileGroupOption) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*LogfileGroupOption)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*LogfileGroupOption)
 	return v.Leave(n)
@@ -96,6 +109,10 @@ type CreateLogfileGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE LOGFILE GROUP ")
 	ctx.WriteName(n.Name)
 	ctx.WriteKeyword(" ADD UNDOFILE ")
@@ -105,9 +122,18 @@ func (n *CreateLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateLogfileGroupStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateLogfileGroupStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateLogfileGroupStmt)
 	for i, opt := range n.Options {
@@ -131,6 +157,10 @@ type AlterLogfileGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ALTER LOGFILE GROUP ")
 	ctx.WriteName(n.Name)
 	ctx.WriteKeyword(" ADD UNDOFILE ")
@@ -140,9 +170,18 @@ func (n *AlterLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *AlterLogfileGroupStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AlterLogfileGroupStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AlterLogfileGroupStmt)
 	for i, opt := range n.Options {
@@ -165,6 +204,10 @@ type DropLogfileGroupStmt struct {
 
 // Restore implements Node interface.
 func (n *DropLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP LOGFILE GROUP ")
 	ctx.WriteName(n.Name)
 	return restoreLogfileGroupOptions(ctx, n.Options)
@@ -172,9 +215,18 @@ func (n *DropLogfileGroupStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropLogfileGroupStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropLogfileGroupStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropLogfileGroupStmt)
 	for i, opt := range n.Options {

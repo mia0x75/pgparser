@@ -22,6 +22,10 @@ type ServerOption struct {
 
 // Restore implements Node interface.
 func (n *ServerOption) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteName(n.Name)
 	ctx.WritePlain(" ")
 	ctx.WriteString(n.Value)
@@ -30,9 +34,18 @@ func (n *ServerOption) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *ServerOption) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ServerOption)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ServerOption)
 	return v.Leave(n)
@@ -53,6 +66,10 @@ type CreateServerStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateServerStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE SERVER ")
 	ctx.WriteName(n.Name)
 	if n.ServerType != "" {
@@ -82,9 +99,18 @@ func (n *CreateServerStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateServerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateServerStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateServerStmt)
 	for i, opt := range n.Options {
@@ -109,6 +135,10 @@ type AlterServerStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterServerStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ALTER SERVER ")
 	ctx.WriteName(n.Name)
 	if n.Version != "" {
@@ -132,9 +162,18 @@ func (n *AlterServerStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *AlterServerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AlterServerStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AlterServerStmt)
 	for i, opt := range n.Options {
@@ -157,6 +196,10 @@ type DropServerStmt struct {
 
 // Restore implements Node interface.
 func (n *DropServerStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP SERVER ")
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
@@ -167,9 +210,18 @@ func (n *DropServerStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropServerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropServerStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropServerStmt)
 	return v.Leave(n)

@@ -13642,16 +13642,17 @@ RelOptionElem:
 CreateExtensionStmt:
 	CREATE EXTENSION Name OptWithOptions CreateExtensionOptList
 		{
-			$$ = &ast.GenericStmt{
-				Kind: "CREATE",
-				Raw:  "EXTENSION " + $3,
+			$$ = &ast.CreateExtensionStmt{
+				Extname: $3,
+				Options: $5,
 			}
 		}
 	| CREATE EXTENSION IF_P NOT EXISTS Name OptWithOptions CreateExtensionOptList
 		{
-			$$ = &ast.GenericStmt{
-				Kind: "CREATE",
-				Raw:  "EXTENSION " + $6,
+			$$ = &ast.CreateExtensionStmt{
+				Extname:     $6,
+				IfNotExists: true,
+				Options:     $8,
 			}
 		}
 	;

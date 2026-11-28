@@ -145,6 +145,10 @@ type CreateSchemaStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateSchemaStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE SCHEMA ")
 	if n.IfNotExists {
 		ctx.WriteKeyword("IF NOT EXISTS ")
@@ -164,9 +168,18 @@ func (n *CreateSchemaStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateSchemaStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateSchemaStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateSchemaStmt)
 	if n.Authorization != nil {
@@ -190,6 +203,10 @@ type CreateDatabaseStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if !n.Name.Present() {
 		return errors.New("database has no name")
 	}
@@ -214,9 +231,18 @@ func (n *CreateDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateDatabaseStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateDatabaseStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateDatabaseStmt)
 	return v.Leave(n)
@@ -236,6 +262,10 @@ type AlterDatabaseStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if !n.Name.Present() {
 		return errors.New("database has no name")
 	}
@@ -271,9 +301,18 @@ func (n *AlterDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *AlterDatabaseStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AlterDatabaseStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AlterDatabaseStmt)
 	return v.Leave(n)
@@ -302,6 +341,10 @@ type CommentStmt struct {
 
 // Restore implements Node interface.
 func (n *CommentStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("COMMENT ON ")
 	// Constraint, policy, rule and trigger comments write the object name
 	// before the parent relation, so they cannot use the plain form.
@@ -378,9 +421,18 @@ func writeNameParts(ctx *format.RestoreCtx, parts []string) {
 
 // Accept implements Node Accept interface.
 func (n *CommentStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CommentStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(newNode)
 }
@@ -394,6 +446,10 @@ type DropDatabaseStmt struct {
 
 // Restore implements Node interface.
 func (n *DropDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP DATABASE ")
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
@@ -404,9 +460,18 @@ func (n *DropDatabaseStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropDatabaseStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropDatabaseStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropDatabaseStmt)
 	return v.Leave(n)
@@ -429,6 +494,10 @@ type IndexColName struct {
 
 // Restore implements Node interface.
 func (n *IndexColName) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Column != nil && n.Expr != nil {
 		return errors.New("index element has both a column and an expression")
 	}
@@ -485,9 +554,18 @@ func (n *IndexColName) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *IndexColName) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*IndexColName)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*IndexColName)
 	if n.Column != nil {
@@ -529,6 +607,10 @@ type ReferenceDef struct {
 
 // Restore implements Node interface.
 func (n *ReferenceDef) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Table == nil {
 		return errors.New("foreign key has no referenced table")
 	}
@@ -577,9 +659,18 @@ func (n *ReferenceDef) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *ReferenceDef) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ReferenceDef)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ReferenceDef)
 	var node Node
@@ -657,6 +748,10 @@ type OnDeleteOpt struct {
 
 // Restore implements Node interface.
 func (n *OnDeleteOpt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.ReferOpt != ReferOptionNoOption && n.ReferOpt.String() == "" {
 		return errors.New("invalid ON DELETE action")
 	}
@@ -687,9 +782,18 @@ func (n *OnDeleteOpt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *OnDeleteOpt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*OnDeleteOpt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*OnDeleteOpt)
 	for i, column := range n.Columns {
@@ -713,6 +817,10 @@ type OnUpdateOpt struct {
 
 // Restore implements Node interface.
 func (n *OnUpdateOpt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.ReferOpt != ReferOptionNoOption && n.ReferOpt.String() == "" {
 		return errors.New("invalid ON UPDATE action")
 	}
@@ -725,9 +833,18 @@ func (n *OnUpdateOpt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *OnUpdateOpt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*OnUpdateOpt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*OnUpdateOpt)
 	return v.Leave(n)
@@ -794,6 +911,10 @@ type ColumnOption struct {
 
 // Restore implements Node interface.
 func (n *ColumnOption) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	switch n.Tp {
 	case ColumnOptionNoOption:
 		// NoOption still carries column constraint attributes.
@@ -909,9 +1030,18 @@ func (n *ColumnOption) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *ColumnOption) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ColumnOption)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ColumnOption)
 	if n.Expr != nil {
@@ -954,6 +1084,10 @@ type IndexOption struct {
 
 // Restore implements Node interface.
 func (n *IndexOption) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	hasPrevOption := false
 	if n.KeyBlockSize > 0 {
 		ctx.WriteKeyword("KEY_BLOCK_SIZE")
@@ -982,9 +1116,18 @@ func (n *IndexOption) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *IndexOption) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*IndexOption)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*IndexOption)
 	return v.Leave(n)
@@ -1052,6 +1195,10 @@ type Constraint struct {
 
 // Restore implements Node interface.
 func (n *Constraint) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Tp != ConstraintCheck && !n.IndexName.Present() && len(n.Keys) == 0 {
 		return errors.Annotate(ErrUnsupportedRestore, "constraint without modeled keys")
 	}
@@ -1144,9 +1291,18 @@ func (n *Constraint) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *Constraint) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*Constraint)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*Constraint)
 	for i, val := range n.Keys {
@@ -1191,6 +1347,13 @@ type ColumnDef struct {
 
 // Restore implements Node interface.
 func (n *ColumnDef) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+	if n.Name == nil || n.Name.Name == "" {
+		return errors.New("column definition has no name")
+	}
+
 	if err := n.Name.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while splicing ColumnDef Name")
 	}
@@ -1211,22 +1374,44 @@ func (n *ColumnDef) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *ColumnDef) Accept(v Visitor) (Node, bool) {
-	newNode, skipChildren := v.Enter(n)
-	if skipChildren {
-		return v.Leave(newNode)
+	if n == nil {
+		return nil, false
 	}
-	n = newNode.(*ColumnDef)
-	node, ok := n.Name.Accept(v)
+
+	entered, skipChildren := v.Enter(n)
+	outer, ok := entered.(*ColumnDef)
+	if !ok || outer == nil {
+		return entered, false
+	}
+	n = outer
+	if skipChildren {
+		return v.Leave(n)
+	}
+	if n.Name == nil {
+		return n, false
+	}
+	updated, ok := n.Name.Accept(v)
 	if !ok {
 		return n, false
 	}
-	n.Name = node.(*ColumnName)
+	name, ok := updated.(*ColumnName)
+	if !ok || name == nil {
+		return n, false
+	}
+	n.Name = name
 	for i, val := range n.Options {
-		node, ok := val.Accept(v)
+		if val == nil {
+			return n, false
+		}
+		updated, ok := val.Accept(v)
 		if !ok {
 			return n, false
 		}
-		n.Options[i] = node.(*ColumnOption)
+		option, ok := updated.(*ColumnOption)
+		if !ok || option == nil {
+			return n, false
+		}
+		n.Options[i] = option
 	}
 	return v.Leave(n)
 }
@@ -1278,6 +1463,10 @@ type CreateTableStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateTableStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if len(n.LikeClauses) > 0 || n.Execute != "" {
 		return errors.Annotate(ErrUnsupportedRestore, "CREATE TABLE LIKE or EXECUTE")
 	}
@@ -1415,9 +1604,18 @@ func (n *CreateTableStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateTableStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateTableStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateTableStmt)
 	node, ok := n.Table.Accept(v)
@@ -1503,6 +1701,10 @@ type DropTableStmt struct {
 
 // Restore implements Node interface.
 func (n *DropTableStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.IsView {
 		ctx.WriteKeyword("DROP VIEW ")
 	} else {
@@ -1526,9 +1728,18 @@ func (n *DropTableStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropTableStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropTableStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropTableStmt)
 	for i, val := range n.Tables {
@@ -1556,6 +1767,10 @@ type DropFunctionStmt struct {
 
 // Restore implements Node interface.
 func (n *DropFunctionStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP FUNCTION ")
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
@@ -1576,9 +1791,18 @@ func (n *DropFunctionStmt) droppedNames() []*TableName {
 
 // Accept implements Node Accept interface.
 func (n *DropFunctionStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropFunctionStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropFunctionStmt)
 	names, ok := acceptRoutineTargets(v, n.droppedNames(), n.Arguments)
@@ -1607,6 +1831,10 @@ type DropProcedureStmt struct {
 
 // Restore implements Node interface.
 func (n *DropProcedureStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP PROCEDURE ")
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
@@ -1627,9 +1855,18 @@ func (n *DropProcedureStmt) droppedNames() []*TableName {
 
 // Accept implements Node Accept interface.
 func (n *DropProcedureStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropProcedureStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropProcedureStmt)
 	names, ok := acceptRoutineTargets(v, n.droppedNames(), n.Arguments)
@@ -1713,6 +1950,10 @@ type DropTriggerStmt struct {
 
 // Restore implements Node interface.
 func (n *DropTriggerStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP TRIGGER ")
 	if n.IfExists {
 		ctx.WriteKeyword("IF EXISTS ")
@@ -1731,9 +1972,18 @@ func (n *DropTriggerStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropTriggerStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropTriggerStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropTriggerStmt)
 	node, ok := n.Name.Accept(v)
@@ -1758,6 +2008,10 @@ type RenameTableStmt struct {
 
 // Restore implements Node interface.
 func (n *RenameTableStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("RENAME TABLE ")
 	for index, table2table := range n.TableToTables {
 		if index != 0 {
@@ -1772,9 +2026,18 @@ func (n *RenameTableStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *RenameTableStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*RenameTableStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*RenameTableStmt)
 	node, ok := n.OldTable.Accept(v)
@@ -1808,6 +2071,10 @@ type TableToTable struct {
 
 // Restore implements Node interface.
 func (n *TableToTable) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.OldTable.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore TableToTable.OldTable")
 	}
@@ -1820,9 +2087,18 @@ func (n *TableToTable) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *TableToTable) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*TableToTable)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*TableToTable)
 	node, ok := n.OldTable.Accept(v)
@@ -1856,6 +2132,10 @@ type CreateViewStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateViewStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE ")
 	if n.OrReplace {
 		ctx.WriteKeyword("OR REPLACE ")
@@ -1897,9 +2177,18 @@ func (n *CreateViewStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateViewStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateViewStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateViewStmt)
 	node, ok := n.ViewName.Accept(v)
@@ -1952,6 +2241,10 @@ type CreateIndexStmt struct {
 
 // Restore implements Node interface.
 func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CREATE ")
 	if n.Unique {
 		ctx.WriteKeyword("UNIQUE ")
@@ -2032,9 +2325,18 @@ func (n *CreateIndexStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *CreateIndexStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CreateIndexStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CreateIndexStmt)
 	node, ok := n.Table.Accept(v)
@@ -2092,6 +2394,10 @@ type DropIndexStmt struct {
 
 // Restore implements Node interface.
 func (n *DropIndexStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DROP INDEX ")
 	if n.Concurrently {
 		ctx.WriteKeyword("CONCURRENTLY ")
@@ -2107,9 +2413,18 @@ func (n *DropIndexStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *DropIndexStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DropIndexStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DropIndexStmt)
 	if n.Table != nil {
@@ -2324,6 +2639,10 @@ type ColumnPosition struct {
 
 // Restore implements Node interface.
 func (n *ColumnPosition) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	switch n.Tp {
 	case ColumnPositionNone:
 		// do nothing
@@ -2342,9 +2661,18 @@ func (n *ColumnPosition) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *ColumnPosition) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ColumnPosition)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ColumnPosition)
 	if n.RelativeColumn != nil {
@@ -2491,6 +2819,10 @@ type PartitionBoundSpec struct {
 
 // Restore implements Node interface.
 func (n *PartitionBoundSpec) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	switch n.BoundType {
 	case "FROM":
 		ctx.WriteKeyword("FOR VALUES FROM (")
@@ -2553,9 +2885,18 @@ func (n *PartitionBoundSpec) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *PartitionBoundSpec) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*PartitionBoundSpec)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*PartitionBoundSpec)
 	for i, expr := range n.From {
@@ -2635,6 +2976,10 @@ type AlterTableSpec struct {
 
 // Restore implements Node interface.
 func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	column := "COLUMN"
 	if n.Attribute {
 		column = "ATTRIBUTE"
@@ -2920,9 +3265,18 @@ func (n *AlterTableSpec) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *AlterTableSpec) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AlterTableSpec)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AlterTableSpec)
 	if n.Constraint != nil {
@@ -3015,6 +3369,10 @@ type AlterTableStmt struct {
 
 // Restore implements Node interface.
 func (n *AlterTableStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Table == nil || len(n.Specs) == 0 {
 		return errors.New("ALTER has no relation or commands")
 	}
@@ -3055,9 +3413,18 @@ func (n *AlterTableStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *AlterTableStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*AlterTableStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*AlterTableStmt)
 	if n.Table != nil {
@@ -3095,6 +3462,10 @@ type TruncateTableStmt struct {
 
 // Restore implements Node interface.
 func (n *TruncateTableStmt) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("TRUNCATE ")
 	// PostgreSQL wants TRUNCATE [TABLE] [ONLY] name, so TABLE comes first.
 	ctx.WriteKeyword("TABLE ")
@@ -3122,9 +3493,18 @@ func (n *TruncateTableStmt) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *TruncateTableStmt) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*TruncateTableStmt)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*TruncateTableStmt)
 	node, ok := n.Table.Accept(v)

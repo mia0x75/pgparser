@@ -33,6 +33,10 @@ func (n *Join) JoinExprCore() *pkast.BaseJoinExpr {
 
 // Restore writes the join, keeping the parentheses of a nested relation.
 func (n *Join) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := ctx.Err(); err != nil {
 		return err
 	}

@@ -65,6 +65,10 @@ type BetweenExpr struct {
 
 // Restore implements Node interface.
 func (n *BetweenExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore BetweenExpr.Expr")
 	}
@@ -104,9 +108,18 @@ func (n *BetweenExpr) Format(w io.Writer) {
 
 // Accept implements Node interface.
 func (n *BetweenExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*BetweenExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 
 	n = newNode.(*BetweenExpr)
@@ -142,6 +155,10 @@ type BinaryOperationExpr struct {
 
 // Restore implements Node interface.
 func (n *BinaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.Left.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred when restore BinaryOperationExpr.L")
 	}
@@ -250,9 +267,18 @@ func endsWithStar(expr ExprNode) bool {
 
 // Accept implements Node interface.
 func (n *BinaryOperationExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*BinaryOperationExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 
 	n = newNode.(*BinaryOperationExpr)
@@ -282,6 +308,10 @@ type WhenClause struct {
 
 // Restore implements Node interface.
 func (n *WhenClause) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("WHEN ")
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore WhenClauses.Expr")
@@ -295,9 +325,18 @@ func (n *WhenClause) Restore(ctx *format.RestoreCtx) error {
 
 // Accept implements Node Accept interface.
 func (n *WhenClause) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*WhenClause)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 
 	n = newNode.(*WhenClause)
@@ -328,6 +367,10 @@ type CaseExpr struct {
 
 // Restore implements Node interface.
 func (n *CaseExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("CASE")
 	if n.Value != nil {
 		ctx.WritePlain(" ")
@@ -376,9 +419,18 @@ func (n *CaseExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *CaseExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CaseExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 
 	n = newNode.(*CaseExpr)
@@ -420,6 +472,10 @@ type SubqueryExpr struct {
 
 // Restore implements Node interface.
 func (n *SubqueryExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Array {
 		ctx.WriteKeyword("ARRAY")
 	}
@@ -444,9 +500,18 @@ func (n *SubqueryExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *SubqueryExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*SubqueryExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*SubqueryExpr)
 	node, ok := n.Query.Accept(v)
@@ -473,6 +538,10 @@ type CompareSubqueryExpr struct {
 
 // Restore implements Node interface.
 func (n *CompareSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.L.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore CompareSubqueryExpr.L")
 	}
@@ -518,9 +587,18 @@ func (n *CompareSubqueryExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *CompareSubqueryExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*CompareSubqueryExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*CompareSubqueryExpr)
 	node, ok := n.L.Accept(v)
@@ -544,6 +622,10 @@ type ColumnName struct {
 
 // Restore implements Node interface.
 func (n *ColumnName) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteName(n.Name)
 	return ctx.Err()
 }
@@ -555,9 +637,18 @@ func (n *ColumnName) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *ColumnName) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ColumnName)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ColumnName)
 	return v.Leave(n)
@@ -584,6 +675,10 @@ type ColumnNameExpr struct {
 
 // Restore implements Node interface.
 func (n *ColumnNameExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n == nil || len(n.Name.Parts) == 0 {
 		return errors.New("column reference has no name")
 	}
@@ -604,9 +699,18 @@ func (n *ColumnNameExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *ColumnNameExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ColumnNameExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ColumnNameExpr)
 	return v.Leave(n)
@@ -621,6 +725,10 @@ type DefaultExpr struct {
 
 // Restore implements Node interface.
 func (n *DefaultExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("DEFAULT")
 	if n.Name != nil {
 		ctx.WritePlain("(")
@@ -643,9 +751,18 @@ func (n *DefaultExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *DefaultExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*DefaultExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*DefaultExpr)
 	if n.Name != nil {
@@ -669,6 +786,10 @@ type ExistsSubqueryExpr struct {
 
 // Restore implements Node interface.
 func (n *ExistsSubqueryExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.Not {
 		ctx.WriteKeyword("NOT EXISTS ")
 	} else {
@@ -694,9 +815,18 @@ func (n *ExistsSubqueryExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *ExistsSubqueryExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ExistsSubqueryExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ExistsSubqueryExpr)
 	node, ok := n.Sel.Accept(v)
@@ -722,6 +852,10 @@ type PatternInExpr struct {
 
 // Restore implements Node interface.
 func (n *PatternInExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore PatternInExpr.Expr")
 	}
@@ -768,9 +902,18 @@ func (n *PatternInExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *PatternInExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*PatternInExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*PatternInExpr)
 	node, ok := n.Expr.Accept(v)
@@ -806,6 +949,10 @@ type IsNullExpr struct {
 
 // Restore implements Node interface.
 func (n *IsNullExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Trace(err)
 	}
@@ -829,9 +976,18 @@ func (n *IsNullExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *IsNullExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*IsNullExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*IsNullExpr)
 	node, ok := n.Expr.Accept(v)
@@ -855,6 +1011,10 @@ type IsTruthExpr struct {
 
 // Restore implements Node interface.
 func (n *IsTruthExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Trace(err)
 	}
@@ -888,9 +1048,18 @@ func (n *IsTruthExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *IsTruthExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*IsTruthExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*IsTruthExpr)
 	node, ok := n.Expr.Accept(v)
@@ -922,6 +1091,10 @@ type PatternLikeExpr struct {
 
 // Restore implements Node interface.
 func (n *PatternLikeExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore PatternLikeExpr.Expr")
 	}
@@ -972,9 +1145,18 @@ func (n *PatternLikeExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *PatternLikeExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*PatternLikeExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*PatternLikeExpr)
 	if n.Expr != nil {
@@ -1010,6 +1192,10 @@ type ParenthesesExpr struct {
 
 // Restore implements Node interface.
 func (n *ParenthesesExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WritePlain("(")
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred when restore ParenthesesExpr.Expr")
@@ -1027,9 +1213,18 @@ func (n *ParenthesesExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *ParenthesesExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ParenthesesExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ParenthesesExpr)
 	if n.Expr != nil {
@@ -1054,6 +1249,10 @@ type PositionExpr struct {
 
 // Restore implements Node interface.
 func (n *PositionExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WritePlainf("%d", n.N)
 	return ctx.Err()
 }
@@ -1065,9 +1264,18 @@ func (n *PositionExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *PositionExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*PositionExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*PositionExpr)
 	if n.P != nil {
@@ -1101,6 +1309,10 @@ type PatternRegexpExpr struct {
 
 // Restore implements Node interface.
 func (n *PatternRegexpExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if err := n.Expr.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore PatternRegexpExpr.Expr")
 	}
@@ -1141,9 +1353,18 @@ func (n *PatternRegexpExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *PatternRegexpExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*PatternRegexpExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*PatternRegexpExpr)
 	node, ok := n.Expr.Accept(v)
@@ -1181,6 +1402,10 @@ func (n *RowExpr) RowCore() *pkast.BaseRowExpr {
 
 // Restore implements Node interface.
 func (n *RowExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("ROW")
 	ctx.WritePlain("(")
 	for i, v := range n.Items {
@@ -1209,9 +1434,18 @@ func (n *RowExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *RowExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*RowExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*RowExpr)
 	for i, val := range n.Items {
@@ -1235,6 +1469,10 @@ type UnaryOperationExpr struct {
 
 // Restore implements Node interface.
 func (n *UnaryOperationExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	switch {
 	case n.OpName != "":
 		ctx.WritePlain(n.OpName)
@@ -1278,9 +1516,18 @@ func (n *UnaryOperationExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *UnaryOperationExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*UnaryOperationExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*UnaryOperationExpr)
 	node, ok := n.Expr.Accept(v)
@@ -1300,6 +1547,10 @@ type ValuesExpr struct {
 
 // Restore implements Node interface.
 func (n *ValuesExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("VALUES")
 	ctx.WritePlain("(")
 	if err := n.Column.Restore(ctx); err != nil {
@@ -1319,9 +1570,18 @@ func (n *ValuesExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *ValuesExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*ValuesExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*ValuesExpr)
 	node, ok := n.Column.Accept(v)
@@ -1351,6 +1611,10 @@ type VariableExpr struct {
 
 // Restore implements Node interface.
 func (n *VariableExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	if n.IsSystem {
 		ctx.WritePlain("@@")
 		if n.ExplicitScope {
@@ -1399,9 +1663,18 @@ func (n *VariableExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *VariableExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*VariableExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	n = newNode.(*VariableExpr)
 	if n.Value == nil {
@@ -1423,6 +1696,10 @@ type MaxValueExpr struct {
 
 // Restore implements Node interface.
 func (n *MaxValueExpr) Restore(ctx *format.RestoreCtx) error {
+	if n == nil {
+		return restorePGNode(ctx, n)
+	}
+
 	ctx.WriteKeyword("MAXVALUE")
 	return ctx.Err()
 }
@@ -1434,9 +1711,18 @@ func (n *MaxValueExpr) Format(w io.Writer) {
 
 // Accept implements Node Accept interface.
 func (n *MaxValueExpr) Accept(v Visitor) (Node, bool) {
+	if n == nil {
+		return nil, false
+	}
+
 	newNode, skipChildren := v.Enter(n)
+
+	enteredNode, enteredOK := newNode.(*MaxValueExpr)
+	if !enteredOK || enteredNode == nil {
+		return newNode, false
+	}
 	if skipChildren {
-		return v.Leave(newNode)
+		return v.Leave(enteredNode)
 	}
 	return v.Leave(n)
 }

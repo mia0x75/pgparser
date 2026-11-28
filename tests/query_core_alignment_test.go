@@ -256,6 +256,47 @@ func TestParseSharedWindowCore(t *testing.T) {
 	}
 }
 
+func TestWindowCoreChangesSurviveVisitor(t *testing.T) {
+	spec := &dialectast.WindowSpec{}
+	order := &dialectast.OrderByClause{BaseOrderByClause: pkast.BaseOrderByClause{
+		Items: []pkast.OrderItemNode{&dialectast.OrderItem{BaseOrderItem: pkast.BaseOrderItem{
+			Expr: &dialectast.ColumnNameExpr{BaseColumnRef: pkast.BaseColumnRef{
+				Name: pkast.QualifiedName{Parts: []pkast.Ident{{Name: "replacement"}}},
+			}},
+		}}},
+	}}
+	spec.WindowSpecCore().OrderBy = order
+	updated, ok := spec.Accept(&projectionVisitor{
+		enter: func(node dialectast.Node) (dialectast.Node, bool) { return node, false },
+		leave: func(node dialectast.Node) (dialectast.Node, bool) { return node, true },
+	})
+	if !ok {
+		t.Fatal("visitor rejected a window core update")
+	}
+	got := updated.(*dialectast.WindowSpec)
+	if got.OrderBy != order || got.WindowSpecCore().OrderBy != order {
+		t.Fatalf("window core update was lost: outer=%p shared=%p want=%p", got.OrderBy, got.WindowSpecCore().OrderBy, order)
+	}
+
+	replacement := &dialectast.OrderByClause{}
+	updated, ok = spec.Accept(&projectionVisitor{
+		enter: func(node dialectast.Node) (dialectast.Node, bool) {
+			if window, ok := node.(*dialectast.WindowSpec); ok {
+				window.OrderBy = replacement
+			}
+			return node, false
+		},
+		leave: func(node dialectast.Node) (dialectast.Node, bool) { return node, true },
+	})
+	if !ok {
+		t.Fatal("visitor rejected an outer window update")
+	}
+	got = updated.(*dialectast.WindowSpec)
+	if got.OrderBy != replacement || got.WindowSpecCore().OrderBy != replacement {
+		t.Fatalf("outer window update was lost: outer=%p shared=%p want=%p", got.OrderBy, got.WindowSpecCore().OrderBy, replacement)
+	}
+}
+
 func TestParseSharedInsertCore(t *testing.T) {
 	stmt, ok := mustParseOne(t, "INSERT INTO t (a, b) VALUES (1, 2), (3, 4)").(*dialectast.InsertStmt)
 	if !ok {
