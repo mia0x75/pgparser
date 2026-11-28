@@ -200,3 +200,16 @@ func TestUnmarshalCIStr(t *testing.T) {
 		t.Fatalf("got %#v, want %#v", ci.L, "aabb")
 	}
 }
+
+func TestTableInfoOldSchemaIDCompatibility(t *testing.T) {
+	var table TableInfo
+	if err := json.Unmarshal([]byte(`{"old_schema_id":17}`), &table); err != nil {
+		t.Fatal(err)
+	}
+	if table.GetDBID(23) != 17 {
+		t.Fatalf("GetDBID() = %d, want legacy schema ID 17", table.GetDBID(23))
+	}
+	if got := (&TableInfo{}).GetDBID(23); got != 23 {
+		t.Fatalf("GetDBID() without legacy metadata = %d, want 23", got)
+	}
+}

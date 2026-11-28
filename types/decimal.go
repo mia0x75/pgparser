@@ -2,7 +2,9 @@ package types
 
 import (
 	"math"
+	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/postgres"
@@ -38,8 +40,9 @@ const (
 	ModeHalfEven RoundMode = "ModeHalfEven"
 	// Truncate just truncates the decimal.
 	ModeTruncate RoundMode = "Truncate"
-	// Ceiling is not supported now.
-	modeCeiling RoundMode = "Ceiling"
+	// ModeCeiling rounds toward positive infinity.
+	ModeCeiling RoundMode = "Ceiling"
+	modeCeiling           = ModeCeiling
 )
 
 var (
@@ -746,9 +749,10 @@ func (d *Decimal) doMiniRightShift(shift, beg, end int) {
 //
 //	   to			- result buffer. d == to is allowed
 //	   frac			- to what position after fraction point to round. can be negative!
-//	   roundMode		- round to nearest even or truncate
+//	   roundMode		- round to nearest even, truncate, or ceiling
 //				ModeHalfEven rounds normally.
 //				Truncate just truncates the decimal.
+//				ModeCeiling rounds toward positive infinity.
 //
 // NOTES
 //
@@ -759,6 +763,10 @@ func (d *Decimal) doMiniRightShift(shift, beg, end int) {
 //
 //	eDecOK/eDecTruncated
 func (d *Decimal) Round(to *Decimal, frac int, roundMode RoundMode) (err error) {
+	if roundMode == modeCeiling {
+		return d.roundCeiling(to, frac)
+	}
+
 	// wordsFracTo is the number of fraction words in buffer.
 	wordsFracTo := (frac + 1) / digitsPerWord
 	if frac > 0 {
@@ -769,8 +777,6 @@ func (d *Decimal) Round(to *Decimal, frac int, roundMode RoundMode) (err error) 
 
 	var roundDigit int32
 	switch roundMode {
-	case modeCeiling:
-		return errors.New("ceiling mode not supported")
 	case ModeHalfEven:
 		roundDigit = 5
 	case ModeTruncate:
@@ -813,18 +819,6 @@ func (d *Decimal) Round(to *Decimal, frac int, roundMode RoundMode) (err error) 
 	if frac == wordsFracTo*digitsPerWord {
 		doInc := false
 		switch roundDigit {
-		// Notice: No support for ceiling mode now.
-		case 0:
-			// If any word after scale is not zero, do increment.
-			// e.g ceiling 3.0001 to scale 1, gets 3.1
-			idx := toIdx + (wordsFrac - wordsFracTo)
-			for idx > toIdx {
-				if d.wordBuf[idx] != 0 {
-					doInc = true
-					break
-				}
-				idx--
-			}
 		case 5:
 			digAfterScale := d.wordBuf[toIdx+1] / digMask // the first digit after scale.
 			// If first digit after scale is 5 and round even, do increment if digit at scale is odd.
@@ -845,7 +839,6 @@ func (d *Decimal) Round(to *Decimal, frac int, roundMode RoundMode) (err error) 
 			return nil
 		}
 	} else {
-		/* TODO - fix this code as it won't work for CEILING mode */
 		pos := wordsFracTo*digitsPerWord - frac - 1
 		shiftedNumber := to.wordBuf[toIdx] / powers10[pos]
 		digAfterScale := shiftedNumber % 10
@@ -934,6 +927,62 @@ func (d *Decimal) Round(to *Decimal, frac int, roundMode RoundMode) (err error) 
 	to.digitsFrac = int8(frac)
 	to.resultFrac = to.digitsFrac
 	return
+}
+
+func (d *Decimal) roundCeiling(to *Decimal, frac int) error {
+	if frac > digitsPerWord*wordBufLen || frac < -digitsPerWord*wordBufLen {
+		return ErrOverflow
+	}
+	text := d.ToString()
+	negative := len(text) > 0 && text[0] == '-'
+	digits := make([]byte, 0, len(text))
+	for _, digit := range text {
+		if digit >= '0' && digit <= '9' {
+			digits = append(digits, byte(digit))
+		}
+	}
+	number, ok := new(big.Int).SetString(string(digits), 10)
+	if !ok {
+		return ErrBadNumber
+	}
+	if negative {
+		number.Neg(number)
+	}
+	shift := frac - int(d.digitsFrac)
+	if shift >= 0 {
+		number.Mul(number, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(shift)), nil))
+	} else {
+		divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(-shift)), nil)
+		quotient, remainder := new(big.Int), new(big.Int)
+		quotient.QuoRem(number, divisor, remainder)
+		if !negative && remainder.Sign() != 0 {
+			quotient.Add(quotient, big.NewInt(1))
+		}
+		number = quotient
+	}
+	if negative && number.Sign() == 0 {
+		negative = false
+	}
+	if number.Sign() < 0 {
+		number.Neg(number)
+	}
+	whole := number.String()
+	if frac > 0 {
+		for len(whole) <= frac {
+			whole = "0" + whole
+		}
+		whole = whole[:len(whole)-frac] + "." + whole[len(whole)-frac:]
+	} else if frac < 0 {
+		whole += strings.Repeat("0", -frac)
+	}
+	if negative {
+		whole = "-" + whole
+	}
+	if err := to.FromString([]byte(whole)); err != nil {
+		return err
+	}
+	to.resultFrac = to.digitsFrac
+	return nil
 }
 
 // FromInt sets the decimal value from int64.

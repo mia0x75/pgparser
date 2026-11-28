@@ -148,8 +148,8 @@ func (t Time) Clock() (hour int, minute int, second int) {
 	return t.Time.Hour(), t.Time.Minute(), t.Time.Second()
 }
 
-// Time is the struct for handling datetime, timestamp and date.
-// TODO: check if need a NewTime function to set Fsp default value?
+// Time is the struct for handling datetime, timestamp and date. Fsp is explicit;
+// zero-value and CurrentTime values use precision zero.
 type Time struct {
 	Time PgTime
 	Type uint8

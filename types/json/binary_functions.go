@@ -10,6 +10,7 @@ import (
 
 	"github.com/mia0x75/pgparser/errors"
 	"github.com/mia0x75/pgparser/hack"
+	"github.com/mia0x75/pgparser/postgres"
 )
 
 // Type returns type of BinaryJSON as string.
@@ -261,8 +262,10 @@ func (bj BinaryJSON) Modify(pathExprList []PathExpression, values []BinaryJSON, 
 		}
 	}
 	if len(pathExprList) != len(values) {
-		// TODO: should return 1582(42000)
-		return retj, errors.New("Incorrect parameter count")
+		return retj, postgres.ClassJSON.New(
+			postgres.ErrWrongParamcountToNativeFct,
+			postgres.PgErrName[postgres.ErrWrongParamcountToNativeFct],
+		).GenWithStackByArgs("JSON_MODIFY")
 	}
 	for _, pathExpr := range pathExprList {
 		for _, leg := range pathExpr.legs {
@@ -271,8 +274,7 @@ func (bj BinaryJSON) Modify(pathExprList []PathExpression, values []BinaryJSON, 
 			}
 		}
 		if pathExpr.flags.containsAnyAsterisk() {
-			// TODO: should return 3149(42000)
-			return retj, errors.New("Invalid path expression")
+			return retj, ErrInvalidJSONPathWildcard.GenWithStackByArgs()
 		}
 	}
 	for i := range pathExprList {
@@ -297,12 +299,10 @@ func (bj BinaryJSON) Remove(pathExprList []PathExpression) (BinaryJSON, error) {
 	}
 	for _, pathExpr := range pathExprList {
 		if len(pathExpr.legs) == 0 {
-			// TODO: should return 3153(42000)
-			return bj, errors.New("Invalid path expression")
+			return bj, ErrInvalidJSONPathEmpty.GenWithStackByArgs()
 		}
 		if pathExpr.flags.containsAnyAsterisk() {
-			// TODO: should return 3149(42000)
-			return bj, errors.New("Invalid path expression")
+			return bj, ErrInvalidJSONPathWildcard.GenWithStackByArgs()
 		}
 		modifer := &binaryModifier{bj: bj}
 		bj = modifer.remove(pathExpr)

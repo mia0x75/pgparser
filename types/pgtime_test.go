@@ -2,6 +2,7 @@ package types
 
 import (
 	"testing"
+	"time"
 )
 
 func TestWeekBehaviour(t *testing.T) {
@@ -23,6 +24,16 @@ func TestWeekBehaviour(t *testing.T) {
 	}
 	if !weekBehaviour(4).test(weekBehaviourFirstWeekday) {
 		t.Errorf("expected true")
+	}
+}
+
+func TestWeekdayForTimezoneFreeWallClock(t *testing.T) {
+	local := time.Local
+	time.Local = time.FixedZone("UTC-12", -12*60*60)
+	defer func() { time.Local = local }()
+	date := FromDate(2011, 12, 30, 0, 30, 0, 0)
+	if got := date.Weekday().String(); got != "Friday" {
+		t.Fatalf("Weekday() = %q, want Friday", got)
 	}
 }
 

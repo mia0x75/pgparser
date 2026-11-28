@@ -55,8 +55,8 @@ func (t PgTime) Microsecond() int {
 
 // Weekday returns the Weekday value.
 func (t PgTime) Weekday() gotime.Weekday {
-	// TODO: Consider time_zone variable.
-	t1, err := t.GoTime(gotime.Local)
+	// PgTime stores timezone-free wall-clock fields, so host-local DST must not change its weekday.
+	t1, err := t.GoTime(gotime.UTC)
 	if err != nil {
 		return 0
 	}

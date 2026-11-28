@@ -252,4 +252,5 @@ const (
 	ErrInvalidJSONPathWildcard             = 3149
 	ErrInvalidJSONContainsPathType         = 3150
 	ErrJSONUsedAsKey                       = 3152
+	ErrInvalidJSONPathEmpty                = 3153
 )

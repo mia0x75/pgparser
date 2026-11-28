@@ -241,4 +241,5 @@ var PgState = map[uint16]string{
 	ErrInvalidJSONData:                     "22032",
 	ErrInvalidJSONPathWildcard:             "42000",
 	ErrJSONUsedAsKey:                       "42000",
+	ErrInvalidJSONPathEmpty:                "42000",
 }

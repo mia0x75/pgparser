@@ -528,7 +528,7 @@ func DefaultTypeForValue(value any, tp *FieldType) {
 		SetBinChsClnFlag(tp)
 	case string:
 		tp.Tp = postgres.TypeVarString
-		// TODO: tp.Flen should be len(x) * 3 (max bytes length of CharsetUTF8)
+		// Flen describes this value's encoded byte length, not a character limit.
 		tp.Flen = len(x)
 		tp.Decimal = UnspecifiedLength
 		tp.Charset, tp.Collate = charset.GetDefaultCharsetAndCollate()

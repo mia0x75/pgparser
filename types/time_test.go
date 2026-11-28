@@ -86,6 +86,15 @@ func TestYear(t *testing.T) {
 	}
 }
 
+func TestCurrentTimeUsesZeroFractionalPrecision(t *testing.T) {
+	if got := types.CurrentTime(postgres.TypeTimestamp).Fsp; got != 0 {
+		t.Fatalf("CurrentTime Fsp = %d, want explicit precision zero", got)
+	}
+	if got := (types.Time{}).Fsp; got != 0 {
+		t.Fatalf("zero-value Time Fsp = %d, want zero", got)
+	}
+}
+
 func TestTimeSuite_ParseFrac(t *testing.T) {
 	tbl := []struct {
 		S        string

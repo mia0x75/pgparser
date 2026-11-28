@@ -202,3 +202,12 @@ func TestFieldType(t *testing.T) {
 		t.Fatalf("got %#v, want %#v", ft.String(), "year(2)")
 	}
 }
+
+func TestDefaultTypeForValueStringLengthIsEncodedBytes(t *testing.T) {
+	var ft FieldType
+	value := "é猫"
+	DefaultTypeForValue(value, &ft)
+	if ft.Flen != len(value) {
+		t.Fatalf("Flen = %d, want encoded byte length %d", ft.Flen, len(value))
+	}
+}

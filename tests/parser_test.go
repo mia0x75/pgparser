@@ -188,6 +188,18 @@ func TestParseSQLSimpleSelect(t *testing.T) {
 	}
 }
 
+func TestParseCommonSelectSemanticFixture(t *testing.T) {
+	stmt := mustParseSelect(t, "SELECT a FROM t WHERE a = 1 ORDER BY a LIMIT 2")
+	if stmt.Fields == nil || len(stmt.Fields.Items) != 1 || stmt.From == nil || stmt.Where == nil || stmt.OrderBy == nil || stmt.Limit == nil {
+		t.Fatalf("common SELECT clauses were not preserved: %#v", stmt.BaseSelectStmt)
+	}
+	restored := restoreString(t, stmt)
+	reparsed := mustParseSelect(t, restored)
+	if reparsed.Fields == nil || len(reparsed.Fields.Items) != 1 || reparsed.Where == nil || reparsed.OrderBy == nil || reparsed.Limit == nil {
+		t.Fatalf("common SELECT semantics changed after Restore: %q", restored)
+	}
+}
+
 // Ported from parser_test.go: TestParseSQLJoinWithAlias.
 func TestParseSQLJoinWithAlias(t *testing.T) {
 	sql := `

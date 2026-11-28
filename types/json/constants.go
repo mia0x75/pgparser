@@ -201,6 +201,11 @@ var (
 		postgres.ErrInvalidJSONPathWildcard,
 		postgres.PgErrName[postgres.ErrInvalidJSONPathWildcard],
 	)
+	// ErrInvalidJSONPathEmpty means a JSON path is empty where a path is required.
+	ErrInvalidJSONPathEmpty = postgres.ClassJSON.New(
+		postgres.ErrInvalidJSONPathEmpty,
+		postgres.PgErrName[postgres.ErrInvalidJSONPathEmpty],
+	)
 	// ErrInvalidJSONContainsPathType means invalid JSON contains path type.
 	ErrInvalidJSONContainsPathType = postgres.ClassJSON.New(
 		postgres.ErrInvalidJSONContainsPathType,
@@ -215,6 +220,8 @@ func init() {
 		postgres.ErrInvalidJSONData:             postgres.ErrInvalidJSONData,
 		postgres.ErrInvalidJSONPathWildcard:     postgres.ErrInvalidJSONPathWildcard,
 		postgres.ErrInvalidJSONContainsPathType: postgres.ErrInvalidJSONContainsPathType,
+		postgres.ErrWrongParamcountToNativeFct:  postgres.ErrWrongParamcountToNativeFct,
+		postgres.ErrInvalidJSONPathEmpty:        postgres.ErrInvalidJSONPathEmpty,
 	}
 }
 

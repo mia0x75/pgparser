@@ -518,31 +518,61 @@ func TestDecimal_RoundWithCeil(t *testing.T) {
 	tests := []struct {
 		input string
 		scale int
+		want  string
 	}{
-		{"123456789.987654321", 1},
-		{"15.1", 0},
-		{"15.5", 0},
-		{"15.9", 0},
-		{"-15.1", 0},
-		{"-15.5", 0},
-		{"-15.9", 0},
-		{"15.1", 1},
-		{"-15.1", 1},
-		{"15.17", 1},
-		{"15.4", -1},
-		{"-15.4", -1},
-		{"5.4", -1},
-		{".999", 0},
-		{"999999999", -9},
+		{"123456789.987654321", 1, "123456790.0"},
+		{"15.1", 0, "16"},
+		{"15.5", 0, "16"},
+		{"15.9", 0, "16"},
+		{"-15.1", 0, "-15"},
+		{"-15.5", 0, "-15"},
+		{"-15.9", 0, "-15"},
+		{"15.1", 1, "15.1"},
+		{"-15.1", 1, "-15.1"},
+		{"15.17", 1, "15.2"},
+		{"15.4", -1, "20"},
+		{"-15.4", -1, "-10"},
+		{"5.4", -1, "10"},
+		{".999", 0, "1"},
+		{".1", -1, "10"},
+		{"-.1", -1, "0"},
+		{"999999999.1", 0, "1000000000"},
+		{"999999999", -9, "1000000000"},
 	}
 	for _, ca := range tests {
 		var dec Decimal
-		_ = dec.FromString([]byte(ca.input))
-		var rounded Decimal
-		err := dec.Round(&rounded, ca.scale, modeCeiling)
-		if err == nil {
-			t.Errorf("expected error for ceiling mode with input %s scale %d, got nil", ca.input, ca.scale)
+		if err := dec.FromString([]byte(ca.input)); err != nil {
+			t.Fatal(err)
 		}
+		var rounded Decimal
+		if err := dec.Round(&rounded, ca.scale, ModeCeiling); err != nil {
+			t.Errorf("Round(%s, %d, ceiling) error = %v", ca.input, ca.scale, err)
+			continue
+		}
+		if got := string(rounded.ToString()); got != ca.want {
+			t.Errorf("Round(%s, %d, ceiling) = %s, want %s", ca.input, ca.scale, got, ca.want)
+		}
+	}
+}
+
+func TestDecimal_RoundCeilingInPlaceAndPrecisionLimit(t *testing.T) {
+	var dec Decimal
+	if err := dec.FromString([]byte("-15.11")); err != nil {
+		t.Fatal(err)
+	}
+	if err := dec.Round(&dec, 1, ModeCeiling); err != nil {
+		t.Fatal(err)
+	}
+	if got := dec.String(); got != "-15.1" {
+		t.Fatalf("in-place ceiling = %q, want -15.1", got)
+	}
+
+	if err := dec.FromString([]byte("1")); err != nil {
+		t.Fatal(err)
+	}
+	var rounded Decimal
+	if err := dec.Round(&rounded, 81, ModeCeiling); err != ErrTruncated {
+		t.Fatalf("ceiling precision-limit error = %v, want %v", err, ErrTruncated)
 	}
 }
 
